@@ -1,2 +1,2 @@
 # GRAPE
-A Go implementation of GPAPE Grape Computations
+A Go implementation of GPAPE Graph Computations
