@@ -10,7 +10,7 @@ import (
 )
 
 func TestStoreGraph(t *testing.T) {
-	f, err := os.Open("c:\\Users\\zpltys\\Desktop\\WikiTalk.txt")
+	f, err := os.Open("c:\\Users\\zpltys\\Desktop\\USA-road-d.USA.gr")
 	defer f.Close()
 
 	if err != nil {
@@ -20,24 +20,29 @@ func TestStoreGraph(t *testing.T) {
 
 	bio := bufio.NewReader(f)
 
-	for i := 1; i <= 4; i++ {
+	for i := 1; i <= 7; i++ {
 		 bio.ReadString('\n')
 	}
 
-	n := 2394385
-	m := 5021410
-
+	n := 23947348
+	m := 58333344
+    //m := 10
 	fmt.Println("start read..")
 
 	g := GenerateGraph(n)
 	for i := 1; i <= m; i++ {
 		line, _ := bio.ReadString('\n')
 
-		s := strings.Split(line, "\t")
-		u, _ := strconv.Atoi(s[0])
-		v, _ := strconv.Atoi(s[1][0:len(s[1]) - 2])
+		s := strings.Split(line, " ")
+		u, _ := strconv.Atoi(s[1])
+		v, _ := strconv.Atoi(s[2])
+		w, _ := strconv.Atoi(s[3][0:len(s[3]) - 1])
 
-		g.Insert(u, v, 1)
+		//fmt.Println(i, u, v, w)
+		if i % 1000000 == 0 {
+			fmt.Printf("finished %v edge", i)
+		}
+		g.Insert(u, v, w)
 	}
 
 	fmt.Println("finish insert")
@@ -52,5 +57,8 @@ func TestStoreGraph(t *testing.T) {
 			val = append(val, strconv.Itoa(v.v))
 		}
 		file.WriteString(strings.Join(val, ",") + "\n")
+		if i % 1000000 == 0 {
+			fmt.Printf("query %v nodes", i)
+		}
 	}
 }
