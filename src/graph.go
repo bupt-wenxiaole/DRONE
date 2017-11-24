@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	f, err := os.Open("../subgraph_json")
+	f, err := os.Open("subgraph.json")
 	if err != nil {
 		panic(err)
 	}

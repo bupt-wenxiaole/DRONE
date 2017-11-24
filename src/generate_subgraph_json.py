@@ -2,7 +2,7 @@ import json
 import sys
 import getopt
 
-def generate_json(Graph, MetisPartion, JsonFile):
+def generate_json(Graph, MetisPartion, SubGraphJson, PartitionJson):
     with open(Graph, "r") as r1 , open(MetisPartion, "r") as r2:
         r1_lines = r1.readlines()
         r1_lines = r1_lines[1:]
@@ -16,13 +16,14 @@ def generate_json(Graph, MetisPartion, JsonFile):
         partition_num = int(MetisPartion[-1])
         print partition_num
         subGraphJsonMap = {}
+	partitionJsonMap = {}
         for i in range(partition_num):
             subGraph = "Graph" + str(i)
             subGraphFI = subGraph + "F.I"
             subGraphFO = subGraph + "F.O"
             subGraphJsonMap[subGraph] = {}
-            subGraphJsonMap[subGraphFI] = {}
-            subGraphJsonMap[subGraphFO] = {}
+            partitionJsonMap[subGraphFI] = {}
+            partitionJsonMap[subGraphFO] = {}
         for j in range(len(r1_lines)):
             nodeIndex = j + 1
             nodeSubGraph = "Graph" + str(r2_lines[j])
@@ -38,43 +39,47 @@ def generate_json(Graph, MetisPartion, JsonFile):
                     #this two nodes belongs to different subgraphs, Border
                     #   first fills in Fi.I
                     #   then  fills in Fi.O
-                    if str(nodeIndex) in subGraphJsonMap[nodeSubGraphFI]:
-                        subGraphJsonMap[nodeSubGraphFI][str(nodeIndex)][str(r1_lines[j][k])] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
+                    if str(nodeIndex) in partitionJsonMap[nodeSubGraphFI]:
+                        partitionJsonMap[nodeSubGraphFI][str(nodeIndex)][str(r1_lines[j][k])] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
                     else:
-                        subGraphJsonMap[nodeSubGraphFI][str(nodeIndex)] = {}
-                        subGraphJsonMap[nodeSubGraphFI][str(nodeIndex)][str(r1_lines[j][k])] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
-                    if str(r1_lines[j][k]) in subGraphJsonMap[nodeSubGraphFO]:
-                        subGraphJsonMap[nodeSubGraphFO][str(r1_lines[j][k])][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
+                        partitionJsonMap[nodeSubGraphFI][str(nodeIndex)] = {}
+                        partitionJsonMap[nodeSubGraphFI][str(nodeIndex)][str(r1_lines[j][k])] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
+                    if str(r1_lines[j][k]) in partitionJsonMap[nodeSubGraphFO]:
+                        partitionJsonMap[nodeSubGraphFO][str(r1_lines[j][k])][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
                     else:
-                        subGraphJsonMap[nodeSubGraphFO][str(r1_lines[j][k])] = {}
-                        subGraphJsonMap[nodeSubGraphFO][str(r1_lines[j][k])][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])  
-    with open(JsonFile, "w") as w:
-        w.write(json.dumps(subGraphJsonMap, sort_keys=True, indent=4, separators=(',', ': ')))
-        
+                        partitionJsonMap[nodeSubGraphFO][str(r1_lines[j][k])] = {}
+                        partitionJsonMap[nodeSubGraphFO][str(r1_lines[j][k])][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])  
+    with open(SubGraphJson, "w") as ws, open(PartitionJson, "w") as wp:
+        ws.write(json.dumps(subGraphJsonMap, sort_keys=True, indent=4, separators=(',', ': ')))
+        wp.write(json.dumps(partitionJsonMap, sort_keys=True, indent=4, separators=(',', ': ')))
 
 def main(argv):
     Graph = ''
     MetisPartion = ''
-    JsonFile = ''
+    SubGraphJson = ''
+    PartitionJson = '' 
     try:
-      opts, args = getopt.getopt(argv,"hg:m:o:",["help","graph=","metispartion=","outputfile="])
+      opts, args = getopt.getopt(argv,"hg:m:s:p:",["help","graph=", "metispartion=", "subgraphjson=", "partitionjson="])
     except getopt.GetoptError:
-      print 'Usage : generate_subgraph_json.py -g <graph> -m <metispartion> -o <outputfile>, reference -h or --help'
+      print 'Usage : generate_subgraph_json.py -g <graph> -m <metispartion> -s <subgraphjson=> -p <partitionjson>, reference -h or --help'
       sys.exit(2)
     for opt, arg in opts:
         if opt in ('-h', "--help"):
             print "this script is for generate subGraph, subGraphFI, subGraphFO json file"
             print "    -g, --graph   the graph file after preprocess"
             print "    -m, --metispartion   the metis partition result"
-            print "    -o, --outputfile the Json file for partition subGraph, subGraphFI, subGraphFO"
+            print "    -s, --subgraphjson the Json file for partition subGraph"
+            print "    -p, --partitionjson the Json file for partition  subGraphFI, subGraphFO"
             sys.exit()
         elif opt in ("-g", "--graph"):
             Graph = arg
         elif opt in ("-m", "--metispartion"):
             MetisPartion = arg
-        elif opt in ("-o", "--outputfile"):
-            JsonFile = arg
-    generate_json(Graph, MetisPartion, JsonFile)
+        elif opt in ("-s", "--subgraphjson"):
+            SubGraphJson = arg
+	elif opt in ("-p", "--partitionjson"):
+	    PartitionJson = arg
+    generate_json(Graph, MetisPartion, SubGraphJson, PartitionJson)
 if __name__ == "__main__":
     main(sys.argv[1:])
 
