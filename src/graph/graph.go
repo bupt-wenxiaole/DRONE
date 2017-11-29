@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"bytes"
@@ -10,12 +10,13 @@ import (
 )
 
 func main() {
-	f, err := os.Open("subgraph.json")
+	f, err := os.Open("C:\\Users\\zpltys\\code\\GRAPE\\test_data\\subgraph.json")
+	//println(err)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-	g, err := NewGraphFromJSON(f, "Graph0")
+	g, err := NewGraphFromJSON(f, "Graph1")
 	if err != nil {
 		panic(err)
 	}
@@ -71,17 +72,20 @@ type Node interface {
 	// ID returns the ID.
 	ID() ID
 	String() string
+	Attr() int
 }
 
 type node struct {
 	id string
+	attr int
 }
 
-var nodeCnt uint64
+//var nodeCnt uint64
 
-func NewNode(id string) Node {
+func NewNode(id string, attr int) Node {
 	return &node{
 		id: id,
+		attr: attr,
 	}
 }
 
@@ -93,11 +97,15 @@ func (n *node) String() string {
 	return n.id
 }
 
+func (n *node) Attr() int {
+	return  n.attr
+}
+
 // Edge connects between two Nodes.
 type Edge interface {
 	Source() Node
 	Target() Node
-	Weight() float64
+	Weight() int
 	String() string
 }
 
@@ -105,10 +113,10 @@ type Edge interface {
 type edge struct {
 	src Node
 	tgt Node
-	wgt float64
+	wgt int
 }
 
-func NewEdge(src, tgt Node, wgt float64) Edge {
+func NewEdge(src, tgt Node, wgt int) Edge {
 	return &edge{
 		src: src,
 		tgt: tgt,
@@ -124,19 +132,21 @@ func (e *edge) Target() Node {
 	return e.tgt
 }
 
-func (e *edge) Weight() float64 {
+func (e *edge) Weight() int {
 	return e.wgt
 }
 
 func (e *edge) String() string {
-	return fmt.Sprintf("%s -- %.3f -→ %s\n", e.src, e.wgt, e.tgt)
+	return fmt.Sprintf("%s -- %d -→ %s\n", e.src, e.wgt, e.tgt)
 }
 
+/*
 type EdgeSlice []Edge
 
 func (e EdgeSlice) Len() int           { return len(e) }
 func (e EdgeSlice) Less(i, j int) bool { return e[i].Weight() < e[j].Weight() }
 func (e EdgeSlice) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
+*/
 
 // Graph describes the methods of graph operations.
 // It assumes that the identifier of a Node is unique.
@@ -168,16 +178,16 @@ type Graph interface {
 
 	// AddEdge adds an edge from nd1 to nd2 with the weight.
 	// It returns error if a node does not exist.
-	AddEdge(id1, id2 ID, weight float64) error
+	AddEdge(id1, id2 ID, weight int) error
 
 	// ReplaceEdge replaces an edge from id1 to id2 with the weight.
-	ReplaceEdge(id1, id2 ID, weight float64) error
+	ReplaceEdge(id1, id2 ID, weight int) error
 
 	// DeleteEdge deletes an edge from id1 to id2.
 	DeleteEdge(id1, id2 ID) error
 
 	// GetWeight returns the weight from id1 to id2.
-	GetWeight(id1, id2 ID) (float64, error)
+	GetWeight(id1, id2 ID) (int, error)
 
 	// GetSources returns the map of parent Nodes.
 	// (Nodes that come towards the argument vertex.)
@@ -200,18 +210,18 @@ type graph struct {
 	idToNodes map[ID]Node
 
 	// nodeToSources maps a Node identifer to sources(parents) with edge weights.
-	nodeToSources map[ID]map[ID]float64
+	nodeToSources map[ID]map[ID]int
 
 	// nodeToTargets maps a Node identifer to targets(children) with edge weights.
-	nodeToTargets map[ID]map[ID]float64
+	nodeToTargets map[ID]map[ID]int
 }
 
 // newGraph returns a new graph.
 func newGraph() *graph {
 	return &graph{
 		idToNodes:     make(map[ID]Node),
-		nodeToSources: make(map[ID]map[ID]float64),
-		nodeToTargets: make(map[ID]map[ID]float64),
+		nodeToSources: make(map[ID]map[ID]int),
+		nodeToTargets: make(map[ID]map[ID]int),
 		//
 		// without this
 		// panic: assignment to entry in nil map
@@ -232,8 +242,8 @@ func (g *graph) Init() {
 	// assignment copies lock value
 
 	g.idToNodes = make(map[ID]Node)
-	g.nodeToSources = make(map[ID]map[ID]float64)
-	g.nodeToTargets = make(map[ID]map[ID]float64)
+	g.nodeToSources = make(map[ID]map[ID]int)
+	g.nodeToTargets = make(map[ID]map[ID]int)
 }
 
 func (g *graph) GetNodeCount() int {
@@ -275,6 +285,7 @@ func (g *graph) AddNode(nd Node) bool {
 	return true
 }
 
+//TODO this function's implement needs profit
 func (g *graph) DeleteNode(id ID) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -298,7 +309,7 @@ func (g *graph) DeleteNode(id ID) bool {
 	return true
 }
 
-func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
+func (g *graph) AddEdge(id1, id2 ID, weight int) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -316,7 +327,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 			g.nodeToTargets[id1][id2] = weight
 		}
 	} else {
-		tmap := make(map[ID]float64)
+		tmap := make(map[ID]int)
 		tmap[id2] = weight
 		g.nodeToTargets[id1] = tmap
 	}
@@ -327,7 +338,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 			g.nodeToSources[id2][id1] = weight
 		}
 	} else {
-		tmap := make(map[ID]float64)
+		tmap := make(map[ID]int)
 		tmap[id1] = weight
 		g.nodeToSources[id2] = tmap
 	}
@@ -335,7 +346,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 	return nil
 }
 
-func (g *graph) ReplaceEdge(id1, id2 ID, weight float64) error {
+func (g *graph) ReplaceEdge(id1, id2 ID, weight int) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -349,14 +360,14 @@ func (g *graph) ReplaceEdge(id1, id2 ID, weight float64) error {
 	if _, ok := g.nodeToTargets[id1]; ok {
 		g.nodeToTargets[id1][id2] = weight
 	} else {
-		tmap := make(map[ID]float64)
+		tmap := make(map[ID]int)
 		tmap[id2] = weight
 		g.nodeToTargets[id1] = tmap
 	}
 	if _, ok := g.nodeToSources[id2]; ok {
 		g.nodeToSources[id2][id1] = weight
 	} else {
-		tmap := make(map[ID]float64)
+		tmap := make(map[ID]int)
 		tmap[id1] = weight
 		g.nodeToSources[id2] = tmap
 	}
@@ -387,7 +398,7 @@ func (g *graph) DeleteEdge(id1, id2 ID) error {
 	return nil
 }
 
-func (g *graph) GetWeight(id1, id2 ID) (float64, error) {
+func (g *graph) GetWeight(id1, id2 ID) (int, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -403,7 +414,7 @@ func (g *graph) GetWeight(id1, id2 ID) (float64, error) {
 			return v, nil
 		}
 	}
-	return 0.0, fmt.Errorf("there is no edge from %s to %s", id1, id2)
+	return 0, fmt.Errorf("there is no edge from %s to %s", id1, id2)
 }
 
 func (g *graph) GetSources(id ID) (map[ID]Node, error) {
@@ -449,7 +460,7 @@ func (g *graph) String() string {
 		nmap, _ := g.GetTargets(id1)
 		for id2, nd2 := range nmap {
 			weight, _ := g.GetWeight(id1, id2)
-			fmt.Fprintf(buf, "%s -- %.3f -→ %s\n", nd1, weight, nd2)
+			fmt.Fprintf(buf, "%s -- %d -→ %s\n", nd1, weight, nd2)
 		}
 	}
 	return buf.String()
@@ -510,7 +521,7 @@ func (g *graph) String() string {
 //	}
 //
 func NewGraphFromJSON(rd io.Reader, graphID string) (Graph, error) {
-	js := make(map[string]map[string]map[string]float64)
+	js := make(map[string]map[string]map[string]int)
 	dec := json.NewDecoder(rd)
 	for {
 		if err := dec.Decode(&js); err == io.EOF {
@@ -528,20 +539,24 @@ func NewGraphFromJSON(rd io.Reader, graphID string) (Graph, error) {
 	for id1, mm := range gmap {
 		nd1 := g.GetNode(StringID(id1))
 		if nd1 == nil {
-			nd1 = NewNode(id1)
+			nd1 = NewNode(id1, 0)
 			if ok := g.AddNode(nd1); !ok {
 				return nil, fmt.Errorf("%s already exists", nd1)
 			}
 		}
 		for id2, weight := range mm {
-			nd2 := g.GetNode(StringID(id2))
-			if nd2 == nil {
-				nd2 = NewNode(id2)
-				if ok := g.AddNode(nd2); !ok {
-					return nil, fmt.Errorf("%s already exists", nd2)
+			if id2 == "attr" {
+				g.idToNodes[StringID(id1)] = NewNode(id1, weight)
+			} else {
+				nd2 := g.GetNode(StringID(id2))
+				if nd2 == nil {
+					nd2 = NewNode(id2, 0)
+					if ok := g.AddNode(nd2); !ok {
+						return nil, fmt.Errorf("%s already exists", nd2)
+					}
 				}
+				g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
 			}
-			g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
 		}
 	}
 
