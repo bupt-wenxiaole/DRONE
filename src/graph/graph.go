@@ -10,17 +10,37 @@ import (
 )
 
 func main() {
-	f, err := os.Open("C:\\Users\\zpltys\\code\\GRAPE\\test_data\\subgraph.json")
+
+	subGraphDir := "C:\\Users\\zpltys\\code\\GRAPE\\test_data\\subgraph.json"
+	partitionDir := "C:\\Users\\zpltys\\code\\GRAPE\\test_data\\partition.json"
+
+	f, err := os.Open(subGraphDir)
 	//println(err)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-	g, err := NewGraphFromJSON(f, "Graph1")
+
+	pf, err := os.Open(partitionDir)
+	g, err := NewGraphFromJSON(f, pf,"1")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(g.String())
+
+	for srcId, msg := range g.GetFIs() {
+		fmt.Println("FI: " + srcId.String())
+		for i := 0; i < len(msg); i++ {
+			fmt.Println("nodeId:" + msg[i].RelatedId().String() + "  partitionId:" + string(msg[i].RelatedWgt()))
+		}
+	}
+
+	for srcId, msg := range g.GetFOs() {
+		fmt.Println("FO: " + srcId.String())
+		for i := 0; i < len(msg); i++ {
+			fmt.Println("nodeId:" + msg[i].RelatedId().String() + "  partitionId:" + string(msg[i].RelatedWgt()))
+		}
+	}
 	/*
 		B -- 18.000 -→ E
 		B -- 14.000 -→ S
@@ -197,6 +217,12 @@ type Graph interface {
 	// (Nodes that go out of the argument vertex.)
 	GetTargets(id ID) (map[ID]Node, error)
 
+	// get all Fi.I message
+	GetFIs() map[ID][]RouteMsg
+
+	// get all Fi.O message
+	GetFOs() map[ID][]RouteMsg
+
 	// String describes the Graph.
 	String() string
 }
@@ -214,6 +240,10 @@ type graph struct {
 
 	// nodeToTargets maps a Node identifer to targets(children) with edge weights.
 	nodeToTargets map[ID]map[ID]int
+
+	// store Fi.I, Fi.O of graph i
+	graphFI map[ID][]RouteMsg
+	graphFO map[ID][]RouteMsg
 }
 
 // newGraph returns a new graph.
@@ -222,6 +252,8 @@ func newGraph() *graph {
 		idToNodes:     make(map[ID]Node),
 		nodeToSources: make(map[ID]map[ID]int),
 		nodeToTargets: make(map[ID]map[ID]int),
+		graphFI:       make(map[ID][]RouteMsg),
+		graphFO:       make(map[ID][]RouteMsg),
 		//
 		// without this
 		// panic: assignment to entry in nil map
@@ -244,6 +276,8 @@ func (g *graph) Init() {
 	g.idToNodes = make(map[ID]Node)
 	g.nodeToSources = make(map[ID]map[ID]int)
 	g.nodeToTargets = make(map[ID]map[ID]int)
+	g.graphFI = make(map[ID][]RouteMsg)
+	g.graphFO = make(map[ID][]RouteMsg)
 }
 
 func (g *graph) GetNodeCount() int {
@@ -466,6 +500,14 @@ func (g *graph) String() string {
 	return buf.String()
 }
 
+func (g *graph) GetFIs() (map[ID][]RouteMsg) {
+	return g.graphFI
+}
+
+func (g *graph) GetFOs() (map[ID][]RouteMsg) {
+	return g.graphFO
+}
+
 // NewGraphFromJSON returns a new Graph from a JSON file.
 // Here's the sample JSON data:
 //
@@ -520,7 +562,7 @@ func (g *graph) String() string {
 //	    },
 //	}
 //
-func NewGraphFromJSON(rd io.Reader, graphID string) (Graph, error) {
+func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
 	js := make(map[string]map[string]map[string]int)
 	dec := json.NewDecoder(rd)
 	for {
@@ -530,7 +572,7 @@ func NewGraphFromJSON(rd io.Reader, graphID string) (Graph, error) {
 			return nil, err
 		}
 	}
-	if _, ok := js[graphID]; !ok {
+	if _, ok := js["Graph" + graphID]; !ok {
 		return nil, fmt.Errorf("%s does not exist", graphID)
 	}
 	gmap := js[graphID]
@@ -559,6 +601,13 @@ func NewGraphFromJSON(rd io.Reader, graphID string) (Graph, error) {
 			}
 		}
 	}
+
+	graphFI, graphFO, err := LoadRouteMsgFromJson(partitonReader, graphID)
+	if err != nil {
+		return nil, err
+	}
+	g.graphFI = graphFI
+	g.graphFO = graphFO
 
 	return g, nil
 }
