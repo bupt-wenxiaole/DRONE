@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	. "graph"
 	"os"
-	"fmt"
 	"strconv"
 )
 
@@ -20,7 +20,7 @@ func main() {
 	defer f.Close()
 
 	pf, err := os.Open(partitionDir)
-	g, err := NewGraphFromJSON(f, pf,"0")
+	g, err := NewGraphFromJSON(f, pf, "0")
 	if err != nil {
 		panic(err)
 	}

@@ -1,10 +1,10 @@
 package graph
 
 import (
-	"io"
 	"encoding/json"
-	"strings"
+	"io"
 	"strconv"
+	"strings"
 	//"fmt"
 )
 
@@ -15,8 +15,8 @@ type RouteMsg interface {
 }
 
 type routeMsg struct {
-	relatedId ID
-	relatedWgt int
+	relatedId      ID
+	relatedWgt     int
 	routePartition int
 }
 
@@ -33,7 +33,7 @@ func (r *routeMsg) RoutePartition() int {
 }
 
 func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
-//	fmt.Println("start resolve")
+	//	fmt.Println("start resolve")
 	ansMap := make(map[ID][]RouteMsg)
 	if jsonMap == nil {
 		return ansMap
@@ -42,7 +42,7 @@ func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
 	//fmt.Println(len(jsonMap))
 
 	for srcID, dstMsg := range jsonMap {
-	//	fmt.Println("srcID:" + string(srcID))
+		//	fmt.Println("srcID:" + string(srcID))
 
 		msgList := make([]RouteMsg, 0)
 
@@ -74,10 +74,10 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 		}
 	}
 
-	FIMap := js["Graph" + graphId + "F.I"]
+	FIMap := js["Graph"+graphId+"F.I"]
 	graphFI := resolveJsonMap(FIMap)
 
-	FOMap := js["Graph" + graphId + "F.O"]
+	FOMap := js["Graph"+graphId+"F.O"]
 	graphFO := resolveJsonMap(FOMap)
 
 	return graphFI, graphFO, nil

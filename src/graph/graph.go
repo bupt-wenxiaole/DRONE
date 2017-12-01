@@ -5,75 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 )
-
-func main() {
-
-	subGraphDir := "C:\\Users\\zpltys\\code\\GRAPE\\test_data\\subgraph.json"
-	partitionDir := "C:\\Users\\zpltys\\code\\GRAPE\\test_data\\partition.json"
-
-	f, err := os.Open(subGraphDir)
-	//println(err)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	pf, err := os.Open(partitionDir)
-	g, err := NewGraphFromJSON(f, pf,"1")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(g.String())
-
-	for srcId, msg := range g.GetFIs() {
-		fmt.Println("FI: " + srcId.String())
-		for i := 0; i < len(msg); i++ {
-			fmt.Println("nodeId:" + msg[i].RelatedId().String() + "  partitionId:" + string(msg[i].RelatedWgt()))
-		}
-	}
-
-	for srcId, msg := range g.GetFOs() {
-		fmt.Println("FO: " + srcId.String())
-		for i := 0; i < len(msg); i++ {
-			fmt.Println("nodeId:" + msg[i].RelatedId().String() + "  partitionId:" + string(msg[i].RelatedWgt()))
-		}
-	}
-	/*
-		B -- 18.000 -→ E
-		B -- 14.000 -→ S
-		B -- 5.000 -→ A
-		B -- 30.000 -→ D
-		C -- 24.000 -→ E
-		C -- 9.000 -→ S
-		T -- 16.000 -→ D
-		T -- 6.000 -→ F
-		T -- 19.000 -→ E
-		T -- 44.000 -→ A
-		D -- 20.000 -→ A
-		D -- 30.000 -→ B
-		D -- 2.000 -→ E
-		D -- 11.000 -→ F
-		D -- 16.000 -→ T
-		F -- 11.000 -→ D
-		F -- 6.000 -→ E
-		F -- 6.000 -→ T
-		E -- 19.000 -→ T
-		E -- 18.000 -→ B
-		E -- 24.000 -→ C
-		E -- 2.000 -→ D
-		E -- 6.000 -→ F
-		A -- 15.000 -→ S
-		A -- 5.000 -→ B
-		A -- 20.000 -→ D
-		A -- 44.000 -→ T
-		S -- 100.000 -→ A
-		S -- 14.000 -→ B
-		S -- 200.000 -→ C
-	*/
-}
 
 // ID is unique identifier.
 type ID interface {
@@ -96,7 +29,7 @@ type Node interface {
 }
 
 type node struct {
-	id string
+	id   string
 	attr int
 }
 
@@ -104,7 +37,7 @@ type node struct {
 
 func NewNode(id string, attr int) Node {
 	return &node{
-		id: id,
+		id:   id,
 		attr: attr,
 	}
 }
@@ -118,7 +51,7 @@ func (n *node) String() string {
 }
 
 func (n *node) Attr() int {
-	return  n.attr
+	return n.attr
 }
 
 // Edge connects between two Nodes.
@@ -500,11 +433,11 @@ func (g *graph) String() string {
 	return buf.String()
 }
 
-func (g *graph) GetFIs() (map[ID][]RouteMsg) {
+func (g *graph) GetFIs() map[ID][]RouteMsg {
 	return g.graphFI
 }
 
-func (g *graph) GetFOs() (map[ID][]RouteMsg) {
+func (g *graph) GetFOs() map[ID][]RouteMsg {
 	return g.graphFO
 }
 
@@ -572,7 +505,7 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 			return nil, err
 		}
 	}
-	if _, ok := js["Graph" + graphID]; !ok {
+	if _, ok := js["Graph"+graphID]; !ok {
 		return nil, fmt.Errorf("%s does not exist", graphID)
 	}
 	gmap := js[graphID]
