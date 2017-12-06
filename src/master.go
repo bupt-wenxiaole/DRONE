@@ -19,7 +19,12 @@ type Master struct {
 	// signals when Register() adds to workers[]
 	// number of worker
 	workerNum  int
-	workers []string
+	workers []*string
+	//TODO: TCP connection reuse
+	//first method: when first call save the handler
+	//second method: after accept resgister then dial and save the handler
+	//https://github.com/grpc/grpc-go/issues/682
+
 	//each worker's RPC address
 	subGraphFiles []string
 	// Name of Input File subgraph json
@@ -43,16 +48,17 @@ func (mr *Master) unlock() {
 // Register is an RPC method that is called by workers after they have started
 // up to report that they are ready to receive tasks.
 // Locks for multiple worker concurrently access worker list
-func (mr *Master) Register(args *RegisterArgs, _ *struct{}) error {
+func (mr *Master) Register(ctx context.Context， args *RegisterArgs) （_ *struct{}， error） {
 	mr.lock()
 	defer mr.unlock()
 	log.Printf("Register: worker %s\n", args.Worker)
 	mr.workers = append(mr.workers, args.Worker)
+
 	if len(worker)  == mr.workerNum {
 		mr.registerDone <- true
 	}
 	// There is no need about scheduler
-	return nil
+	return nil, nil
 }
 
 // newMaster initializes a new Master
@@ -79,10 +85,24 @@ func (mr *Master) killWorkers() {
 		if ok == false {
 			log.Printf("Master: RPC %s shutdown error\n", w)
 		} else {
-			mr.statistic = append(mr.statistic, reply.Niter)
+			mr.statistic = append(mr.statistic, reply.Niteration)
 		}
 
 	}
+}
+func (mr *Master) startGPRCServer(port string) {
+	ln, err := net.Listen("tcp", port)
+	if err != nil {
+		panic(err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterMaster(grpcServer, mr)
+	go func() {
+		if err := grpcServer.Serve(ln); err != nil {
+			panic(err)
+		}
+	}()
+
 }
 
 func RunMaster(jobName string, subGraphJson []string, partitionJson []string, nWorker int, master string) {
