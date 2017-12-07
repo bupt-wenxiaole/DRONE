@@ -1,0 +1,23 @@
+syntax = "proto3";
+package protobuf;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+service Master{
+  rpc Register(RegisterRequest) returns (RegisterResponse) {}
+}
+
+message RegisterRequest {
+  bytes workerIP = 1;
+  bytes workerPort = 2;
+}
+
+message RegisterResponse {
+  bool ok = 1;
+}
+
