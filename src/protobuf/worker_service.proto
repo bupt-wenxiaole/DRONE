@@ -46,7 +46,7 @@ message AssembleResponse {
 	bool ok = 1
 }
 message ssspMessageRequest {
-	ssspMessageStruct pair = 1
+	repeated ssspMessageStruct pair = 1
 }
 message ssspMessageStruct {
 	int nodeID = 1
