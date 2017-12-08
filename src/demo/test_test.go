@@ -10,7 +10,7 @@ import (
 )
 
 func TestStoreGraph(t *testing.T) {
-	f, err := os.Open("c:\\Users\\zpltys\\Desktop\\USA-road-d.USA.gr")
+	f, err := os.Open("/home/zpltys/code/USA-road-d.USA.gr")
 	defer f.Close()
 
 	if err != nil {
@@ -47,7 +47,7 @@ func TestStoreGraph(t *testing.T) {
 
 	fmt.Println("finish insert")
 
-	file, _ := os.OpenFile("c:\\Users\\zpltys\\Desktop\\graph.txt", os.O_RDWR|os.O_CREATE, os.ModeType)
+	file, _ := os.OpenFile("/home/zpltys/code/graph.txt", os.O_RDWR|os.O_CREATE, os.ModeType)
 	defer file.Close()
 
 	for i := 0; i < n; i++ {
