@@ -1,0 +1,57 @@
+syntax = "proto3";
+package protobuf;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+service Worker {
+	//service to master
+	rpc ShutDown(ShutDownRequest) returns (ShutDownResponse) {}
+	rpc PEval(PEvalRequest) returns (PEvalResponse) {}
+	rpc IncEval(IncEvalRequest) returns (IncEvalResponse) {}
+	rpc Assemble(AssembleRequest) returns (AssembleResponse) {}
+	//service to worker
+	rpc Send(ssspMessageRequest) returns (ssspMessageResponse) {}
+
+}
+
+
+message ShutDownRequest {
+}
+message ShutDownResponse {
+	bytes iterationNum = 1
+}
+
+message PEvalRequest {
+	bytes subGraphJson = 1
+	bytes partitionJson = 2
+}
+message PEvalResponse {
+	bool ok = 1
+}
+message IncEvalRequest {
+	
+}
+message IncEvalResponse {
+	bool update = 1
+}
+message AssembleRequset {
+	
+}
+message AssembleResponse {
+	bool ok = 1
+}
+message ssspMessageRequest {
+	ssspMessageStruct pair = 1
+}
+message ssspMessageStruct {
+	int nodeID = 1
+	int distance = 2
+}
+message ssspMessageResponse {
+	
+}
