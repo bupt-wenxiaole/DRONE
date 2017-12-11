@@ -45,13 +45,13 @@ message AssembleRequset {
 message AssembleResponse {
 	bool ok = 1
 }
-message ssspMessageRequest {
-	ssspMessageStruct pair = 1
+message SSSPMessageRequest {
+	repeated ssspMessageStruct pair = 1
 }
-message ssspMessageStruct {
-	int nodeID = 1
+message SSSPMessageStruct {
+	string nodeID = 1
 	int distance = 2
 }
-message ssspMessageResponse {
+message SSSPMessageResponse {
 	
 }

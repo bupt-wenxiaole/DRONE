@@ -25,17 +25,17 @@ type Node interface {
 	// ID returns the ID.
 	ID() ID
 	String() string
-	Attr() int
+	Attr() int64
 }
 
 type node struct {
 	id   string
-	attr int
+	attr int64
 }
 
 //var nodeCnt uint64
 
-func NewNode(id string, attr int) Node {
+func NewNode(id string, attr int64) Node {
 	return &node{
 		id:   id,
 		attr: attr,
@@ -50,7 +50,7 @@ func (n *node) String() string {
 	return n.id
 }
 
-func (n *node) Attr() int {
+func (n *node) Attr() int64 {
 	return n.attr
 }
 
@@ -505,13 +505,14 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 			return nil, err
 		}
 	}
-	if _, ok := js["Graph"+graphID]; !ok {
+	if _, ok := js["Graph" + graphID]; !ok {
 		return nil, fmt.Errorf("%s does not exist", graphID)
 	}
-	gmap := js[graphID]
+	gmap := js["Graph" + graphID]
 
 	g := newGraph()
 	for id1, mm := range gmap {
+
 		nd1 := g.GetNode(StringID(id1))
 		if nd1 == nil {
 			nd1 = NewNode(id1, 0)
@@ -521,7 +522,7 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 		}
 		for id2, weight := range mm {
 			if id2 == "attr" {
-				g.idToNodes[StringID(id1)] = NewNode(id1, weight)
+				g.idToNodes[StringID(id1)] = NewNode(id1, int64(weight))
 			} else {
 				nd2 := g.GetNode(StringID(id2))
 				if nd2 == nil {

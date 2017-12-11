@@ -15,7 +15,7 @@ import (
 
 type Master struct {
 	mutex *sync.Mutex
-	newCond *syc.Cond
+	newCond *sync.Cond
 	// signals when Register() adds to workers[]
 	// number of worker
 	workerNum  int
