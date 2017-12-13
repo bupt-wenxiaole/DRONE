@@ -26,8 +26,6 @@ message shutDownResponse {
 }
 
 message pEvalRequest {
-	string subGraphJson = 1;
-	string partitionJson = 2;
 }
 message pEvalResponse {
 	bool ok = 1;
