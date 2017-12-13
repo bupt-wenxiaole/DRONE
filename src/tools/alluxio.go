@@ -60,5 +60,5 @@ func ReadFromAlluxio(fs *alluxio.Client, path string) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	buffer, nil
+	return buffer, nil
 }
