@@ -44,7 +44,12 @@ func WriteToAlluxio(fs *alluxio.Client, path string, data []string) (bool, error
 			b = bytes.NewBuffer(make([]byte, 0))
 		}
 	}
-
+	if b.Len() != 0 {
+		_, err = fs.Write(writeId, b)
+		if err != nil {
+			return false, err
+		}
+	}
 	return true, nil
 }
 

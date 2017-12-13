@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"algorithm"
 	"graph"
-	"os"
+	//"os"
 	"math"
 	//"strconv"
 	//"unicode"
@@ -96,4 +96,11 @@ func main() {
 	for id, dis := range dis1 {
 		fmt.Printf("g1:  %v : %v\n", id, dis)
 	}
+
+	writePath := "/zpltys/testWrite"
+	data := make([]string, 0)
+	data = append(data, "ni hao")
+	data = append(data, "ok")
+	//fmt.Println(data[0] + data[1])
+	tools.WriteToAlluxio(fs, writePath, data)
 }
