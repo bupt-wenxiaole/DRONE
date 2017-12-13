@@ -1,155 +1,222 @@
 package worker
 
 import (
-    "log"
-    "net"
-    "time"
-    pb "protobuf"
-    "golang.org/x/net/context"
-    "google.golang.org/grpc"
-    "math/rand"
-    "strconv"
-    "graph"
+	"algorithm"
+	"bufio"
+	"context"
+	"google.golang.org/grpc"
+	"graph"
+	"io"
+	"log"
+	"math"
+	"net"
+	"os"
+	pb "protobuf"
+	"strconv"
+	"strings"
+	"sync"
+	"tools"
 )
 
-type DistKV struct {
-    Node string
-    Distance int
-}
-type DistKVChanGRPC struct {
-    peerMessageChan chan DistKV 
-}
+func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
+	distance := make(map[graph.ID]int64)
+	exchangeMsg := make(map[graph.ID]int64)
 
-type BoundMsg struct {
-    DstId graph.ID
-    RouteLen int64
-}
+	for id := range g.GetNodes() {
+		distance[id] = math.MaxInt64
+	}
 
-func (s *DistKVChanGRPC) Put(ctx context.Context, r *pb.PutRequest) (*pb.PutResponse, error) {
-    //quote: 
-    //In Google : we require that Go programmers pass a Context parameter as the first argument 
-    //to every function on the call path between incoming and outgoing requests. 
-    resp := &pb.PutResponse{}
-    resp.Header = &pb.ResponseHeader{}
-    distance, err := strconv.Atoi(string(r.DistanceTosourceNode))
-    if err != nil {
-        resp.Header.Ok = true
-        return resp, err
-    }
-    var messageBlock DistKV = DistKV{Node:string(r.NodeIndex), Distance: distance}
-    s.peerMessageChan <- messageBlock
-    resp.Header.Ok = true
-    return resp, nil
+	for id := range g.GetFOs() {
+		exchangeMsg[id] = math.MaxInt64
+	}
+	return distance, exchangeMsg
 }
 
-func startServerGRPC(port string, peerNumber int) {
-    ln, err := net.Listen("tcp", port)
-    if err != nil {
-        panic(err)
-    }
+type Worker struct {
+	mutex *sync.Mutex
 
-    s := &DistKVChanGRPC{}
-    s.peerMessageChan = make(chan DistKV, peerNumber)
-    grpcServer := grpc.NewServer()
-    pb.RegisterDistKVServer(grpcServer, s)
-    go func() {
-        if err := grpcServer.Serve(ln); err != nil {
-            panic(err)
-        }
-    }()
+	peers        []string
+	selfId       int // the id of this worker itself in workers
+	grpcHandlers []*grpc.ClientConn
+
+	g           graph.Graph
+	distance    map[graph.ID]int64 //
+	exchangeMsg map[graph.ID]int64
+	updated     []*algorithm.Pair
+
+	routeTable map[graph.ID][]*algorithm.BoundMsg
+
+	iterationNum int
+	stopChannel  chan bool
 }
 
-func Stress(port, endpoint string, keys, vals [][]byte, connsN, clientsN int) {
-    //connsN means number of tcp connection, clientsN means numbers of grpc client
-    go startServerGRPC(port, 100)
-
-    conns := make([]*grpc.ClientConn, connsN)
-    for i := range conns {
-        conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
-        if err != nil {
-            panic(err)
-        }
-        conns[i] = conn
-    }
-    clients := make([]pb.DistKVClient, clientsN)
-    for i := range clients {
-        clients[i] = pb.NewDistKVClient(conns[i%int(connsN)])
-    }
-
-    requests := make(chan *pb.PutRequest, len(keys))
-    done, errChan := make(chan struct{}), make(chan error)
-
-    for i := range clients {
-        go func(i int, requests chan *pb.PutRequest) {
-            var cnt = 0
-            for r := range requests {
-                if _, err := clients[i].Put(context.Background(), r); err != nil {
-                    errChan <- err
-                    return
-                }
-            }
-            done <- struct{}{}
-        }(i, requests)
-    }
-
-    st := time.Now()
-
-    for i := range keys {
-        r := &pb.PutRequest{
-            NodeIndex:   keys[i],
-            DistanceTosourceNode: vals[i],
-        }
-        requests <- r
-    }
-
-    close(requests)
-
-    cn := 0
-    for cn != len(clients) {
-        select {
-        case err := <-errChan:
-            panic(err)
-        case <-done:
-            cn++
-        }
-    }
-    close(done)
-    close(errChan)
-
-    tt := time.Since(st)
-    size := len(keys)
-    pt := tt / time.Duration(size)
-    log.Printf("GRPC took %v for %d requests with %d client(s) (%v per each).\n", tt, size, clientsN, pt)
+func (w *Worker) Lock() {
+	w.mutex.Lock()
 }
 
-func GenerateRouteTable(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*BoundMsg {
-    routeTable := make(map[graph.ID][]*BoundMsg)
-    for fo, msgs := range FO {
-        for _, msg := range msgs {
-            srcId := msg.RelatedId()
-            if _, ok := routeTable[srcId]; !ok {
-                routeTable[srcId] = make([]*BoundMsg, 0)
-            }
-
-            nowMsg := &BoundMsg{
-                DstId:    fo,
-                RouteLen: int64(msg.RelatedWgt()),
-            }
-            routeTable[srcId] = append(routeTable[srcId], nowMsg)
-        }
-    }
-    return routeTable
+func (w *Worker) UnLock() {
+	w.mutex.Unlock()
 }
 
-func main() {
-    var keys, vals [][]byte
-    var pairNum = 3
-    for i := 0; i < pairNum; i++ {
-        var key = []byte(strconv.Itoa(rand.Intn(10)))
-        var val = []byte(strconv.Itoa(rand.Intn(100)))
-        keys = append(keys, key)
-        vals = append(vals, val)
-    }
-    Stress(":9000", "10.2.152.24:9000",keys, vals, 1, 10)
+func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
+	w.Lock()
+	defer w.Lock()
 
+	for _, handle := range w.grpcHandlers {
+		handle.Close()
+	}
+	w.stopChannel <- true
+	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
+}
+
+func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
+	// init grpc handler and store it
+	// cause until now, we can ensure all workers have in work,
+	// so we do this here
+	w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
+	for id, peer := range w.peers {
+		if id == w.selfId {
+			continue
+		}
+		conn, err := grpc.Dial(peer, grpc.WithInsecure())
+		if err != nil {
+			panic(err)
+		}
+		w.grpcHandlers[id] = conn
+	}
+
+	// Load graph data
+	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+	graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath)
+	defer graphIO.Close()
+	partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath)
+	defer partitionIO.Close()
+	w.g, _ = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId))
+
+	// Initial some variables from graph
+	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
+	w.distance, w.exchangeMsg = Generate(w.g)
+
+	isMessageToSend, messages := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID("1"))
+	if !isMessageToSend {
+		return &pb.PEvalResponse{Ok: isMessageToSend}, nil
+	} else {
+		for partitionId, message := range messages {
+			client := pb.NewWorkerClient(w.grpcHandlers[partitionId])
+			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
+			for _, msg := range message {
+				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
+			}
+			_, err := client.Send(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+	return &pb.PEvalResponse{Ok: isMessageToSend}, nil
+}
+
+func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+	w.updated = make([]*algorithm.Pair, 0)
+	w.iterationNum++
+
+	isMessageToSend, messages := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.routeTable, w.updated)
+	if !isMessageToSend {
+		return &pb.IncEvalResponse{Update: isMessageToSend}, nil
+	} else {
+		for partitionId, message := range messages {
+			client := pb.NewWorkerClient(w.grpcHandlers[partitionId])
+			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
+			for _, msg := range message {
+				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
+			}
+			_, err := client.Send(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+	return &pb.IncEvalResponse{Update: isMessageToSend}, nil
+}
+
+func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
+	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+
+	result := make([]string, 0)
+	for id, dist := range w.distance {
+		result = append(result, id.String()+"\t"+strconv.FormatInt(dist, 10))
+	}
+
+	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return &pb.AssembleResponse{Ok: ok}, nil
+}
+
+func (w *Worker) Send(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
+	decodeMessage := make([]*algorithm.Pair, 0)
+
+	for _, msg := range args.Pair {
+		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.StringID(msg.NodeID), Distance: msg.Distance})
+	}
+
+	w.Lock()
+	w.updated = append(w.updated, decodeMessage...)
+	w.UnLock()
+
+	return &pb.SSSPMessageResponse{}, nil
+}
+
+func newWorker(id int) *Worker {
+	w := new(Worker)
+	w.mutex = new(sync.Mutex)
+	w.selfId = id
+	w.peers = make([]string, 0)
+	w.updated = make([]*algorithm.Pair, 0)
+	w.iterationNum = 0
+	w.stopChannel = make(chan bool)
+
+	// read config file get ip:port config
+	// in config file, every line in this format: id,ip:port\n
+	// while id means the id of this worker, and 0 means master
+	// the id of first line must be 0 (so the first ip:port is master)
+	f, err := os.Open(tools.ConfigPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	rd := bufio.NewReader(f)
+	for {
+		line, err := rd.ReadString('\n')
+		line = strings.Split(line, "\n")[0] //delete the end "\n"
+		if err != nil || io.EOF == err {
+			break
+		}
+
+		conf := strings.Split(line, ",")
+		w.peers = append(w.peers, conf[1])
+	}
+
+	return w
+}
+
+func RunWorker(id int) {
+	w := newWorker(id)
+
+	ln, err := net.Listen("tcp", ":"+strings.Split(w.peers[w.selfId], ":")[1])
+
+	if err != nil {
+		panic(err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterWorkerServer(grpcServer, w)
+	go func() {
+		if err := grpcServer.Serve(ln); err != nil {
+			panic(err)
+		}
+	}()
+
+	<-w.stopChannel
 }

@@ -13,7 +13,7 @@ service Master{
 }
 
 message RegisterRequest {
-  int workerID = 1
+  int32 workerIndex = 1;
 }
 
 message RegisterResponse {
