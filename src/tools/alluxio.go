@@ -1,10 +1,10 @@
 package tools
 
 import (
-	"github.com/Alluxio/alluxio-go"
-	"time"
-	"github.com/Alluxio/alluxio-go/option"
 	"bytes"
+	"github.com/Alluxio/alluxio-go"
+	"github.com/Alluxio/alluxio-go/option"
+	"time"
 	//"strings"
 	"fmt"
 	//"log"

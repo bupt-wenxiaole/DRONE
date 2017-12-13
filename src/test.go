@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"algorithm"
+	"fmt"
 	"graph"
 	//"os"
 	"math"
@@ -46,23 +46,23 @@ func main() {
 	f1.Close()
 	pf1.Close()
 
-	dis0, exc0:= Generate(g0)
+	dis0, exc0 := Generate(g0)
 	dis1, exc1 := Generate(g1)
 
 	routeTable0 := algorithm.GenerateRouteTable(g0.GetFOs())
 	routeTable1 := algorithm.GenerateRouteTable(g1.GetFOs())
-/*
-	for id, msgs := range routeTable1 {
-		for _, msg := range msgs {
-			fmt.Printf("routeTable1 : id:%v, disId:%v, routeLen:%v\n", id, msg.DstId, msg.RouteLen)
+	/*
+		for id, msgs := range routeTable1 {
+			for _, msg := range msgs {
+				fmt.Printf("routeTable1 : id:%v, disId:%v, routeLen:%v\n", id, msg.DstId, msg.RouteLen)
+			}
 		}
-	}
-*/
+	*/
 
 	continue0, messageMap0 := algorithm.SSSP_PEVal(g0, dis0, exc0, routeTable0, graph.StringID("1"))
 	continue1, messageMap1 := algorithm.SSSP_PEVal(g1, dis1, exc1, routeTable1, graph.StringID("1"))
 
-	fmt.Printf("continue1:%v\n", continue1 )
+	fmt.Printf("continue1:%v\n", continue1)
 	var nc0, nc1 bool
 	var nmsg0, nmsg1 map[int][]*algorithm.Pair
 
@@ -88,7 +88,6 @@ func main() {
 		messageMap0 = nmsg0
 		messageMap1 = nmsg1
 	}
-
 
 	for id, dis := range dis0 {
 		fmt.Printf("g0:  %v : %v\n", id, dis)
