@@ -9,6 +9,13 @@ import (
     "context"
     "log"
     "algorithm"
+    "net"
+    "os"
+    "bufio"
+    "io"
+    "strings"
+    "strconv"
+    "fmt"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -61,8 +68,19 @@ func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest ) (*pb.S
     w.stopChannel <- true
 }
 
-func (w *Worker) PEVal (ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
-    // TODO dial all peers, and save it to grpCHandles
+func (w *Worker) PEval (ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
+    w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
+    for id, peer := range w.peers {
+        if id == w.selfId {
+            continue
+        }
+        conn, err := grpc.Dial(peer, grpc.WithInsecure())
+        if err != nil {
+            panic(err)
+        }
+        w.grpcHandlers[id] = conn
+    }
+
     // TODO load graph from alluxio
 
     // Initial worker
@@ -79,7 +97,7 @@ func (w *Worker) PEVal (ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRe
             for _, msg := range message {
                 encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance:msg.Distance,})
             }
-            _, err := client.Send(context.Background(), pb.SSSPMessageRequest{Pair: encodeMessage})
+            _, err := client.Send(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
             if err != nil {
                 log.Fatal(err)
             }
@@ -101,7 +119,7 @@ func (w *Worker) IncEval (ctx context.Context, args *pb.IncEvalRequest) (*pb.Inc
             for _, msg := range message {
                 encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance:msg.Distance,})
             }
-            _, err := client.Send(context.Background(), pb.SSSPMessageRequest{Pair: encodeMessage})
+            _, err := client.Send(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
             if err != nil {
                 log.Fatal(err)
             }
@@ -133,12 +151,48 @@ func newWorker(id int) *Worker {
     w := new(Worker)
     w.mutex = new(sync.Mutex)
     w.selfId = id
+    w.peers = make([]string, 0)
     return w
 }
 
 func run(id int) {
     w := newWorker(id)
-    w.listen
+
+    //read config file
+    f, err := os.Open("../test_data/config.txt")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer f.Close()
+    rd := bufio.NewReader(f)
+    for {
+        line, err := rd.ReadString('\n')
+        line = strings.Split(line, "\n")[0]    //delete the end "\n"
+        if err != nil || io.EOF == err {
+            break
+        }
+
+        conf := strings.Split(line, ",")
+        w.peers = append(w.peers, conf[1])
+    }
+
+    //listen
+ //   port, err := strconv.Atoi(strings.Split(w.peers[w.selfId], ":")[1])
+  //  if err != nil {
+//        fmt.Println("self ip:port" + w.peers[w.selfId])
+ //   }
+
+    ln, err := net.Listen("tcp", ":" + strings.Split(w.peers[w.selfId], ":")[1])
+    if err != nil {
+        panic(err)
+    }
+    grpcServer := grpc.NewServer()
+    pb.RegisterWorkerServer(grpcServer, w)
+    go func() {
+        if err := grpcServer.Serve(ln); err != nil {
+            panic(err)
+        }
+    }()
 
     <- w.stopChannel
 }
