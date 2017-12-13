@@ -1,22 +1,23 @@
 package worker
 
 import (
-	"algorithm"
-	"bufio"
-	"context"
-	"google.golang.org/grpc"
-	"graph"
-	"io"
-	"log"
-	"math"
-	"net"
-	"os"
-	pb "protobuf"
-	"strconv"
-	"strings"
-	"sync"
-	"tools"
+    "algorithm"
+    "bufio"
+    "google.golang.org/grpc"
+    "graph"
+    "io"
+    "log"
+    "math"
+    "net"
+    "os"
+    pb "protobuf"
+    "sync"
+    "tools"
+    "strconv"
+    "strings"
+    "golang.org/x/net/context"
 )
+
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 	distance := make(map[graph.ID]int64)
