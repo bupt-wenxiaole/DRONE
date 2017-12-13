@@ -8,6 +8,7 @@ import (
 	"math"
 	//"strconv"
 	//"unicode"
+	"tools"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -27,18 +28,20 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // This example creates a PriorityQueue with some items, adds and manipulates an item,
 // and then removes the items in priority order.
 func main() {
-	subgraphPath := "C:\\Users\\zpltys\\code\\GRAPE\\test_data\\subgraph.json"
-	partitionPath := "C:\\Users\\zpltys\\code\\GRAPE\\test_data\\partition.json"
+	graphPath := "/zpltys/graphData/subgraph.json"
+	partitionPath := "/zpltys/graphData/partition.json"
+
+	fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
-	f0, _ := os.Open(subgraphPath)
-	pf0, _ := os.Open(partitionPath)
+	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
 	g0, _ := graph.NewGraphFromJSON(f0, pf0, "0")
 	f0.Close()
 	pf0.Close()
 
-	f1, _ := os.Open(subgraphPath)
-	pf1, _ := os.Open(partitionPath)
+	f1, _ := tools.ReadFromAlluxio(fs, graphPath)
+	pf1, _ := tools.ReadFromAlluxio(fs, partitionPath)
 	g1, _ := graph.NewGraphFromJSON(f1, pf1, "1")
 	f1.Close()
 	pf1.Close()

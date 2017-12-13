@@ -5,8 +5,9 @@ import (
 	"log"
 	"bufio"
 	"strings"
-	"net"
+	//"net"
 	"io"
+	"bytes"
 	"fmt"
 )
 
@@ -30,6 +31,8 @@ func main() {
 		lines = append(lines, conf[1])
 	}
 
+	b := bytes.NewBuffer(make([]byte, 0))
+
 	//listen
 	//   port, err := strconv.Atoi(strings.Split(w.peers[w.selfId], ":")[1])
 	//  if err != nil {
@@ -37,13 +40,13 @@ func main() {
 	//   }
 
 	for _, l := range lines {
-		fmt.Println(l)
+		fmt.Fprintln(b, l)
+		fmt.Printf("len(b): %v\n", b.Len())
+		fmt.Println(b)
 
-		ln, err := net.Listen("tcp", ":" + strings.Split(l, ":")[1])
-		if err != nil {
-			panic(err)
-		}
-		ln.Close()
+		//fmt.Println(l)
+
+
 	}
 
 }

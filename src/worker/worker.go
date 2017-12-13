@@ -176,13 +176,9 @@ func run(id int) {
         w.peers = append(w.peers, conf[1])
     }
 
-    //listen
- //   port, err := strconv.Atoi(strings.Split(w.peers[w.selfId], ":")[1])
-  //  if err != nil {
-//        fmt.Println("self ip:port" + w.peers[w.selfId])
- //   }
 
     ln, err := net.Listen("tcp", ":" + strings.Split(w.peers[w.selfId], ":")[1])
+
     if err != nil {
         panic(err)
     }
