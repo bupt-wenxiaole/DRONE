@@ -505,10 +505,10 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 			return nil, err
 		}
 	}
-	if _, ok := js["Graph" + graphID]; !ok {
+	if _, ok := js["Graph"+graphID]; !ok {
 		return nil, fmt.Errorf("%s does not exist", graphID)
 	}
-	gmap := js["Graph" + graphID]
+	gmap := js["Graph"+graphID]
 
 	g := newGraph()
 	for id1, mm := range gmap {

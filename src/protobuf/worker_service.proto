@@ -10,48 +10,45 @@ option (gogoproto.goproto_getters_all) = false;
 
 service Worker {
 	//service to master
-	rpc ShutDown(ShutDownRequest) returns (ShutDownResponse) {}
-	rpc PEval(PEvalRequest) returns (PEvalResponse) {}
-	rpc IncEval(IncEvalRequest) returns (IncEvalResponse) {}
-	rpc Assemble(AssembleRequest) returns (AssembleResponse) {}
+	rpc ShutDown (shutDownRequest) returns (shutDownResponse) {}
+	rpc PEval (pEvalRequest) returns (pEvalResponse) {}
+	rpc IncEval (incEvalRequest) returns (incEvalResponse) {}
+	rpc Assemble (assembleRequest) returns (assembleResponse) {}
 	//service to worker
-	rpc Send(ssspMessageRequest) returns (ssspMessageResponse) {}
+	rpc Send (sSSPMessageRequest) returns (sSSPMessageResponse) {}
 
 }
 
+message shutDownRequest {
+}
+message shutDownResponse {
+	int32 iterationNum = 1;
+}
 
-message ShutDownRequest {
+message pEvalRequest {
+	string subGraphJson = 1;
+	string partitionJson = 2;
 }
-message ShutDownResponse {
-	bytes iterationNum = 1
+message pEvalResponse {
+	bool ok = 1;
+}
+message incEvalRequest {
 }
 
-message PEvalRequest {
-	bytes subGraphJson = 1
-	bytes partitionJson = 2
+message incEvalResponse {
+	bool update = 1;
 }
-message PEvalResponse {
-	bool ok = 1
+message assembleRequest {	
 }
-message IncEvalRequest {
-	
+message assembleResponse {
+	bool ok = 1;
 }
-message IncEvalResponse {
-	bool update = 1
+message sSSPMessageRequest {
+	repeated sSSPMessageStruct pair = 1;
 }
-message AssembleRequset {
-	
+message sSSPMessageStruct {
+	string nodeID = 1;
+	int64 distance = 2;
 }
-message AssembleResponse {
-	bool ok = 1
-}
-message SSSPMessageRequest {
-	repeated ssspMessageStruct pair = 1
-}
-message SSSPMessageStruct {
-	string nodeID = 1
-	int distance = 2
-}
-message SSSPMessageResponse {
-	
+message sSSPMessageResponse {
 }
