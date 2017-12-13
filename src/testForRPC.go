@@ -14,7 +14,7 @@ import (
 func main() {
 	lines := make([]string, 0)
 
-	f, err := os.Open("test_data/config.txt")
+	f, err := os.Open("../test_data/config.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
