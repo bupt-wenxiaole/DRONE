@@ -206,10 +206,10 @@ func RunWorker(id int) {
 	w := newWorker(id)
 
 	ln, err := net.Listen("tcp", ":"+strings.Split(w.peers[w.selfId], ":")[1])
-
 	if err != nil {
 		panic(err)
 	}
+
 	grpcServer := grpc.NewServer()
 	pb.RegisterWorkerServer(grpcServer, w)
 	go func() {
@@ -217,6 +217,8 @@ func RunWorker(id int) {
 			panic(err)
 		}
 	}()
+
+    //TODO: register to master
 
 	<-w.stopChannel
 }
