@@ -101,13 +101,11 @@ func SSSP_aggregateMsg(oriMsg []*Pair) []*Pair {
 // map[i] is a list of message need to be sent to partition i
 func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, startID graph.ID) (bool, map[int][]*Pair) {
 	nodes := g.GetNodes()
-
+	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
 		return false, make(map[int][]*Pair)
 	}
-
 	FO := g.GetFOs()
-
 	updatedID := make([]graph.ID, 0)
 	pq := make(PriorityQueue, 0)
 
@@ -116,27 +114,21 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 		Distance: 0,
 	}
 	heap.Push(&pq, startPair)
-
+	// begin SSSP iteration
 	for pq.Len() > 0 {
 		top := heap.Pop(&pq).(*Pair)
 		srcID := top.NodeId
 		nowDis := top.Distance
-
-		//fmt.Printf("srcID: %v  dis: %v\n", srcID, nowDis)
-
 		if nowDis >= distance[srcID] {
 			continue
 		}
-
 		distance[srcID] = nowDis
+		//every iteration, query the update on Fi.O
 		if msgs, ok := routeTable[srcID]; ok {
-			//fmt.Printf("srcId:%v\n", srcID)
 			for _, msg := range msgs {
-				//fmt.Printf("exchangeMsg[%v]: %v\n", msg.DstId, exchangeMsg[msg.DstId])
 				if exchangeMsg[msg.DstId] <= nowDis+msg.RouteLen {
 					continue
 				}
-				//fmt.Printf("UpdateId:%v\n", msg.DstId)
 				exchangeMsg[msg.DstId] = nowDis + msg.RouteLen
 				updatedID = append(updatedID, msg.DstId)
 			}
@@ -151,7 +143,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 			}
 		}
 	}
-
+	//end SSSP iteration
 	filterMap := make(map[graph.ID]bool)
 	messageMap := make(map[int][]*Pair)
 	for _, id := range updatedID {
@@ -159,7 +151,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 			continue
 		}
 		filterMap[id] = true
-
+		//TODO: from the GPAPE paper, Json file implementation is a little weird, F.O's partition is only related with first level key
 		partition := FO[id][0].RoutePartition()
 		dis := exchangeMsg[id]
 		if _, ok := messageMap[partition]; !ok {
@@ -174,8 +166,6 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
 func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, updated []*Pair) (bool, map[int][]*Pair) {
-	//nodes := g.GetNodes()
-
 	if len(updated) == 0 {
 		return false, make(map[int][]*Pair)
 	}
