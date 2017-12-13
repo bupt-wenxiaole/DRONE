@@ -218,7 +218,16 @@ func RunWorker(id int) {
 		}
 	}()
 
-    //TODO: register to master
+    masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+    if err != nil {
+        log.Fatal(err)
+    }
+    registerClient := pb.NewMasterClient(masterHandle)
+    response, err := registerClient.Register(context.Background(), &pb.RegisterRequest{WorkerIndex:int32(w.selfId)})
+    if err != nil || !response.Ok {
+        log.Fatal("error for register")
+    }
 
+    // wait for stop
 	<-w.stopChannel
 }
