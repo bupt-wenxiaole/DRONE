@@ -13,8 +13,7 @@ service Master{
 }
 
 message RegisterRequest {
-  bytes workerIP = 1;
-  bytes workerPort = 2;
+  int workerID = 1
 }
 
 message RegisterResponse {
