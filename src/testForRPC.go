@@ -13,7 +13,7 @@ import (
 func main() {
 	lines := make([]string, 0)
 
-	f, err := os.Open("test_data/config.txt")
+	f, err := os.Open("../test_data/config.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,9 +37,10 @@ func main() {
 	//   }
 
 	for _, l := range lines {
-		fmt.Println(l)
+        port := strings.Split(l, ":")[1]
+        fmt.Println(port)
 
-		ln, err := net.Listen("tcp", ":" + strings.Split(l, ":")[1])
+		ln, err := net.Listen("tcp", ":" + port)
 		if err != nil {
 			panic(err)
 		}
