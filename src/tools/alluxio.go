@@ -11,8 +11,6 @@ import (
 	"io"
 )
 
-const maxBufferSize = 1024000
-
 func GenerateAlluxioClient(host string) *alluxio.Client {
 	fs := alluxio.NewClient(host, 39999, time.Minute)
 	return fs

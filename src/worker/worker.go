@@ -182,7 +182,7 @@ func newWorker(id int) *Worker {
 	// in config file, every line in this format: id,ip:port\n
 	// while id means the id of this worker, and 0 means master
 	// the id of first line must be 0 (so the first ip:port is master)
-	f, err := os.Open("../test_data/config.txt")
+	f, err := os.Open(tools.ConfigPath)
 	if err != nil {
 		log.Fatal(err)
 	}
