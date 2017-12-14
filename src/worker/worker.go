@@ -15,6 +15,7 @@ import (
     "tools"
     "strconv"
     "strings"
+    "time"
     "golang.org/x/net/context"
 )
 
@@ -60,13 +61,21 @@ func (w *Worker) UnLock() {
 }
 
 func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
+	log.Println("receive shutDown request")
 	w.Lock()
 	defer w.Lock()
+	log.Println("shutdown ing")
 
-	for _, handle := range w.grpcHandlers {
+	for i, handle := range w.grpcHandlers {
+		if i == 0 || i == w.selfId {
+			continue
+		}
 		handle.Close()
 	}
+	log.Println("shutdown step 1")
 	w.stopChannel <- true
+        log.Println("shutdown step 2")
+	log.Println("shutdown ok")
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
@@ -74,9 +83,10 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	// init grpc handler and store it
 	// cause until now, we can ensure all workers have in work,
 	// so we do this here
+
 	w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
 	for id, peer := range w.peers {
-		if id == w.selfId {
+		if id == w.selfId || id == 0 {
 			continue
 		}
 		conn, err := grpc.Dial(peer, grpc.WithInsecure())
@@ -92,8 +102,11 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	defer graphIO.Close()
 	partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath)
 	defer partitionIO.Close()
-	w.g, _ = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId))
+	w.g, _ = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
 
+	if w.g == nil {
+		log.Println("can't load graph")
+	}
 	// Initial some variables from graph
 	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
 	w.distance, w.exchangeMsg = Generate(w.g)
@@ -103,13 +116,16 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 		return &pb.PEvalResponse{Ok: isMessageToSend}, nil
 	} else {
 		for partitionId, message := range messages {
-			client := pb.NewWorkerClient(w.grpcHandlers[partitionId])
+			client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
+				log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
-			_, err := client.Send(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
+			log.Printf("send partition id:%v\n", partitionId)
+			_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
 			if err != nil {
+				log.Println("send error")
 				log.Fatal(err)
 			}
 		}
@@ -118,20 +134,20 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 }
 
 func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
-	w.updated = make([]*algorithm.Pair, 0)
 	w.iterationNum++
 
 	isMessageToSend, messages := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.routeTable, w.updated)
+	w.updated = make([]*algorithm.Pair, 0)
 	if !isMessageToSend {
 		return &pb.IncEvalResponse{Update: isMessageToSend}, nil
 	} else {
 		for partitionId, message := range messages {
-			client := pb.NewWorkerClient(w.grpcHandlers[partitionId])
+			client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
 			}
-			_, err := client.Send(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
+			_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -156,11 +172,13 @@ func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.As
 	return &pb.AssembleResponse{Ok: ok}, nil
 }
 
-func (w *Worker) Send(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
+func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
+	log.Println("send receive")
 	decodeMessage := make([]*algorithm.Pair, 0)
 
 	for _, msg := range args.Pair {
 		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.StringID(msg.NodeID), Distance: msg.Distance})
+		log.Printf("received msg: nodeId:%v dis:%v\n", graph.StringID(msg.NodeID), msg.Distance)
 	}
 
 	w.Lock()
@@ -205,7 +223,9 @@ func newWorker(id int) *Worker {
 
 func RunWorker(id int) {
 	w := newWorker(id)
-
+	
+	log.Println(w.selfId)
+	log.Println(w.peers[w.selfId])
 	ln, err := net.Listen("tcp", ":"+strings.Split(w.peers[w.selfId], ":")[1])
 	if err != nil {
 		panic(err)
@@ -214,6 +234,7 @@ func RunWorker(id int) {
 	grpcServer := grpc.NewServer()
 	pb.RegisterWorkerServer(grpcServer, w)
 	go func() {
+		log.Println("start listen")	
 		if err := grpcServer.Serve(ln); err != nil {
 			panic(err)
 		}
@@ -231,4 +252,6 @@ func RunWorker(id int) {
 
     // wait for stop
 	<-w.stopChannel
+	time.Sleep(1000)
+	log.Println("finish task")
 }

@@ -65,10 +65,15 @@ func (mr *Master) Register(ctx context.Context, args *pb.RegisterRequest) (r *pb
 		log.Fatal("%d worker register more than one times", args.WorkerIndex)
 	} else {
 		mr.grpcHandlers[args.WorkerIndex] = conn
+		if conn == nil {
+			log.Println("conn is null!")
+		}
 	}
 	if len(mr.grpcHandlers) == mr.workerNum {
 		mr.registerDone <- true
 	}
+	log.Printf("len:%d\n", len(mr.grpcHandlers))
+	log.Printf("workernum:%d\n", mr.workerNum)
 	// There is no need about scheduler
 	return &pb.RegisterResponse{Ok: true}, nil
 }
@@ -84,13 +89,13 @@ func newMaster() (mr *Master) {
 	mr.wg = new(sync.WaitGroup)
 	//workersAddress slice's index is worker's Index
 	//read from Config text
-	mr.workersAddress = make([]string, mr.workerNum)
+	mr.workersAddress = make([]string, 0)
 	mr.grpcHandlers = make(map[int32]*grpc.ClientConn)
 	mr.statistic = make([]int32, mr.workerNum)
 	return mr
 }
 func (mr *Master) ReadConfig() {
-	f, err := os.Open("C:\\Users\\root\\GoglandProjects\\GRAPE\\test_data\\config.txt")
+	f, err := os.Open("/home/xwen/GRAPE/test_data/config.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -104,7 +109,9 @@ func (mr *Master) ReadConfig() {
 			break
 		}
 		conf := strings.Split(line, ",")
+		//TODO: this operate is for out of range
 		if first {
+			mr.workersAddress = append(mr.workersAddress, "0")
 			mr.address = conf[1]
 			log.Print(mr.address)
 			first = false
@@ -113,6 +120,7 @@ func (mr *Master) ReadConfig() {
 			log.Print(conf[1])
 		}
 	}
+	mr.workerNum = len(mr.workersAddress) - 1
 }
 func (mr *Master) wait() {
 	<-mr.JobDoneChan
@@ -136,7 +144,7 @@ func (mr *Master) KillWorkers() {
 	}
 }
 func (mr *Master) StartMasterServer() {
-	ln, err := net.Listen("tcp", ":10000")
+	ln, err := net.Listen("tcp", mr.address)
 	if err != nil {
 		panic(err)
 	}
@@ -153,16 +161,28 @@ func (mr *Master) PEval() bool {
 	for i := 1; i <= mr.workerNum; i++ {
 		log.Printf("Master: start %d PEval", i)
 		mr.wg.Add(1)
-		go func() {
+		go func(id int) {
+			log.Printf("oringin i %v\n", id)
+			log.Printf("oringin i %v\n", int32(id))
 			defer mr.wg.Done()
-			handler := mr.grpcHandlers[int32(i)]
+			handler, ok := mr.grpcHandlers[int32(id)]
+			if !ok {
+				log.Println("key error")
+			}
+			if handler == nil {
+				log.Println("handler is null!")
+			}
 			client := pb.NewWorkerClient(handler)
-			pevalRequest := &pb.PEvalRequest{}
-			if _, err := client.PEval(context.Background(), pevalRequest); err != nil {
-				log.Fatal("Fail to execute PEval %d", i)
+			if client == nil {
+				log.Println("client is null!")
+			}
+			//pevalRequest := &pb.PEvalRequest{}
+			if _, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
+				log.Printf("Fail to execute PEval %d\n", id)
+				log.Fatal(err)
 				//TODO: still something todo: Master Just terminate, how about the Worker
 			}
-		}()
+		}(i)
 	}
 	mr.wg.Wait()
 	return true
@@ -177,20 +197,20 @@ func (mr *Master) IncEvalALL() bool {
 		for i := 1; i <= mr.workerNum; i++ {
 			log.Printf("Master: start the %dth PEval of worker %i", stepCount, i)
 			mr.wg.Add(1)
-			go func() {
+			go func(id int) {
 				defer mr.wg.Done()
-				handler := mr.grpcHandlers[int32(i)]
+				handler := mr.grpcHandlers[int32(id)]
 				client := pb.NewWorkerClient(handler)
 				incEvalRequest := &pb.IncEvalRequest{}
 				if reply, err := client.IncEval(context.Background(), incEvalRequest); err != nil {
-					log.Fatal("Fail to execute IncEval worker %d", i)
+					log.Fatal("Fail to execute IncEval worker %v", id)
 				} else {
 					mr.Lock()
 					//multiple goroutines access update
 					update = update || reply.Update
 					mr.Unlock()
 				}
-			}()
+			}(i)
 		}
 		mr.wg.Wait()
 		if update == false {
@@ -203,15 +223,15 @@ func (mr *Master) Assemble() bool {
 	for i := 1; i <= mr.workerNum; i++ {
 		log.Printf("Master: start worker %d Assemble", i)
 		mr.wg.Add(1)
-		go func() {
+		go func(id int) {
 			defer mr.wg.Done()
-			handler := mr.grpcHandlers[int32(i)]
+			handler := mr.grpcHandlers[int32(id)]
 			client := pb.NewWorkerClient(handler)
 			assembleRequest := &pb.AssembleRequest{}
 			if _, err := client.Assemble(context.Background(), assembleRequest); err != nil {
-				log.Fatal("Fail to execute Assemble worker %d", i)
+				log.Fatal("Fail to execute Assemble worker %v", id)
 			}
-		}()
+		}(i)
 	}
 	mr.wg.Wait()
 	return true
@@ -222,8 +242,11 @@ func (mr *Master) StopRPCServer() {
 
 func RunJob(jobName string) {
 	mr := newMaster()
+	log.Printf("workerNUM:%d\n", mr.workerNum)	
 	mr.ReadConfig()
 	go mr.StartMasterServer()
+	log.Printf("workerNUM:%d\n", mr.workerNum)
+	<-mr.registerDone
 	mr.PEval()
 	mr.IncEvalALL()
 	mr.Assemble()

@@ -6,15 +6,11 @@
 
 	It is generated from these files:
 		master_service.proto
-		sssp_message.proto
 		worker_service.proto
 
 	It has these top-level messages:
 		RegisterRequest
 		RegisterResponse
-		PutRequest
-		ResponseHeader
-		PutResponse
 		ShutDownRequest
 		ShutDownResponse
 		PEvalRequest

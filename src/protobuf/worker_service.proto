@@ -15,7 +15,7 @@ service Worker {
 	rpc IncEval (incEvalRequest) returns (incEvalResponse) {}
 	rpc Assemble (assembleRequest) returns (assembleResponse) {}
 	//service to worker
-	rpc Send (sSSPMessageRequest) returns (sSSPMessageResponse) {}
+	rpc SSSPSend (sSSPMessageRequest) returns (sSSPMessageResponse) {}
 
 }
 
