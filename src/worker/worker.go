@@ -1,22 +1,23 @@
 package worker
 
 import (
-	"algorithm"
-	"bufio"
-	"context"
-	"google.golang.org/grpc"
-	"graph"
-	"io"
-	"log"
-	"math"
-	"net"
-	"os"
-	pb "protobuf"
-	"strconv"
-	"strings"
-	"sync"
-	"tools"
+    "algorithm"
+    "bufio"
+    "google.golang.org/grpc"
+    "graph"
+    "io"
+    "log"
+    "math"
+    "net"
+    "os"
+    pb "protobuf"
+    "sync"
+    "tools"
+    "strconv"
+    "strings"
+    "golang.org/x/net/context"
 )
+
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 	distance := make(map[graph.ID]int64)
@@ -206,10 +207,10 @@ func RunWorker(id int) {
 	w := newWorker(id)
 
 	ln, err := net.Listen("tcp", ":"+strings.Split(w.peers[w.selfId], ":")[1])
-
 	if err != nil {
 		panic(err)
 	}
+
 	grpcServer := grpc.NewServer()
 	pb.RegisterWorkerServer(grpcServer, w)
 	go func() {
@@ -218,5 +219,16 @@ func RunWorker(id int) {
 		}
 	}()
 
+    masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+    if err != nil {
+        log.Fatal(err)
+    }
+    registerClient := pb.NewMasterClient(masterHandle)
+    response, err := registerClient.Register(context.Background(), &pb.RegisterRequest{WorkerIndex:int32(w.selfId)})
+    if err != nil || !response.Ok {
+        log.Fatal("error for register")
+    }
+
+    // wait for stop
 	<-w.stopChannel
 }
