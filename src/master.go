@@ -11,7 +11,7 @@ import (
 	pb "protobuf"
 	"strings"
 	"sync"
-	"tools"
+	//"tools"
 )
 
 type Master struct {
@@ -34,7 +34,7 @@ type Master struct {
 	// Name of Input File partition json
 	shutdown     chan struct{}
 	registerDone chan bool
-	statistic    []int
+	statistic    []int32
 	//each worker's statistic data
 	wg          *sync.WaitGroup
 	JobDoneChan chan bool
@@ -86,11 +86,11 @@ func newMaster() (mr *Master) {
 	//read from Config text
 	mr.workersAddress = make([]string, mr.workerNum)
 	mr.grpcHandlers = make(map[int32]*grpc.ClientConn)
-	mr.statistic = make([]int, mr.workerNum)
+	mr.statistic = make([]int32, mr.workerNum)
 	return mr
 }
 func (mr *Master) ReadConfig() {
-	f, err := os.Open(tools.ConfigPath)
+	f, err := os.Open("C:\\Users\\root\\GoglandProjects\\GRAPE\\test_data\\config.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,9 +106,11 @@ func (mr *Master) ReadConfig() {
 		conf := strings.Split(line, ",")
 		if first {
 			mr.address = conf[1]
+			log.Print(mr.address)
 			first = false
 		} else {
-			mr.workersAddress = append(mr.workersAddres, conf[1])
+			mr.workersAddress = append(mr.workersAddress, conf[1])
+			log.Print(conf[1])
 		}
 	}
 }
@@ -128,13 +130,13 @@ func (mr *Master) KillWorkers() {
 			log.Fatal("fail to kill worker %d", i)
 		} else {
 			//discuss : goland can't recognize the reply
-			mr.statistic = append(mr.statistic, reply.iterationNum)
+			mr.statistic = append(mr.statistic, reply.IterationNum)
 		}
 
 	}
 }
 func (mr *Master) StartMasterServer() {
-	ln, err := net.Listen("tcp", mr.address)
+	ln, err := net.Listen("tcp", ":10000")
 	if err != nil {
 		panic(err)
 	}
@@ -155,7 +157,7 @@ func (mr *Master) PEval() bool {
 			defer mr.wg.Done()
 			handler := mr.grpcHandlers[int32(i)]
 			client := pb.NewWorkerClient(handler)
-			pevalRequest := pb.PEvalRequest{}
+			pevalRequest := &pb.PEvalRequest{}
 			if _, err := client.PEval(context.Background(), pevalRequest); err != nil {
 				log.Fatal("Fail to execute PEval %d", i)
 				//TODO: still something todo: Master Just terminate, how about the Worker
@@ -171,7 +173,6 @@ func (mr *Master) IncEvalALL() bool {
 	stepCount := 0
 	for {
 		stepCount++
-		cnt := 0
 		update := false
 		for i := 1; i <= mr.workerNum; i++ {
 			log.Printf("Master: start the %dth PEval of worker %i", stepCount, i)
@@ -186,7 +187,7 @@ func (mr *Master) IncEvalALL() bool {
 				} else {
 					mr.Lock()
 					//multiple goroutines access update
-					update = update || reply.update
+					update = update || reply.Update
 					mr.Unlock()
 				}
 			}()
@@ -207,7 +208,7 @@ func (mr *Master) Assemble() bool {
 			handler := mr.grpcHandlers[int32(i)]
 			client := pb.NewWorkerClient(handler)
 			assembleRequest := &pb.AssembleRequest{}
-			if reply, err := client.Assemble(context.Background(), assembleRequest); err != nil {
+			if _, err := client.Assemble(context.Background(), assembleRequest); err != nil {
 				log.Fatal("Fail to execute Assemble worker %d", i)
 			}
 		}()
@@ -216,10 +217,10 @@ func (mr *Master) Assemble() bool {
 	return true
 }
 func (mr *Master) StopRPCServer() {
-	return
+
 }
 
-func RunJob(jobName string, subGraphJson string, partitionJson string) {
+func RunJob(jobName string) {
 	mr := newMaster()
 	mr.ReadConfig()
 	go mr.StartMasterServer()
