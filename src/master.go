@@ -135,12 +135,12 @@ func (mr *Master) KillWorkers() {
 		client := pb.NewWorkerClient(handler)
 		shutDownReq := &pb.ShutDownRequest{}
 		reply, err := client.ShutDown(context.Background(), shutDownReq)
-		if err != nil {
-			log.Fatal("fail to kill worker %d", i)
-		} else {
+		//if err != nil {
+		//	log.Fatal("fail to kill worker %d", i)
+		//} else {
 			//discuss : goland can't recognize the reply
-			mr.statistic = append(mr.statistic, reply.IterationNum)
-		}
+		//		mr.statistic = append(mr.statistic, reply.IterationNum)
+		//}
 
 	}
 }
@@ -227,7 +227,6 @@ func (mr *Master) Assemble() bool {
 		}(i)
 	}
 	mr.wg.Wait()
-	mr.JobDoneChan <- true
 	return true
 }
 func (mr *Master) StopRPCServer() {
@@ -236,17 +235,19 @@ func (mr *Master) StopRPCServer() {
 
 func RunJob(jobName string) {
 	mr := newMaster()
-	log.Printf("workerNUM:%d\n", mr.workerNum)	
 	mr.ReadConfig()
 	go mr.StartMasterServer()
-	log.Printf("workerNUM:%d\n", mr.workerNum)
 	<-mr.registerDone
+	log.Println("start PEval")
 	mr.PEval()
+	log.Println("end PEval")
+	log.Println("start IncEval")
 	mr.IncEvalALL()
+	log.Println("end IncEval")
 	mr.Assemble()
-	//mr.KillWorkers()
-	//mr.StopRPCServer()
-	mr.wait()
+	mr.KillWorkers()
+	mr.StopRPCServer()
+	//mr.wait()
 	log.Printf("Job %s finishes", jobName)
 }
 
