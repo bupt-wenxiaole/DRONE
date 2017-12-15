@@ -38,7 +38,7 @@ func main() {
 	fmt.Println("start")
 	f0, _ := os.Open(graphPath)
 	pf0, _ := os.Open(partitionPath)
-	g0, err := graph.NewGraphFromJSON(f0, pf0, "0")
+	_, err := graph.NewGraphFromJSON(f0, pf0, "0")
 	if err != nil {
 		log.Fatal(err)
 	}
