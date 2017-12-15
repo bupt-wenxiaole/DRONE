@@ -27,7 +27,7 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // and then removes the items in priority order.
 func main() {
 	//graphPath := "/GRAPE/data/G0.json"
-	partitionPath := "/GRAPE/data/P0.json"
+	//partitionPath := "/GRAPE/data/P0.json"
 
 	//fs := tools.GenerateAlluxioClient("10.2.152.24")
 
