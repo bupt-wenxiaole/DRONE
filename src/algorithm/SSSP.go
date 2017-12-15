@@ -9,6 +9,8 @@ import (
 // for more information about this implement of priority queue,
 // you can reference https://golang.org/pkg/container/heap/
 // we use Pair for store distance message associated with node ID
+
+// in this struct, Distance is the distance from the global start node to this node
 type Pair struct {
 	NodeId   graph.ID
 	Distance int64
@@ -40,6 +42,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 }
 
 // store the weight of edge connected to DstID
+// in this struct, routeLen is only the length of one edge
 type BoundMsg struct {
 	DstId    graph.ID
 	RouteLen int64

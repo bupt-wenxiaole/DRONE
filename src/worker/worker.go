@@ -98,9 +98,9 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 
 	// Load graph data
 	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
-	graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath)
+	graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
-	partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath)
+	partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json"))
 	defer partitionIO.Close()
 	w.g, _ = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
 
