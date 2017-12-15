@@ -129,17 +129,18 @@ func (mr *Master) KillWorkers() {
 	mr.Lock()
 	defer mr.Unlock()
 	for i := 1; i <= mr.workerNum; i++ {
+		mr.wg.Add(1)
 		log.Printf("Master: shutdown worker %d\n", i)
 		handler := mr.grpcHandlers[int32(i)]
 		client := pb.NewWorkerClient(handler)
 		shutDownReq := &pb.ShutDownRequest{}
 		reply, err := client.ShutDown(context.Background(), shutDownReq)
-		if err != nil {
-			log.Fatal("fail to kill worker %d", i)
-		} else {
+		//if err != nil {
+		//	log.Fatal("fail to kill worker %d", i)
+		//} else {
 			//discuss : goland can't recognize the reply
-			mr.statistic = append(mr.statistic, reply.IterationNum)
-		}
+		//		mr.statistic = append(mr.statistic, reply.IterationNum)
+		//}
 
 	}
 }
@@ -162,20 +163,12 @@ func (mr *Master) PEval() bool {
 		log.Printf("Master: start %d PEval", i)
 		mr.wg.Add(1)
 		go func(id int) {
-			log.Printf("oringin i %v\n", id)
-			log.Printf("oringin i %v\n", int32(id))
 			defer mr.wg.Done()
 			handler, ok := mr.grpcHandlers[int32(id)]
 			if !ok {
 				log.Println("key error")
 			}
-			if handler == nil {
-				log.Println("handler is null!")
-			}
 			client := pb.NewWorkerClient(handler)
-			if client == nil {
-				log.Println("client is null!")
-			}
 			//pevalRequest := &pb.PEvalRequest{}
 			if _, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
 				log.Printf("Fail to execute PEval %d\n", id)
@@ -242,17 +235,19 @@ func (mr *Master) StopRPCServer() {
 
 func RunJob(jobName string) {
 	mr := newMaster()
-	log.Printf("workerNUM:%d\n", mr.workerNum)	
 	mr.ReadConfig()
 	go mr.StartMasterServer()
-	log.Printf("workerNUM:%d\n", mr.workerNum)
 	<-mr.registerDone
+	log.Println("start PEval")
 	mr.PEval()
+	log.Println("end PEval")
+	log.Println("start IncEval")
 	mr.IncEvalALL()
+	log.Println("end IncEval")
 	mr.Assemble()
 	mr.KillWorkers()
 	mr.StopRPCServer()
-	mr.wait()
+	//mr.wait()
 	log.Printf("Job %s finishes", jobName)
 }
 
