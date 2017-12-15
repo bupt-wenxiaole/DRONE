@@ -1,15 +1,16 @@
 package main
 
 import (
-	"algorithm"
+	//"algorithm"
 	"fmt"
 	"graph"
 	//"os"
 	"math"
 	//"strconv"
 	//"unicode"
-	"tools"
+	//"tools"
 	"os"
+	"log"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -37,7 +38,10 @@ func main() {
 	fmt.Println("start")
 	f0, _ := os.Open(graphPath)
 	pf0, _ := os.Open(partitionPath)
-	g0, _ := graph.NewGraphFromJSON(f0, pf0, "0")
+	g0, err := graph.NewGraphFromJSON(f0, pf0, "0")
+	if err != nil {
+		log.Fatal(err)
+	}
 	f0.Close()
 	pf0.Close()
 
