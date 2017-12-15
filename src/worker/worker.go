@@ -103,8 +103,11 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
 	partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer partitionIO.Close()
-	w.g, _ = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
-
+	var err error
+	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
+	if err != nil {
+		log.Fatal(err)
+	}
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
