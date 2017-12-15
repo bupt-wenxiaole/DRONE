@@ -502,6 +502,7 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 		if err := dec.Decode(&js); err == io.EOF {
 			break
 		} else if err != nil {
+			fmt.Println("load graph error")
 			return nil, err
 		}
 	}
