@@ -1,17 +1,12 @@
 package main
 
 import (
-	//"algorithm"
 	"fmt"
 	"graph"
-	//"os"
 	"math"
-	//"strconv"
-	//"unicode"
-	//"tools"
-	//"os"
 	"log"
 	"tools"
+	"os"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -37,7 +32,8 @@ func main() {
 	fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
-	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+//	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+    f0, _ := os.Open("/home/zpltys/G0.json")
 	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
 	g, err := graph.NewGraphFromJSON(f0, pf0, "0")
 	if err != nil {
