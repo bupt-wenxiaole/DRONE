@@ -134,7 +134,7 @@ func (mr *Master) KillWorkers() {
 		handler := mr.grpcHandlers[int32(i)]
 		client := pb.NewWorkerClient(handler)
 		shutDownReq := &pb.ShutDownRequest{}
-		reply, err := client.ShutDown(context.Background(), shutDownReq)
+		client.ShutDown(context.Background(), shutDownReq)
 		//if err != nil {
 		//	log.Fatal("fail to kill worker %d", i)
 		//} else {
