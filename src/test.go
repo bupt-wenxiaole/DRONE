@@ -5,7 +5,7 @@ import (
 	"graph"
 	"math"
 	"log"
-	"tools"
+	//"tools"
 	"os"
 )
 
@@ -29,12 +29,13 @@ func main() {
 	//graphPath := "/GRAPE/data/G0.json"
 	partitionPath := "/GRAPE/data/P0.json"
 
-	fs := tools.GenerateAlluxioClient("10.2.152.24")
+	//fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
 //	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
     f0, _ := os.Open("/home/zpltys/G0.json")
-	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
+//	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
+    pf0, _ := os.Open("/home/zpltys/G1.json")
 	g, err := graph.NewGraphFromJSON(f0, pf0, "0")
 	if err != nil {
 		log.Fatal(err)
