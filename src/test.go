@@ -30,8 +30,8 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // This example creates a PriorityQueue with some items, adds and manipulates an item,
 // and then removes the items in priority order.
 func main() {
-	graphPath := "/home/zpltys/G0.json"
-	partitionPath := "/home/zpltys/P0.json"
+	graphPath := "/home/zpltys/G1.json"
+	partitionPath := "/home/zpltys/P1.json"
 
 	//fs := tools.GenerateAlluxioClient("10.2.152.24")
 
@@ -42,6 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+    fmt.Println("finish")
 	f0.Close()
 	pf0.Close()
 
