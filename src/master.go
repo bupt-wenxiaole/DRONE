@@ -129,6 +129,7 @@ func (mr *Master) KillWorkers() {
 	mr.Lock()
 	defer mr.Unlock()
 	for i := 1; i <= mr.workerNum; i++ {
+		mr.wg.Add(1)
 		log.Printf("Master: shutdown worker %d\n", i)
 		handler := mr.grpcHandlers[int32(i)]
 		client := pb.NewWorkerClient(handler)
@@ -162,20 +163,12 @@ func (mr *Master) PEval() bool {
 		log.Printf("Master: start %d PEval", i)
 		mr.wg.Add(1)
 		go func(id int) {
-			log.Printf("oringin i %v\n", id)
-			log.Printf("oringin i %v\n", int32(id))
 			defer mr.wg.Done()
 			handler, ok := mr.grpcHandlers[int32(id)]
 			if !ok {
 				log.Println("key error")
 			}
-			if handler == nil {
-				log.Println("handler is null!")
-			}
 			client := pb.NewWorkerClient(handler)
-			if client == nil {
-				log.Println("client is null!")
-			}
 			//pevalRequest := &pb.PEvalRequest{}
 			if _, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
 				log.Printf("Fail to execute PEval %d\n", id)
@@ -234,6 +227,7 @@ func (mr *Master) Assemble() bool {
 		}(i)
 	}
 	mr.wg.Wait()
+	mr.JobDoneChan <- true
 	return true
 }
 func (mr *Master) StopRPCServer() {
@@ -250,8 +244,8 @@ func RunJob(jobName string) {
 	mr.PEval()
 	mr.IncEvalALL()
 	mr.Assemble()
-	mr.KillWorkers()
-	mr.StopRPCServer()
+	//mr.KillWorkers()
+	//mr.StopRPCServer()
 	mr.wait()
 	log.Printf("Job %s finishes", jobName)
 }

@@ -252,6 +252,5 @@ func RunWorker(id int) {
 
     // wait for stop
 	<-w.stopChannel
-	time.Sleep(1000)
 	log.Println("finish task")
 }
