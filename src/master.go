@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	//"tools"
+	"tools"
 )
 
 type Master struct {
@@ -95,7 +96,7 @@ func newMaster() (mr *Master) {
 	return mr
 }
 func (mr *Master) ReadConfig() {
-	f, err := os.Open("/home/xwen/GRAPE/test_data/config.txt")
+	f, err := os.Open(tools.ConfigPath)
 	if err != nil {
 		log.Fatal(err)
 	}
