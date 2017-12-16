@@ -13,6 +13,9 @@ import (
 	"sync"
 	//"tools"
 	"tools"
+	"time"
+	"fmt"
+	"strconv"
 )
 
 type Master struct {
@@ -240,11 +243,14 @@ func RunJob(jobName string) {
 	go mr.StartMasterServer()
 	<-mr.registerDone
 	log.Println("start PEval")
+	start := time.Now()
 	mr.PEval()
 	log.Println("end PEval")
 	log.Println("start IncEval")
 	mr.IncEvalALL()
 	log.Println("end IncEval")
+	runTime := time.Since(start)
+	fmt.Printf("runTime: %vs", runTime)
 	mr.Assemble()
 	mr.KillWorkers()
 	mr.StopRPCServer()

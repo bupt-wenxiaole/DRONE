@@ -16,6 +16,8 @@ import (
     "strconv"
     "strings"
     "golang.org/x/net/context"
+	"time"
+	"fmt"
 )
 
 
@@ -71,9 +73,7 @@ func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.Sh
 		}
 		handle.Close()
 	}
-	log.Println("shutdown step 1")
 	w.stopChannel <- true
-        log.Println("shutdown step 2")
 	log.Println("shutdown ok")
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
@@ -113,7 +113,7 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
-				log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
+				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
 			log.Printf("send partition id:%v\n", partitionId)
 			_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
@@ -171,7 +171,7 @@ func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb
 
 	for _, msg := range args.Pair {
 		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.StringID(msg.NodeID), Distance: msg.Distance})
-		log.Printf("received msg: nodeId:%v dis:%v\n", graph.StringID(msg.NodeID), msg.Distance)
+		//log.Printf("received msg: nodeId:%v dis:%v\n", graph.StringID(msg.NodeID), msg.Distance)
 	}
 
 	w.Lock()
@@ -211,6 +211,8 @@ func newWorker(id int) *Worker {
 		w.peers = append(w.peers, conf[1])
 	}
 
+	start := time.Now()
+
 	//graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
 	graphIO, _ := os.Open("G" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
@@ -221,6 +223,9 @@ func newWorker(id int) *Worker {
 	if err != nil {
 		log.Fatal(err)
 	}
+	loadTime := time.Since(start)
+	fmt.Printf("loadGraph Time: %vs", loadTime)
+
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
