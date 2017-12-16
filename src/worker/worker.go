@@ -211,9 +211,11 @@ func newWorker(id int) *Worker {
 		w.peers = append(w.peers, conf[1])
 	}
 
-	graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
+	//graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
+	graphIO, _ := os.Open("G" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
-	partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
+	//partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
+	partitionIO, _ := os.Open("P" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer partitionIO.Close()
 	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
 	if err != nil {
