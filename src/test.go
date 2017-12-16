@@ -44,7 +44,7 @@ func main() {
     	log.Fatal(err)
 	}
 */
-    g, err := graph.NewGraphFromJSON(f0, pf0, "0")
+    _, err := graph.NewGraphFromJSON(f0, pf0, "0")
 
     if err != nil {
     	log.Fatal(err)
