@@ -115,8 +115,6 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
         	log.Fatal(err)
     	}
     	fs.Close(readId1)
-	//log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	//graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
 	log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
 	readId2, err := fs.OpenFile(tools.GraphPath + "P" + strconv.Itoa(w.selfId - 1) + ".json", &option.OpenFile{})
@@ -128,14 +126,11 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
         	log.Fatal(err)
     	}
     	fs.Close(readId2)
-	//partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer partitionIO.Close()
-        //graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
-	//partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
 	var err1 error
 	w.g, err1 = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
 	if err1 != nil {
-		log.Fatal(err)
+		log.Fatal(err1)
 	}
 	if w.g == nil {
 		log.Println("can't load graph")
