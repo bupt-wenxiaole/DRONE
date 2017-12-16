@@ -32,10 +32,11 @@ func main() {
 	//partitionPath := "/GRAPE/data/P0.json"
 	partitionPath := "/zpltys/graphData/partition.json"
 	//graphPath := "/zpltys/graphData/text.txt"
-	fs := tools.GenerateAlluxioClient("10.2.152.24")
+       fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
 	//f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+
     f0, _ := os.Open("/home/zpltys/subgraph.json")
 	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
     //pf0, _ := os.Open("/home/zpltys/G1.json")

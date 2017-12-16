@@ -9,6 +9,7 @@ import (
     "log"
     "math"
     "net"
+    "time"
     "os"
     pb "protobuf"
     "sync"
@@ -16,9 +17,15 @@ import (
     "strconv"
     "strings"
     "golang.org/x/net/context"
-	"time"
-	"fmt"
+	  "time"
+	  "fmt"
 )
+
+//set up the alluxio client within minute, return a client point
+func SetUpClient(host string) *alluxio.Client {
+    fs := alluxio.NewClient(host, 39999, time.Minute)
+    return fs
+}
 
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -96,14 +103,6 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	}
 
 	// Load graph data
-	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
-	//log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	//graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	//defer graphIO.Close()
-	//log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
-	//partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
-	//defer partitionIO.Close()
-
 	isMessageToSend, messages := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID("1"))
 	if !isMessageToSend {
 		return &pb.PEvalResponse{Ok: isMessageToSend}, nil
