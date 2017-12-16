@@ -21,11 +21,6 @@ import (
 	  "fmt"
 )
 
-//set up the alluxio client within minute, return a client point
-func SetUpClient(host string) *alluxio.Client {
-    fs := alluxio.NewClient(host, 39999, time.Minute)
-    return fs
-}
 
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {

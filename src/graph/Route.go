@@ -1,14 +1,11 @@
 package graph
 
 import (
+	"encoding/json"
 	"io"
 	"strconv"
 	"strings"
-	"bytes"
-	"io/ioutil"
-	"github.com/json-iterator/go"
 	//"fmt"
-	"log"
 )
 
 type RouteMsg interface {
@@ -65,14 +62,7 @@ func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
 }
 
 func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[ID][]RouteMsg, error) {
-	var ioBuffer bytes.Buffer
-        out, err := ioutil.ReadAll(rd)
-	if err != nil {
-		log.Fatal("load route message Fail")
-	}
-        ioBuffer.Write(out)
-        var json = jsoniter.ConfigCompatibleWithStandardLibrary
-        dec := json.NewDecoder(&ioBuffer)
+	dec := json.NewDecoder(rd)
 	//          GraphXF.I/O    srcID      dstID   attr
 	js := make(map[string]map[string]map[string]string)
 
