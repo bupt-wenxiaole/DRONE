@@ -96,12 +96,16 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	}
 
 	// Load graph data
-	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
 	log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	defer graphIO.Close()
-	log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
-	partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
+	//graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
+	//defer graphIO.Close()
+	//log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
+	//partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
+	//defer partitionIO.Close()
+        grpahIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
+        defer graphIO.Close()
+	partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer partitionIO.Close()
 	var err error
 	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
