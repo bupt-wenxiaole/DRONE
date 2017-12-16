@@ -97,27 +97,12 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 
 	// Load graph data
 	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
-	log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
+	//log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
 	//graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
 	//defer graphIO.Close()
 	//log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
 	//partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
 	//defer partitionIO.Close()
-	graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
-	defer graphIO.Close()
-	partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
-	defer partitionIO.Close()
-	var err error
-	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
-	if err != nil {
-		log.Fatal(err)
-	}
-	if w.g == nil {
-		log.Println("can't load graph")
-	}
-	// Initial some variables from graph
-	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
-	w.distance, w.exchangeMsg = Generate(w.g)
 
 	isMessageToSend, messages := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID("1"))
 	if !isMessageToSend {
@@ -225,6 +210,21 @@ func newWorker(id int) *Worker {
 		conf := strings.Split(line, ",")
 		w.peers = append(w.peers, conf[1])
 	}
+
+	graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
+	defer graphIO.Close()
+	partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
+	defer partitionIO.Close()
+	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if w.g == nil {
+		log.Println("can't load graph")
+	}
+	// Initial some variables from graph
+	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
+	w.distance, w.exchangeMsg = Generate(w.g)
 
 	return w
 }

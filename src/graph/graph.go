@@ -2,10 +2,11 @@ package graph
 
 import (
 	"bytes"
-    "github.com/json-iterator/go"
+    //"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"sync"
+	"encoding/json"
 )
 
 // ID is unique identifier.
@@ -498,7 +499,7 @@ func (g *graph) GetFOs() map[ID][]RouteMsg {
 func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
 	js := make(map[string]map[string]map[string]int)
 
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	//var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 	dec := json.NewDecoder(rd)
 	for {
