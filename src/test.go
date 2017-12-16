@@ -4,9 +4,15 @@ import (
 	"fmt"
 	"graph"
 	"math"
+	//"log"
+	//"os"
+	"tools"
+	//"io"
+	//"google.golang.org/grpc/test"
+	"strings"
+	//"github.com/json-iterator/go"
+	"io/ioutil"
 	"log"
-	//"tools"
-	"os"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -26,27 +32,31 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // This example creates a PriorityQueue with some items, adds and manipulates an item,
 // and then removes the items in priority order.
 func main() {
-	//graphPath := "/GRAPE/data/G0.json"
-	//partitionPath := "/GRAPE/data/P0.json"
-
-	//fs := tools.GenerateAlluxioClient("10.2.152.24")
+	graphPath := "/GRAPE/data/G1.json"
+//	partitionPath := "/GRAPE/data/P0.json"
+	//graphPath := "/zpltys/graphData/text.txt"
+	fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
-//	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
-    f0, _ := os.Open("/home/zpltys/G0.json")
+	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+  //  f0, _ := os.Open("/home/zpltys/G0.json")
 //	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
-    pf0, _ := os.Open("/home/zpltys/G1.json")
-	g, err := graph.NewGraphFromJSON(f0, pf0, "0")
-	if err != nil {
-		log.Fatal(err)
-	}
-    fmt.Println("finish")
+   // pf0, _ := os.Open("/home/zpltys/G1.json")
 
-	for fo, _ := range g.GetFOs() {
-		fmt.Printf("fo: %v \n", fo)
+    data, err := ioutil.ReadAll(f0)
+    if err != nil {
+    	log.Fatal(err)
 	}
 
-	f0.Close()
-	pf0.Close()
+	fmt.Printf("byte len:%v\n", len(data))
+	str := string(data)
+	fmt.Printf("str len:%v\n", len(str))
+	s := strings.Split(str, "\n")
+	fmt.Printf("slice len:%v\n", len(s))
+
+	tools.WriteToAlluxio(fs, "/zpltys/test1.json", s)
+
+	//fmt.Println(str)
+
 
 }

@@ -7,5 +7,5 @@ const (
 	PartitionPath = "/GRAPE/data/"
 	ConfigPath = "../test_data/config.txt"
 
-	maxBufferSize = 1024000
+	MaxBufferSize = 102400
 )

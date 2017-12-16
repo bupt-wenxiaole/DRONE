@@ -2,7 +2,7 @@ package graph
 
 import (
 	"bytes"
-	"encoding/json"
+    "github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"sync"
@@ -497,6 +497,9 @@ func (g *graph) GetFOs() map[ID][]RouteMsg {
 //
 func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
 	js := make(map[string]map[string]map[string]int)
+
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
 	dec := json.NewDecoder(rd)
 	for {
 		if err := dec.Decode(&js); err == io.EOF {
