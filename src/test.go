@@ -29,13 +29,14 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // and then removes the items in priority order.
 func main() {
 	//graphPath := "/GRAPE/data/G1.json"
-	partitionPath := "/GRAPE/data/P0.json"
+	//partitionPath := "/GRAPE/data/P0.json"
+	partitionPath := "/zpltys/graphData/partition.json"
 	//graphPath := "/zpltys/graphData/text.txt"
 	fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
 	//f0, _ := tools.ReadFromAlluxio(fs, graphPath)
-    f0, _ := os.Open("/home/zpltys/G0.json")
+    f0, _ := os.Open("/home/zpltys/subgraph.json")
 	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
     //pf0, _ := os.Open("/home/zpltys/G1.json")
 /*
