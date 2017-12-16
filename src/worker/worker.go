@@ -17,8 +17,8 @@ import (
     "strconv"
     "strings"
     "golang.org/x/net/context"
-    "github.com/Alluxio/alluxio-go"
-    "github.com/Alluxio/alluxio-go/option"
+	  "time"
+	  "fmt"
 )
 
 //set up the alluxio client within minute, return a client point
@@ -80,9 +80,7 @@ func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.Sh
 		}
 		handle.Close()
 	}
-	log.Println("shutdown step 1")
 	w.stopChannel <- true
-        log.Println("shutdown step 2")
 	log.Println("shutdown ok")
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
@@ -105,40 +103,6 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	}
 
 	// Load graph data
-	fs := SetUpClient("10.2.152.24")
-	readId1, err := fs.OpenFile(tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json", &option.OpenFile{})
-        if err != nil {
-        	log.Fatal("read file from alluxio: ", err)
-   	}
-	graphIO, err := fs.Read(readId1)
-	if err != nil {
-        	log.Fatal(err)
-    	}
-    	fs.Close(readId1)
-	defer graphIO.Close()
-	log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
-	readId2, err := fs.OpenFile(tools.GraphPath + "P" + strconv.Itoa(w.selfId - 1) + ".json", &option.OpenFile{})
-        if err != nil {
-        	log.Fatal("read file from alluxio: ", err)
-   	}
-	partitionIO, err := fs.Read(readId2)
-	if err != nil {
-        	log.Fatal(err)
-    	}
-    	fs.Close(readId2)
-	defer partitionIO.Close()
-	var err1 error
-	w.g, err1 = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
-	if err1 != nil {
-		log.Fatal(err1)
-	}
-	if w.g == nil {
-		log.Println("can't load graph")
-	}
-	// Initial some variables from graph
-	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
-	w.distance, w.exchangeMsg = Generate(w.g)
-
 	isMessageToSend, messages := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID("1"))
 	if !isMessageToSend {
 		return &pb.PEvalResponse{Ok: isMessageToSend}, nil
@@ -148,7 +112,7 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
-				log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
+				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
 			log.Printf("send partition id:%v\n", partitionId)
 			_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
@@ -206,7 +170,7 @@ func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb
 
 	for _, msg := range args.Pair {
 		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.StringID(msg.NodeID), Distance: msg.Distance})
-		log.Printf("received msg: nodeId:%v dis:%v\n", graph.StringID(msg.NodeID), msg.Distance)
+		//log.Printf("received msg: nodeId:%v dis:%v\n", graph.StringID(msg.NodeID), msg.Distance)
 	}
 
 	w.Lock()
@@ -245,6 +209,28 @@ func newWorker(id int) *Worker {
 		conf := strings.Split(line, ",")
 		w.peers = append(w.peers, conf[1])
 	}
+
+	start := time.Now()
+
+	//graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
+	graphIO, _ := os.Open("G" + strconv.Itoa(w.selfId - 1) + ".json")
+	defer graphIO.Close()
+	//partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
+	partitionIO, _ := os.Open("P" + strconv.Itoa(w.selfId - 1) + ".json")
+	defer partitionIO.Close()
+	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
+	if err != nil {
+		log.Fatal(err)
+	}
+	loadTime := time.Since(start)
+	fmt.Printf("loadGraph Time: %vs", loadTime)
+
+	if w.g == nil {
+		log.Println("can't load graph")
+	}
+	// Initial some variables from graph
+	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
+	w.distance, w.exchangeMsg = Generate(w.g)
 
 	return w
 }

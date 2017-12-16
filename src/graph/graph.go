@@ -2,11 +2,11 @@ package graph
 
 import (
 	"bytes"
-    	"github.com/json-iterator/go"
-    	"io/ioutil"
+    //"github.com/json-iterator/go"
 	"fmt"
 	"io"
 	"sync"
+	"encoding/json"
 )
 
 // ID is unique identifier.
@@ -501,8 +501,7 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 	out, err := ioutil.ReadAll(rd)
 	ioBuffer.Write(out)
 	js := make(map[string]map[string]map[string]int)
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
-	dec := json.NewDecoder(&ioBuffer)
+	dec := json.NewDecoder(rd)
 	for {
 		if err := dec.Decode(&js); err == io.EOF {
 			break
