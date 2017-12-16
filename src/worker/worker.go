@@ -9,6 +9,7 @@ import (
     "log"
     "math"
     "net"
+    "time"
     "os"
     pb "protobuf"
     "sync"
@@ -16,7 +17,15 @@ import (
     "strconv"
     "strings"
     "golang.org/x/net/context"
+    "github.com/Alluxio/alluxio-go"
+    "github.com/Alluxio/alluxio-go/option"
 )
+
+//set up the alluxio client within minute, return a client point
+func SetUpClient(host string) *alluxio.Client {
+    fs := alluxio.NewClient(host, 39999, time.Minute)
+    return fs
+}
 
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -96,20 +105,36 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	}
 
 	// Load graph data
-	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
-	log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	//graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
-	//defer graphIO.Close()
-	//log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
-	//partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
-	//defer partitionIO.Close()
-        graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
-        defer graphIO.Close()
-	partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
-	defer partitionIO.Close()
-	var err error
-	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
+	fs := SetUpClient("10.2.152.24")
+	readId1, err := fs.OpenFile(tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json", &option.OpenFile{})
+        if err != nil {
+        	log.Fatal("read file from alluxio: ", err)
+   	}
+	graphIO, err := fs.Read(readId1)
 	if err != nil {
+        	log.Fatal(err)
+    	}
+    	fs.Close(readId1)
+	//log.Print("load path %s\n", tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
+	//graphIO, _ := tools.ReadFromAlluxio(fs, tools.GraphPath + "G" + strconv.Itoa(w.selfId - 1) + ".json")
+	defer graphIO.Close()
+	log.Print("load path %s\n", tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
+	readId2, err := fs.OpenFile(tools.GraphPath + "P" + strconv.Itoa(w.selfId - 1) + ".json", &option.OpenFile{})
+        if err != nil {
+        	log.Fatal("read file from alluxio: ", err)
+   	}
+	partitionIO, err := fs.Read(readId2)
+	if err != nil {
+        	log.Fatal(err)
+    	}
+    	fs.Close(readId2)
+	//partitionIO, _ := tools.ReadFromAlluxio(fs, tools.PartitionPath + "P" + strconv.Itoa(w.selfId - 1) + ".json")
+	defer partitionIO.Close()
+        //graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
+	//partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
+	var err1 error
+	w.g, err1 = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
+	if err1 != nil {
 		log.Fatal(err)
 	}
 	if w.g == nil {

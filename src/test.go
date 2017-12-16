@@ -5,7 +5,7 @@ import (
 	"graph"
 	"math"
 	//"log"
-	//"os"
+	"os"
 	"tools"
 	//"io"
 	//"google.golang.org/grpc/test"
@@ -32,14 +32,14 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // This example creates a PriorityQueue with some items, adds and manipulates an item,
 // and then removes the items in priority order.
 func main() {
-	graphPath := "/GRAPE/data/G1.json"
+	//graphPath := "/GRAPE/data/G1.json"
 //	partitionPath := "/GRAPE/data/P0.json"
 	//graphPath := "/zpltys/graphData/text.txt"
-	fs := tools.GenerateAlluxioClient("10.2.152.24")
+       fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
-	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
-  //  f0, _ := os.Open("/home/zpltys/G0.json")
+	//f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+  	f0, _ := os.Open("/home/xwen/G0.json")
 //	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
    // pf0, _ := os.Open("/home/zpltys/G1.json")
 
