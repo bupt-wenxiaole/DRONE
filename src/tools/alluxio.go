@@ -9,6 +9,8 @@ import (
 	"fmt"
 	//"log"
 	"io"
+	//"io/ioutil"
+	"log"
 )
 
 func GenerateAlluxioClient(host string) *alluxio.Client {
@@ -33,7 +35,7 @@ func WriteToAlluxio(fs *alluxio.Client, path string, data []string) (bool, error
 	b := bytes.NewBuffer(make([]byte, 0))
 	for _, line := range data {
 		fmt.Fprintln(b, line)
-		if b.Len() > maxBufferSize {
+		if b.Len() > MaxBufferSize {
 			_, err = fs.Write(writeId, b)
 			if err != nil {
 				return false, err
@@ -58,10 +60,10 @@ func ReadFromAlluxio(fs *alluxio.Client, path string) (io.ReadCloser, error) {
 	}
 	defer fs.Close(readId)
 
-	buffer, err := fs.Read(readId)
+	read, err := fs.Read(readId)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
-	return buffer, nil
+	return read, nil
 }
