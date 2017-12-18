@@ -12,7 +12,7 @@ def generate_json(Graph, MetisPartion, SubGraphJson, PartitionJson):
         r2_lines = r2.readlines()
         r2_lines = map(int, r2_lines)
         assert len(r1_lines) == len(r2_lines) 
-        partition_num = int(MetisPartion[-1])
+        partition_num = int(MetisPartion.split(".")[-1])
         subGraphJsonMapList = []
         partitionJsonMapList = []
         for i in range(partition_num):
