@@ -2,13 +2,13 @@
 # use awk to automatically read config.txt
 # set the IP of slaves and the ssh user name
 partitionNum="4"
-slaveIp1="10.2.152.24"
+slaveIp1="10.2.152.21"
 slaveID1="1"
 slaveIp2="10.2.152.22"
 slaveID2="2"
-slaveIp3="10.2.152.21"
+slaveIp3="10.2.152.23"
 slaveID3="3"
-slaveIp4="10.2.152.23"
+slaveIp4="10.2.152.24"
 slaveID4="4"
 slaveName=$(whoami)
 
@@ -27,7 +27,7 @@ pwd
 
 # start shell script to start the worker daemon
 ssh ${slaveName}@${slaveIp1} "chmod +x ${slavePath}/sbin/start-worker.sh"
-ssh ${slaveName}@${slaveIp1} "${slavePath}/sbin/start-worker.sh ${slaveID1} ${partitionNum}" > log.txt
+ssh ${slaveName}@${slaveIp1} "${slavePath}/sbin/start-worker.sh ${slaveID1} ${partitionNum} &" 
 
 ssh ${slaveName}@${slaveIp2} "chmod +x ${slavePath}/sbin/start-worker.sh"
 ssh ${slaveName}@${slaveIp2} "${slavePath}/sbin/start-worker.sh ${slaveID2} ${partitionNum} &"
@@ -36,4 +36,4 @@ ssh ${slaveName}@${slaveIp3} "chmod +x ${slavePath}/sbin/start-worker.sh"
 ssh ${slaveName}@${slaveIp3} "${slavePath}/sbin/start-worker.sh ${slaveID3} ${partitionNum} &"
 
 ssh ${slaveName}@${slaveIp4} "chmod +x ${slavePath}/sbin/start-worker.sh"
-ssh ${slaveName}@${slaveIp4} "${slavePath}/sbin/start-worker.sh ${slaveID4} ${partitionNum} &"
+ssh ${slaveName}@${slaveIp4} "${slavePath}/sbin/start-worker.sh ${slaveID4} ${partitionNum}"
