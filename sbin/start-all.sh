@@ -27,10 +27,10 @@ pwd
 
 # start shell script to start the worker daemon
 ssh ${slaveName}@${slaveIp1} "chmod +x ${slavePath}/sbin/start-worker.sh"
-ssh ${slaveName}@${slaveIp1} "${slavePath}/sbin/start-worker.sh ${slaveID1} ${partitionNum} &" 
+ssh ${slaveName}@${slaveIp1} "${slavePath}/sbin/start-worker.sh `${slaveID1} ${partitionNum} &`"
 
 ssh ${slaveName}@${slaveIp2} "chmod +x ${slavePath}/sbin/start-worker.sh"
-ssh ${slaveName}@${slaveIp2} "${slavePath}/sbin/start-worker.sh ${slaveID2} ${partitionNum} &"
+ssh ${slaveName}@${slaveIp2} "${slavePath}/sbin/start-worker.sh `${slaveID2} ${partitionNum} &`"
 
 ssh ${slaveName}@${slaveIp3} "chmod +x ${slavePath}/sbin/start-worker.sh"
 ssh ${slaveName}@${slaveIp3} "${slavePath}/sbin/start-worker.sh ${slaveID3} ${partitionNum} &"
