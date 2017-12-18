@@ -212,6 +212,8 @@ func newWorker(id ,partitionNum int) *Worker {
 	defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
 
+	//if graphIO
+
 	partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath + "P" + suffix + strconv.Itoa(w.selfId - 1) + ".json", "P" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
 	defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
 	defer partitionIO.Close()
