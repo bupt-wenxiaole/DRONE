@@ -10,7 +10,7 @@ import (
 	//"log"
 	"io"
 	//"io/ioutil"
-	"log"
+	//"log"
 	"os/exec"
 	"os"
 )
