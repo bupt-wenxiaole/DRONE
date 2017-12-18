@@ -33,16 +33,13 @@ func (r *routeMsg) RoutePartition() int {
 }
 
 func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
-	//	fmt.Println("start resolve")
 	ansMap := make(map[ID][]RouteMsg)
 	if jsonMap == nil {
 		return ansMap
 	}
 
-	//fmt.Println(len(jsonMap))
 
 	for srcID, dstMsg := range jsonMap {
-		//	fmt.Println("srcID:" + string(srcID))
 
 		msgList := make([]RouteMsg, 0)
 
