@@ -207,13 +207,14 @@ func newWorker(id ,partitionNum int) *Worker {
 
 	start := time.Now()
 
-	suffix := strconv.Itoa(partitionNum - 1) + "_"
-	//graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
-	graphIO, _ := os.Open("G" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
+	suffix := strconv.Itoa(partitionNum) + "_"
+	graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath + "G" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
-	//partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
-	partitionIO, _ := os.Open("P" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
+
+	partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath + "P" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
+	defer tools.DeleteLocalFile(tools.LocalTempFile)
 	defer partitionIO.Close()
+
 	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Fatal(err)

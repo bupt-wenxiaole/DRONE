@@ -13,6 +13,7 @@ import (
 	//"log"
 	"os/exec"
 	"os"
+	"log"
 )
 
 func GenerateAlluxioClient(host string) *alluxio.Client {
@@ -57,8 +58,20 @@ func WriteToAlluxio(fs *alluxio.Client, path string, data []string) (bool, error
 
 // when read, we pull alluxio file to local fileSystem as buffer, and delete it after read
 func ReadFromAlluxio(path string) (io.ReadCloser, error) {
+	deleteCmd := exec.Command("/usr/bin/rm", LocalTempFile)
+	err := deleteCmd.Run()
+	if err != nil {
+		log.Printf("no such file before, file name:%v\n", LocalTempFile)
+	}
+
 	cmd := exec.Command("/opt/alluxio-1.5.0/bin/alluxio", "fs", "copyToLocal", path, LocalTempFile)
 	cmd.Run()
 	read, err := os.Open(LocalTempFile)
 	return read, err
+}
+
+func DeleteLocalFile(path string) error {
+	deleteCmd := exec.Command("/usr/bin/rm", LocalTempFile)
+	err := deleteCmd.Run()
+	return err
 }
