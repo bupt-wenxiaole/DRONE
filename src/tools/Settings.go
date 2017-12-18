@@ -5,7 +5,8 @@ const (
 	ResultPath    = "/GRAPE/result/"
 	GraphPath     = "/GRAPE/data/"
 	PartitionPath = "/GRAPE/data/"
+	//LocalTempFile = "temp.json"
 	ConfigPath = "../test_data/config.txt"
 
-	MaxBufferSize = 102400
+	MaxBufferSize = 1024000
 )
