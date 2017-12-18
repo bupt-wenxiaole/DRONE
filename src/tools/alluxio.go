@@ -7,13 +7,9 @@ import (
 	"time"
 	//"strings"
 	"fmt"
-	//"log"
 	"io"
-	//"io/ioutil"
-	//"log"
 	"os/exec"
 	"os"
-	"log"
 )
 
 func GenerateAlluxioClient(host string) *alluxio.Client {
