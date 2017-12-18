@@ -7,10 +7,9 @@ import (
 	"time"
 	//"strings"
 	"fmt"
-	//"log"
 	"io"
-	//"io/ioutil"
-	"log"
+	"os/exec"
+	"os"
 )
 
 func GenerateAlluxioClient(host string) *alluxio.Client {
@@ -53,17 +52,16 @@ func WriteToAlluxio(fs *alluxio.Client, path string, data []string) (bool, error
 	return true, nil
 }
 
-func ReadFromAlluxio(fs *alluxio.Client, path string) (io.ReadCloser, error) {
-	readId, err := fs.OpenFile(path, &option.OpenFile{})
-	if err != nil {
-		return nil, err
-	}
-	defer fs.Close(readId)
+// when read, we pull alluxio file to local fileSystem as buffer, and delete it after read
+func ReadFromAlluxio(path, tempDir string) (io.ReadCloser, error) {
+	cmd := exec.Command("/opt/alluxio-1.5.0/bin/alluxio", "fs", "copyToLocal", path, tempDir)
+	cmd.Run()
+	read, err := os.Open(tempDir)
+	return read, err
+}
 
-	read, err := fs.Read(readId)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return read, nil
+func DeleteLocalFile(path string) error {
+	deleteCmd := exec.Command("/usr/bin/rm", path)
+	err := deleteCmd.Run()
+	return err
 }
