@@ -57,21 +57,21 @@ func WriteToAlluxio(fs *alluxio.Client, path string, data []string) (bool, error
 }
 
 // when read, we pull alluxio file to local fileSystem as buffer, and delete it after read
-func ReadFromAlluxio(path string) (io.ReadCloser, error) {
-	deleteCmd := exec.Command("/usr/bin/rm", LocalTempFile)
+func ReadFromAlluxio(path, tempDir string) (io.ReadCloser, error) {
+	deleteCmd := exec.Command("/usr/bin/rm", tempDir)
 	err := deleteCmd.Run()
 	if err != nil {
-		log.Printf("no such file before, file name:%v\n", LocalTempFile)
+		log.Printf("no such file before, file name:%v\n", tempDir)
 	}
 
-	cmd := exec.Command("/opt/alluxio-1.5.0/bin/alluxio", "fs", "copyToLocal", path, LocalTempFile)
+	cmd := exec.Command("/opt/alluxio-1.5.0/bin/alluxio", "fs", "copyToLocal", path, tempDir)
 	cmd.Run()
-	read, err := os.Open(LocalTempFile)
+	read, err := os.Open(tempDir)
 	return read, err
 }
 
 func DeleteLocalFile(path string) error {
-	deleteCmd := exec.Command("/usr/bin/rm", LocalTempFile)
+	deleteCmd := exec.Command("/usr/bin/rm", path)
 	err := deleteCmd.Run()
 	return err
 }
