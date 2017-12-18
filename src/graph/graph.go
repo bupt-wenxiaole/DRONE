@@ -7,6 +7,7 @@ import (
 	"io"
 	"sync"
 	"encoding/json"
+	"log"
 )
 
 // ID is unique identifier.
@@ -507,6 +508,7 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 			break
 		} else if err != nil {
 			fmt.Println("load graph error")
+			log.Fatal(err)
 			return nil, err
 		}
 	}
