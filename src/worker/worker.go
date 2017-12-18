@@ -175,7 +175,7 @@ func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb
 	return &pb.SSSPMessageResponse{}, nil
 }
 
-func newWorker(id int) *Worker {
+func newWorker(id ,partitionNum int) *Worker {
 	w := new(Worker)
 	w.mutex = new(sync.Mutex)
 	w.selfId = id
@@ -207,11 +207,12 @@ func newWorker(id int) *Worker {
 
 	start := time.Now()
 
+	suffix := strconv.Itoa(partitionNum - 1) + "_"
 	//graphIO, _ := os.Open("/home/xwen/GRAPE/src/G" + strconv.Itoa(w.selfId - 1) + ".json")
-	graphIO, _ := os.Open("G" + strconv.Itoa(w.selfId - 1) + ".json")
+	graphIO, _ := os.Open("G" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
 	//partitionIO, _ := os.Open("/home/xwen/GRAPE/src/P" + strconv.Itoa(w.selfId - 1) + ".json")
-	partitionIO, _ := os.Open("P" + strconv.Itoa(w.selfId - 1) + ".json")
+	partitionIO, _ := os.Open("P" + suffix + strconv.Itoa(w.selfId - 1) + ".json")
 	defer partitionIO.Close()
 	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId - 1))
 	if err != nil {
@@ -230,8 +231,8 @@ func newWorker(id int) *Worker {
 	return w
 }
 
-func RunWorker(id int) {
-	w := newWorker(id)
+func RunWorker(id , partitionNum int) {
+	w := newWorker(id, partitionNum)
 	
 	log.Println(w.selfId)
 	log.Println(w.peers[w.selfId])

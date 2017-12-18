@@ -8,7 +8,9 @@ import (
 	//"strings"
 	//"io/ioutil"
 	"log"
-	"os"
+	//"os"
+	"strings"
+	"io/ioutil"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
@@ -28,30 +30,25 @@ func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
 // This example creates a PriorityQueue with some items, adds and manipulates an item,
 // and then removes the items in priority order.
 func main() {
-	//graphPath := "/GRAPE/data/G1.json"
+	graphPath := "/GRAPE/data/G1.json"
 	//partitionPath := "/GRAPE/data/P0.json"
-	partitionPath := "/zpltys/graphData/partition.json"
+	//partitionPath := "/zpltys/graphData/partition.json"
 	//graphPath := "/zpltys/graphData/text.txt"
-       fs := tools.GenerateAlluxioClient("10.2.152.24")
+	fs := tools.GenerateAlluxioClient("10.2.152.24")
 
 	fmt.Println("start")
-	//f0, _ := tools.ReadFromAlluxio(fs, graphPath)
+	f0, _ := tools.ReadFromAlluxio(fs, graphPath)
 
-    f0, _ := os.Open("/home/zpltys/subgraph.json")
-	pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
+    //f0, _ := os.Open("/home/zpltys/subgraph.json")
+	//pf0, _ := tools.ReadFromAlluxio(fs, partitionPath)
     //pf0, _ := os.Open("/home/zpltys/G1.json")
-/*
+
     data, err := ioutil.ReadAll(f0)
     if err != nil {
     	log.Fatal(err)
 	}
-*/
-    _, err := graph.NewGraphFromJSON(f0, pf0, "0")
 
-    if err != nil {
-    	log.Fatal(err)
-	}
- /*
+
 	fmt.Printf("byte len:%v\n", len(data))
 	str := string(data)
 	fmt.Printf("str len:%v\n", len(str))
@@ -59,7 +56,7 @@ func main() {
 	fmt.Printf("slice len:%v\n", len(s))
 
 	tools.WriteToAlluxio(fs, "/zpltys/test1.json", s)
-*/
+
 	//fmt.Println(str)
 
 
