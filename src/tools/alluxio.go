@@ -55,7 +55,7 @@ func WriteToAlluxio(fs *alluxio.Client, path string, data []string) (bool, error
 
 // when read, we pull alluxio file to local fileSystem as buffer, and delete it after read
 func ReadFromAlluxio(path, tempDir string) (io.ReadCloser, error) {
-	cmd := exec.Command("/opt/alluxio-1.5.0/bin/alluxio", "fs copyToLocal " +  path + " " + tempDir)
+	cmd := exec.Command("/opt/alluxio-1.5.0/bin/alluxio", "fs", "copyToLocal", path, tempDir)
 	drugError := cmd.Run()
 	if drugError != nil {
 		log.Println("drugError:")
