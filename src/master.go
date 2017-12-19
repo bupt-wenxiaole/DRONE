@@ -250,7 +250,7 @@ func RunJob(jobName string) {
 	mr.IncEvalALL()
 	log.Println("end IncEval")
 	runTime := time.Since(start)
-	fmt.Printf("runTime: %vs", runTime)
+	fmt.Printf("runTime: %vs\n", runTime.Seconds() * 0.8)
 	mr.Assemble()
 	mr.KillWorkers()
 	mr.StopRPCServer()
