@@ -27,14 +27,56 @@ message shutDownResponse {
 
 message pEvalRequest {
 }
+
+message workerCommunicationSize {
+    int workerID  //destination partition ID
+    int communicationSize //size of message to send
+}
+
+message pEvalResponseBody {
+    int iterationNum = 1;
+    //duration time of partial SSSP loop
+    float iterationSeconds = 2;
+    //duration time of combine message
+    float combineSeconds = 3;
+    //number of updated boarders node pair
+    int updatePairNum = 4;
+    //number of destinations which message send to
+    int dstPartitionNum = 5;
+    //duration of a worker send to message to all other workers
+    float allPeerSend = 6;
+    //size of worker to worker communication pairs
+    repeated workerCommunicationSize = 7;
+}
 message pEvalResponse {
 	bool ok = 1;
+	pEvalResponseBody body = 2;
 }
 message incEvalRequest {
 }
+message incEvalResponseBody {
+    //duration time of aggregator
+    float aggregatorSeconds = 1;
+    int aggregatorOriSize = 2;
+    int aggregatorReducedSize = 3;
 
+    int iterationNum = 4;
+    //duration time of partial SSSP loop
+    float iterationSeconds = 5;
+    //duration time of combine message
+    float combineSeconds = 6;
+    //number of updated boarders node pair
+    int updatePairNum = 7;
+    //number of destinations which message send to
+    int dstPartitionNum = 8;
+    //duration of a worker send to message to all other workers
+    float allPeerSend = 9;
+    //size of worker to worker communication pairs
+    repeated workerCommunicationSize = 10;
+}
 message incEvalResponse {
 	bool update = 1;
+	incEvalResponseBody body = 2;
 }
 message assembleRequest {	
 }
