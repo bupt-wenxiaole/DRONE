@@ -11,11 +11,9 @@ import (
 	pb "protobuf"
 	"strings"
 	"sync"
-	//"tools"
 	"tools"
 	"time"
 	"fmt"
-	//"strconv"
 )
 
 type Master struct {
@@ -174,10 +172,24 @@ func (mr *Master) PEval() bool {
 			}
 			client := pb.NewWorkerClient(handler)
 			//pevalRequest := &pb.PEvalRequest{}
-			if _, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
+			if pevalResponse, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
 				log.Printf("Fail to execute PEval %d\n", id)
 				log.Fatal(err)
 				//TODO: still something todo: Master Just terminate, how about the Worker
+			} else if !pevalResponse.Ok{
+				log.Printf("This worker %v dosen't participate in this round\n!", id)
+			} else {
+				log.Printf("worker %v IterationNum : %v\n", id, pevalResponse.Body.IterationNum)
+				log.Printf("worker %v duration time of partial evaluation: %v\n", id, pevalResponse.Body.IterationSeconds)
+				log.Printf("worker %v duration time of combine message : %v\n", id, pevalResponse.Body.CombineSeconds)
+				log.Printf("worker %v number of updated boarders node pair : %v\n", id, pevalResponse.Body.UpdatePairNum)
+				log.Printf("worker %v number of destinations which message send to: %v\n", id ,pevalResponse.Body.DstPartitionNum)
+				log.Printf("worker %v duration of a worker send to message to all other workers : %v\n", id, pevalResponse.Body.AllPeerSend)
+				for nodeID, pairNum := range pevalResponse.Body.PairNum {
+					log.Printf("worker %v send to worker %v %v messages\n", id, nodeID, pairNum)
+				}
+
+
 			}
 		}(i)
 	}
@@ -192,7 +204,7 @@ func (mr *Master) IncEvalALL() bool {
 		stepCount++
 		update := false
 		for i := 1; i <= mr.workerNum; i++ {
-			log.Printf("Master: start the %dth PEval of worker %i", stepCount, i)
+			log.Printf("Master: start the %vth Incval of worker %v", stepCount, i)
 			mr.wg.Add(1)
 			go func(id int) {
 				defer mr.wg.Done()
@@ -201,11 +213,25 @@ func (mr *Master) IncEvalALL() bool {
 				incEvalRequest := &pb.IncEvalRequest{}
 				if reply, err := client.IncEval(context.Background(), incEvalRequest); err != nil {
 					log.Fatal("Fail to execute IncEval worker %v", id)
-				} else {
+				} else if !reply.Update{
+					log.Printf("This worker %v dosen't update in the round %v\n!", id, stepCount)
 					mr.Lock()
 					//multiple goroutines access update
 					update = update || reply.Update
 					mr.Unlock()
+				} else {
+					log.Printf("worker %v IterationNum %v in the round : %v\n", id, reply.Body.IterationNum, stepCount)
+					log.Printf("worker %v duration time of Inc evaluation: %v in the round : %v\n", id, reply.Body.IterationSeconds, stepCount)
+					log.Printf("worker %v duration time of combine message : %v in the round : %v\n", id, reply.Body.CombineSeconds, stepCount)
+					log.Printf("worker %v number of updated boarders node pair : %v in the round : %v\n", id, reply.Body.UpdatePairNum, stepCount)
+					log.Printf("worker %v number of destinations which message send to: %v in the round : %v\n", id ,reply.Body.DstPartitionNum, stepCount)
+					log.Printf("worker %v duration of a worker send to message to all other workers : %v in the round : %v\n", id, reply.Body.AllPeerSend, stepCount)
+					log.Printf("worker %v duration of aggregate message: %v in the round : %v\n",id, reply.Body.AggregatorSeconds, stepCount)
+					log.Printf("worker %v number of message before aggreagate: %v in the round : %v\n",id, reply.Body.AggregatorOriSize, stepCount)
+					log.Printf("worker %v number of message after aggreagate: %v in the round : %v\n",id, reply.Body.AggregatorReducedSize, stepCount)
+					for nodeID, pairNum := range reply.Body.PairNum {
+						log.Printf("worker %v send to worker %v %v messages in the round : %v\n", id, nodeID, pairNum, stepCount)
+					}
 				}
 			}(i)
 		}
@@ -218,7 +244,7 @@ func (mr *Master) IncEvalALL() bool {
 }
 func (mr *Master) Assemble() bool {
 	for i := 1; i <= mr.workerNum; i++ {
-		log.Printf("Master: start worker %d Assemble", i)
+		log.Printf("Master: start worker %v Assemble", i)
 		mr.wg.Add(1)
 		go func(id int) {
 			defer mr.wg.Done()
@@ -250,7 +276,7 @@ func RunJob(jobName string) {
 	mr.IncEvalALL()
 	log.Println("end IncEval")
 	runTime := time.Since(start)
-	fmt.Printf("runTime: %vs\n", runTime.Seconds() * 0.8)
+	fmt.Printf("runTime: %vs\n", runTime.Seconds())
 	mr.Assemble()
 	mr.KillWorkers()
 	mr.StopRPCServer()
