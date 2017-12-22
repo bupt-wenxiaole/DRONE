@@ -17,8 +17,8 @@ import (
     "strconv"
     "strings"
     "golang.org/x/net/context"
-	  "time"
-	  "fmt"
+    "time"
+    "fmt"
 )
 
 
@@ -98,13 +98,17 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	}
 
 	// Load graph data
-	isMessageToSend, messages := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID("1"))
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum:= algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID("1"))
 	if !isMessageToSend {
-		return &pb.PEvalResponse{Ok: isMessageToSend}, nil
+		var SlicePeerSend []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
+		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum,iterationTime, combineTime, updatePairNum, dstPartitionNum, 0, SlicePeerSend }}, nil
 	} else {
+		fullSendStart := time.Now()
+		var SlicePeerSend []*pb.WorkerCommunicationSize
 		for partitionId, message := range messages {
 			client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
+			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.String(), Distance: msg.Distance})
 				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
@@ -116,8 +120,9 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 				log.Fatal(err)
 			}
 		}
+		fullSendDuration := time.Since(fullSendStart).Seconds()
 	}
-	return &pb.PEvalResponse{Ok: isMessageToSend}, nil
+	return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{IterationNum:iterationNum, IterationSeconds:iter}}, nil
 }
 
 func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {

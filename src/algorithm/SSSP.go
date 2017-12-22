@@ -181,7 +181,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 // the only difference is updated, which is the message this partition received
 func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, updated []*Pair) (bool, map[int][]*Pair, float64, float64, int32, int32, int32, float64, int32, int32) {
 	if len(updated) == 0 {
-		return false, make(map[int][]*Pair)
+		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
 
 	FO := g.GetFOs()
@@ -192,7 +192,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 	aggregatorOriSize := int32(len(updated))
 	aggregateStart := time.Now()
 	updated = SSSP_aggregateMsg(updated)
-	aggregateTime := time.Since(aggregateStart)
+	aggregateTime := time.Since(aggregateStart).Seconds()
 	aggregatorReducedSize := int32(len(updated))
 
 
@@ -239,7 +239,6 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 		}
 	}
 	iterationTime := time.Since(iterationStartTime).Seconds()
-
 	combineStartTime := time.Now()
 
 	filterMap := make(map[graph.ID]bool)
