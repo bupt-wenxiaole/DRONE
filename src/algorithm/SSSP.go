@@ -3,6 +3,7 @@ package algorithm
 import (
 	"container/heap"
 	"graph"
+	"time"
 	//"fmt"
 )
 
@@ -102,11 +103,11 @@ func SSSP_aggregateMsg(oriMsg []*Pair) []*Pair {
 // returned bool value indicates which there has some message need to be send
 // the map value is the message need to be send
 // map[i] is a list of message need to be sent to partition i
-func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, startID graph.ID) (bool, map[int][]*Pair) {
+func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, startID graph.ID) (bool, map[int][]*Pair, float64, float64, int32, int32, int32) {
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
-		return false, make(map[int][]*Pair)
+		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0
 	}
 	FO := g.GetFOs()
 	updatedID := make([]graph.ID, 0)
@@ -117,8 +118,12 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 		Distance: 0,
 	}
 	heap.Push(&pq, startPair)
+
+	var iterationNum int32 = 0
+	itertationStartTime := time.Now()
 	// begin SSSP iteration
 	for pq.Len() > 0 {
+		iterationNum ++
 		top := heap.Pop(&pq).(*Pair)
 		srcID := top.NodeId
 		nowDis := top.Distance
@@ -146,6 +151,8 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 			}
 		}
 	}
+	iterationTime := time.Since(itertationStartTime).Seconds()
+	combineStartTime := time.Now()
 	//end SSSP iteration
 	filterMap := make(map[graph.ID]bool)
 	messageMap := make(map[int][]*Pair)
@@ -163,12 +170,16 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 		messageMap[partition] = append(messageMap[partition], &Pair{NodeId: id, Distance: dis})
 	}
 
-	return len(messageMap) != 0, messageMap
+	combineTime := time.Since(combineStartTime).Seconds()
+
+	updatePairNum := int32(len(filterMap))
+	dstPartitionNum := int32(len(messageMap))
+	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, updated []*Pair) (bool, map[int][]*Pair) {
+func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[graph.ID]int64, routeTable map[graph.ID][]*BoundMsg, updated []*Pair) (bool, map[int][]*Pair, float64, float64, int32, int32, int32, float64, int32, int32) {
 	if len(updated) == 0 {
 		return false, make(map[int][]*Pair)
 	}
@@ -178,7 +189,12 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 	updatedID := make([]graph.ID, 0)
 	pq := make(PriorityQueue, 0)
 
+	aggregatorOriSize := int32(len(updated))
+	aggregateStart := time.Now()
 	updated = SSSP_aggregateMsg(updated)
+	aggregateTime := time.Since(aggregateStart)
+	aggregatorReducedSize := int32(len(updated))
+
 
 	for _, ssspMsg := range updated {
 		startPair := &Pair{
@@ -188,7 +204,12 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 		heap.Push(&pq, startPair)
 	}
 
+	var iterationNum int32 = 0
+	iterationStartTime := time.Now()
+
 	for pq.Len() > 0 {
+		iterationNum = iterationNum + 1
+
 		top := heap.Pop(&pq).(*Pair)
 		srcID := top.NodeId
 		nowDis := top.Distance
@@ -217,6 +238,9 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 			}
 		}
 	}
+	iterationTime := time.Since(iterationStartTime).Seconds()
+
+	combineStartTime := time.Now()
 
 	filterMap := make(map[graph.ID]bool)
 	messageMap := make(map[int][]*Pair)
@@ -234,5 +258,9 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 		messageMap[partition] = append(messageMap[partition], &Pair{NodeId: id, Distance: dis})
 	}
 
-	return len(messageMap) != 0, messageMap
+	combineTime := time.Since(combineStartTime).Seconds()
+
+	updatePairNum := int32(len(filterMap))
+	dstPartitionNum := int32(len(messageMap))
+	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }
