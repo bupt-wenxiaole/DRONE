@@ -220,6 +220,10 @@ func (mr *Master) IncEvalALL() bool {
 					update = update || reply.Update
 					mr.Unlock()
 				} else {
+					mr.Lock()
+					//multiple goroutines access update
+					update = update || reply.Update
+					mr.Unlock()
 					log.Printf("worker %v IterationNum %v in the round : %v\n", id, reply.Body.IterationNum, stepCount)
 					log.Printf("worker %v duration time of Inc evaluation: %v in the round : %v\n", id, reply.Body.IterationSeconds, stepCount)
 					log.Printf("worker %v duration time of combine message : %v in the round : %v\n", id, reply.Body.CombineSeconds, stepCount)
