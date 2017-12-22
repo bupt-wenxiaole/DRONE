@@ -36,15 +36,15 @@ message workerCommunicationSize {
 message pEvalResponseBody {
     int32 iterationNum = 1;
     //duration time of partial SSSP loop
-    float64 iterationSeconds = 2;
+    double iterationSeconds = 2;
     //duration time of combine message
-    float64 combineSeconds = 3;
+    double combineSeconds = 3;
     //number of updated boarders node pair
     int32 updatePairNum = 4;
     //number of destinations which message send to
     int32 dstPartitionNum = 5;
     //duration of a worker send to message to all other workers
-    float allPeerSend = 6;
+    double allPeerSend = 6;
     //size of worker to worker communication pairs
     repeated workerCommunicationSize pairNum = 7;
 }
@@ -56,21 +56,21 @@ message incEvalRequest {
 }
 message incEvalResponseBody {
     //duration time of aggregator
-    float64 aggregatorSeconds = 1;
+    double aggregatorSeconds = 1;
     int32 aggregatorOriSize = 2;
     int32 aggregatorReducedSize = 3;
 
     int32 iterationNum = 4;
     //duration time of partial SSSP loop
-    float64 iterationSeconds = 5;
+    double iterationSeconds = 5;
     //duration time of combine message
-    float64 combineSeconds = 6;
+    double combineSeconds = 6;
     //number of updated boarders node pair
     int32 updatePairNum = 7;
     //number of destinations which message send to
     int32 dstPartitionNum = 8;
     //duration of a worker send to message to all other workers
-    float64 allPeerSend = 9;
+    double allPeerSend = 9;
     //size of worker to worker communication pairs
     repeated workerCommunicationSize pairNum = 10;
 }
