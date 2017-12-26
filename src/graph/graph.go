@@ -8,6 +8,9 @@ import (
 	"sync"
 	"encoding/json"
 	"log"
+	"bufio"
+	"strings"
+	"strconv"
 )
 
 // ID is unique identifier.
@@ -282,13 +285,6 @@ func (g *graph) AddEdge(id1, id2 ID, weight int) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if !g.unsafeExistID(id1) {
-		return fmt.Errorf("%s does not exist in the graph.", id1)
-	}
-	if !g.unsafeExistID(id2) {
-		return fmt.Errorf("%s does not exist in the graph.", id2)
-	}
-
 	if _, ok := g.nodeToTargets[id1]; ok {
 		if v, ok2 := g.nodeToTargets[id1][id2]; ok2 {
 			g.nodeToTargets[id1][id2] = v + weight
@@ -497,6 +493,37 @@ func (g *graph) GetFOs() map[ID][]RouteMsg {
 //	    },
 //	}
 //
+
+// pattern graph should be constructed as the format
+// NodeId type numberOfSuffixNodes id1 id2 id3 ...
+
+func NewPatternGraph(rd io.Reader) (Graph, error) {
+	buffer := bufio.NewReader(rd)
+
+	g := newGraph()
+	for {
+		line, err := buffer.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+
+		line = line[0 : len(line) - 1]
+		msg := strings.Split(line, " ")
+		nodeId := msg[0]
+		attr, _ := strconv.Atoi(msg[1])
+		node := NewNode(nodeId, int64(attr))
+		g.AddNode(node)
+
+		num, _ := strconv.Atoi(msg[2])
+		for i := 3; i < num + 3; i += 1 {
+			g.AddEdge(StringID(nodeId), StringID(msg[i]), 1)
+		}
+
+	}
+
+	return g, nil
+}
+
 func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
 	js := make(map[string]map[string]map[string]int)
 
