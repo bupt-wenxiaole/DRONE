@@ -52,6 +52,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 	}
 
 	log.Println("zs-log: start PEVal initial")
+
 	// initial
 	allNodeUnionFO := set.NewNonTS()
 	for v := range g.GetNodes() {
@@ -129,15 +130,20 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 				continue
 			}
 
-			log.Printf("u: %v,  iterationNum: %v \n", u.String(), iterationNum)
+			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
 				for _, vInterface := range remove[u].List() {
 
 					iterationNum++
-					if iterationNum % 100 == 0 {
+					if iterationNum % 10000 == 0 {
 						log.Printf("zs-log: have iteration %v times \n", iterationNum)
+						sum := 0
+						for uTmp := range pattern.GetNodes() {
+							sum += sim[uTmp].Size()
+						}
+						log.Printf("zs-log: sum of sim size:%v\n", sum)
 					}
 
 					v := vInterface.(graph.ID)
