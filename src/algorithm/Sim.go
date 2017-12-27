@@ -129,6 +129,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 				continue
 			}
 
+			log.Printf("u: %v,  iterationNum: %v \n", u.String(), iterationNum)
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
