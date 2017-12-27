@@ -9,7 +9,7 @@ const (
 	ConfigPath = "../test_data/config.txt"
 
 	PatternPath = "../test_data/pattern.txt"
-	GraphSimulationTypeModel = 10
+	GraphSimulationTypeModel = 100
 
 	MaxBufferSize = 1024000
 )
