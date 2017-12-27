@@ -16,6 +16,7 @@ service Worker {
 	rpc Assemble (assembleRequest) returns (assembleResponse) {}
 	//service to worker
 	rpc SSSPSend (sSSPMessageRequest) returns (sSSPMessageResponse) {}
+    rpc simSend (simMessageRequest) returns (simMessageResponse) {}
 
 }
 
@@ -91,4 +92,13 @@ message sSSPMessageStruct {
 	int64 distance = 2;
 }
 message sSSPMessageResponse {
+}
+message simMessageRequest {
+    repeated simMessageStruct pair = 1;
+}
+message simMessageResponse {
+}
+message simMessageStruct {
+    string patternId = 1;
+    string dataId = 2;
 }
