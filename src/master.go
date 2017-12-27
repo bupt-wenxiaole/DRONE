@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"io"
@@ -11,9 +12,8 @@ import (
 	pb "protobuf"
 	"strings"
 	"sync"
-	"tools"
 	"time"
-	"fmt"
+	"tools"
 )
 
 type Master struct {
@@ -136,11 +136,11 @@ func (mr *Master) KillWorkers() {
 		handler := mr.grpcHandlers[int32(i)]
 		client := pb.NewWorkerClient(handler)
 		shutDownReq := &pb.ShutDownRequest{}
-	        client.ShutDown(context.Background(), shutDownReq)
+		client.ShutDown(context.Background(), shutDownReq)
 		//if err != nil {
 		//	log.Fatal("fail to kill worker %d", i)
 		//} else {
-			//discuss : goland can't recognize the reply
+		//discuss : goland can't recognize the reply
 		//		mr.statistic = append(mr.statistic, reply.IterationNum)
 		//}
 
@@ -176,19 +176,18 @@ func (mr *Master) PEval() bool {
 				log.Printf("Fail to execute PEval %d\n", id)
 				log.Fatal(err)
 				//TODO: still something todo: Master Just terminate, how about the Worker
-			} else if !pevalResponse.Ok{
+			} else if !pevalResponse.Ok {
 				log.Printf("This worker %v dosen't participate in this round\n!", id)
 			} else {
 				log.Printf("worker %v IterationNum : %v\n", id, pevalResponse.Body.IterationNum)
 				log.Printf("worker %v duration time of partial evaluation: %v\n", id, pevalResponse.Body.IterationSeconds)
 				log.Printf("worker %v duration time of combine message : %v\n", id, pevalResponse.Body.CombineSeconds)
 				log.Printf("worker %v number of updated boarders node pair : %v\n", id, pevalResponse.Body.UpdatePairNum)
-				log.Printf("worker %v number of destinations which message send to: %v\n", id ,pevalResponse.Body.DstPartitionNum)
+				log.Printf("worker %v number of destinations which message send to: %v\n", id, pevalResponse.Body.DstPartitionNum)
 				log.Printf("worker %v duration of a worker send to message to all other workers : %v\n", id, pevalResponse.Body.AllPeerSend)
 				for nodeID, pairNum := range pevalResponse.Body.PairNum {
 					log.Printf("worker %v send to worker %v %v messages\n", id, nodeID, pairNum)
 				}
-
 
 			}
 		}(i)
@@ -213,7 +212,7 @@ func (mr *Master) IncEvalALL() bool {
 				incEvalRequest := &pb.IncEvalRequest{}
 				if reply, err := client.IncEval(context.Background(), incEvalRequest); err != nil {
 					log.Fatal("Fail to execute IncEval worker %v", id)
-				} else if !reply.Update{
+				} else if !reply.Update {
 					log.Printf("This worker %v dosen't update in the round %v\n!", id, stepCount)
 					mr.Lock()
 					//multiple goroutines access update
@@ -228,11 +227,11 @@ func (mr *Master) IncEvalALL() bool {
 					log.Printf("worker %v duration time of Inc evaluation: %v in the round : %v\n", id, reply.Body.IterationSeconds, stepCount)
 					log.Printf("worker %v duration time of combine message : %v in the round : %v\n", id, reply.Body.CombineSeconds, stepCount)
 					log.Printf("worker %v number of updated boarders node pair : %v in the round : %v\n", id, reply.Body.UpdatePairNum, stepCount)
-					log.Printf("worker %v number of destinations which message send to: %v in the round : %v\n", id ,reply.Body.DstPartitionNum, stepCount)
+					log.Printf("worker %v number of destinations which message send to: %v in the round : %v\n", id, reply.Body.DstPartitionNum, stepCount)
 					log.Printf("worker %v duration of a worker send to message to all other workers : %v in the round : %v\n", id, reply.Body.AllPeerSend, stepCount)
-					log.Printf("worker %v duration of aggregate message: %v in the round : %v\n",id, reply.Body.AggregatorSeconds, stepCount)
-					log.Printf("worker %v number of message before aggreagate: %v in the round : %v\n",id, reply.Body.AggregatorOriSize, stepCount)
-					log.Printf("worker %v number of message after aggreagate: %v in the round : %v\n",id, reply.Body.AggregatorReducedSize, stepCount)
+					log.Printf("worker %v duration of aggregate message: %v in the round : %v\n", id, reply.Body.AggregatorSeconds, stepCount)
+					log.Printf("worker %v number of message before aggreagate: %v in the round : %v\n", id, reply.Body.AggregatorOriSize, stepCount)
+					log.Printf("worker %v number of message after aggreagate: %v in the round : %v\n", id, reply.Body.AggregatorReducedSize, stepCount)
 					for nodeID, pairNum := range reply.Body.PairNum {
 						log.Printf("worker %v send to worker %v %v messages in the round : %v\n", id, nodeID, pairNum, stepCount)
 					}

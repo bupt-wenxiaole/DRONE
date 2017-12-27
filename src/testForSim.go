@@ -1,15 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"graph"
-	"os"
-	"log"
-	"gopkg.in/fatih/set.v0"
 	"algorithm"
+	"fmt"
+	"gopkg.in/fatih/set.v0"
+	"graph"
+	"log"
+	"os"
 )
 
-func main()  {
+func main() {
 	fmt.Println("gogogo")
 
 	patternFile, _ := os.Open("test_data\\pattern.txt.tmp")
@@ -26,12 +26,10 @@ func main()  {
 	defer partitionFile0.Close()
 	defer partitionFile1.Close()
 
-
 	g0, err1 := graph.NewGraphFromJSON(subGraphFile0, partitionFile0, "0")
 	if err1 != nil {
 		log.Fatal(err1)
 	}
-
 
 	g1, err2 := graph.NewGraphFromJSON(subGraphFile1, partitionFile1, "1")
 	if err2 != nil {

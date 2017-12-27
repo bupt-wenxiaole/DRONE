@@ -1,9 +1,9 @@
 package main
 
 import (
-	"os"
-	"graph"
 	"fmt"
+	"graph"
+	"os"
 )
 
 func main() {
@@ -13,7 +13,6 @@ func main() {
 		fmt.Println(err)
 	}
 	g, _ := graph.NewPatternGraph(patternFile)
-
 
 	for id := range g.GetNodes() {
 		source, _ := g.GetSources(id)

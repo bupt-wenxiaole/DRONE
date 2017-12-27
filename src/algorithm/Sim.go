@@ -5,11 +5,12 @@ import (
 	// for more information, please reference https://github.com/fatih/set
 	"gopkg.in/fatih/set.v0"
 	//"fmt"
+	"time"
 )
 
 type SimPair struct {
 	PatternNode graph.ID
-	DataNode graph.ID
+	DataNode    graph.ID
 }
 
 // generate post and pre set for data graph nodes(include FO nodes)
@@ -42,11 +43,10 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]set.Interface, map[graph.
 	return preSet, postSet
 }
 
-
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
-func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Interface, preSet map[graph.ID]set.Interface, postSet map[graph.ID]set.Interface) (map[int][]*SimPair, bool) {
+func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Interface, preSet map[graph.ID]set.Interface, postSet map[graph.ID]set.Interface) (bool, map[int][]*SimPair, float64, float64, int32, int32, int32) {
 	nodeMap := pattern.GetNodes()
-	patternNodeSet := set.NewNonTS()     // a set for all pattern nodes
+	patternNodeSet := set.NewNonTS() // a set for all pattern nodes
 	for _, node := range nodeMap {
 		patternNodeSet.Add(node)
 	}
@@ -114,6 +114,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 	}
 
 	//calculate
+	iterationStartTime := time.Now()
+	var iterationNum int32 = 0
 	for {
 		iterationFinish := true
 		for _, id := range patternNodeSet.List() {
@@ -122,6 +124,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 				continue
 			}
 
+			iterationNum++
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
@@ -159,23 +162,31 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 			break
 		}
 	}
+	iterationTime := time.Since(iterationStartTime).Seconds()
 
+	combineStart := time.Now()
+	var updatePairNum int32 = 0
+	var dstPartitionNum int32 = 0
 
 	reducedMsg := make(map[int][]*SimPair)
 	for partitionId, message := range messageMap {
+		updatePairNum += int32(message.Size())
+
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for _, msg := range message.List() {
 			reducedMsg[partitionId] = append(reducedMsg[partitionId], msg.(*SimPair))
 		}
 	}
+	combineTime := time.Since(combineStart).Seconds()
 
-	return reducedMsg, len(reducedMsg) != 0
+	dstPartitionNum = int32(len(reducedMsg))
+
+	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
-
-func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Interface, preSet map[graph.ID]set.Interface, postSet map[graph.ID]set.Interface, messages []*SimPair ) (map[int][]*SimPair, bool) {
+func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Interface, preSet map[graph.ID]set.Interface, postSet map[graph.ID]set.Interface, messages []*SimPair) (bool, map[int][]*SimPair, float64, float64, int32, int32, int32, float64, int32, int32) {
 	nodeMap := pattern.GetNodes()
-	patternNodeSet := set.NewNonTS()     // a set for all pattern nodes
+	patternNodeSet := set.NewNonTS() // a set for all pattern nodes
 	for _, node := range nodeMap {
 		patternNodeSet.Add(node)
 	}
@@ -203,6 +214,8 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.I
 
 	//calculate
 	messageMap := make(map[int]set.Interface)
+	iterationStartTime := time.Now()
+	var iterationNum int32 = 0
 
 	for {
 		iterationFinish := true
@@ -212,6 +225,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.I
 				continue
 			}
 
+			iterationNum++
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
@@ -249,14 +263,23 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.I
 			break
 		}
 	}
+	iterationTime := time.Since(iterationStartTime).Seconds()
+
+	combineStart := time.Now()
+	var updatePairNum int32 = 0
+	var dstPartitionNum int32 = 0
 
 	reducedMsg := make(map[int][]*SimPair)
 	for partitionId, message := range messageMap {
+		updatePairNum += int32(message.Size())
+
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for _, msg := range message.List() {
 			reducedMsg[partitionId] = append(reducedMsg[partitionId], msg.(*SimPair))
 		}
 	}
+	dstPartitionNum = int32(len(reducedMsg))
+	combineTime := time.Since(combineStart).Seconds()
 
-	return reducedMsg, len(reducedMsg) != 0
+	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, 0, int32(len(messages)), int32(len(messages))
 }

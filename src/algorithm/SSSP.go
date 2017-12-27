@@ -123,7 +123,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[grap
 	itertationStartTime := time.Now()
 	// begin SSSP iteration
 	for pq.Len() > 0 {
-		iterationNum ++
+		iterationNum++
 		top := heap.Pop(&pq).(*Pair)
 		srcID := top.NodeId
 		nowDis := top.Distance
@@ -194,7 +194,6 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]int64, exchangeMsg map[gr
 	updated = SSSP_aggregateMsg(updated)
 	aggregateTime := time.Since(aggregateStart).Seconds()
 	aggregatorReducedSize := int32(len(updated))
-
 
 	for _, ssspMsg := range updated {
 		startPair := &Pair{

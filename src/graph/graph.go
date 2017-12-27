@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"strings"
 	"strconv"
+	"tools"
 )
 
 // ID is unique identifier.
@@ -549,7 +550,8 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 
 		nd1 := g.GetNode(StringID(id1))
 		if nd1 == nil {
-			nd1 = NewNode(id1, 0)
+			intId, _ := strconv.Atoi(id1)
+			nd1 = NewNode(id1, int64(intId % tools.GraphSimulationTypeModel))
 			if ok := g.AddNode(nd1); !ok {
 				return nil, fmt.Errorf("%s already exists", nd1)
 			}
@@ -560,7 +562,8 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 			} else {
 				nd2 := g.GetNode(StringID(id2))
 				if nd2 == nil {
-					nd2 = NewNode(id2, 0)
+					intId, _ := strconv.Atoi(id2)
+					nd2 = NewNode(id2, int64(intId % tools.GraphSimulationTypeModel))
 					if ok := g.AddNode(nd2); !ok {
 						return nil, fmt.Errorf("%s already exists", nd2)
 					}

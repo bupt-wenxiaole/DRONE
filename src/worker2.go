@@ -17,6 +17,6 @@ func main() {
 	if err != nil {
 		fmt.Println("conv fail!")
 	}
-	worker.RunWorker(workerID, PartitionNum)
+	worker.RunSimWorker(workerID, PartitionNum)
 	fmt.Println("stop")
 }

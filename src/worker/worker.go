@@ -196,6 +196,10 @@ func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb
 	return &pb.SSSPMessageResponse{}, nil
 }
 
+func (w *Worker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
+	return nil, nil
+}
+
 func newWorker(id, partitionNum int) *Worker {
 	w := new(Worker)
 	w.mutex = new(sync.Mutex)
