@@ -118,6 +118,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 	}
 
 	log.Println("zs-log: start calculate")
+	log.Printf("zs-log: node size:%v \n", allNodeUnionFO.Size())
 
 	//calculate
 	iterationStartTime := time.Now()
