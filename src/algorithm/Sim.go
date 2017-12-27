@@ -129,14 +129,16 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 				continue
 			}
 
-			iterationNum++
-			if iterationNum % 1000000 == 0 {
-				log.Printf("zs-log: have iteration %v times \n", iterationNum)
-			}
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
 				for _, vInterface := range remove[u].List() {
+
+					iterationNum++
+					if iterationNum % 100000 == 0 {
+						log.Printf("zs-log: have iteration %v times \n", iterationNum)
+					}
+
 					v := vInterface.(graph.ID)
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
@@ -233,12 +235,14 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.I
 				continue
 			}
 
-			iterationNum++
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
 				for _, vInterface := range remove[u].List() {
 					v := vInterface.(graph.ID)
+
+					iterationNum++
+
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
 
