@@ -136,7 +136,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 				for _, vInterface := range remove[u].List() {
 
 					iterationNum++
-					if iterationNum % 100000 == 0 {
+					if iterationNum % 100 == 0 {
 						log.Printf("zs-log: have iteration %v times \n", iterationNum)
 					}
 
