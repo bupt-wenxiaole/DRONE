@@ -10,7 +10,6 @@ import (
 	"graph"
 	"io"
 	"log"
-	"math"
 	"net"
 	"os"
 	pb "protobuf"
@@ -175,11 +174,9 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	return &pb.AssembleResponse{Ok: ok}, nil
 }
 
-/*
 func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
 	return nil, nil
 }
-*/
 
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
 	w.Lock()
