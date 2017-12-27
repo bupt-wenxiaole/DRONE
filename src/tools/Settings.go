@@ -8,7 +8,7 @@ const (
 	//LocalTempFile = "temp.json"
 	ConfigPath = "../test_data/config.txt"
 
-	PatternPath = "../test_data/subgraph.json"
+	PatternPath = "../test_data/pattern.txt"
 	GraphSimulationTypeModel = 10
 
 	MaxBufferSize = 1024000

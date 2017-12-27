@@ -228,7 +228,10 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	if graphIO == nil {
 		fmt.Println("graphIO is nil")
 	}
-	patternFile, _ := os.Open(tools.PatternPath)
+	patternFile, err := os.Open(tools.PatternPath)
+	if err != nil {
+		log.Fatal("pattern path error")
+	}
 	defer patternFile.Close()
 	w.pattern, _ = graph.NewPatternGraph(patternFile)
 
