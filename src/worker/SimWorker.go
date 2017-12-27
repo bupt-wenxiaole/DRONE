@@ -196,6 +196,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
+	w.sim = make(map[graph.ID]set.Interface)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
