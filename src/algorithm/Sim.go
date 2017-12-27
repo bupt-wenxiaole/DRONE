@@ -4,8 +4,8 @@ import (
 	"graph"
 	// for more information, please reference https://github.com/fatih/set
 	"gopkg.in/fatih/set.v0"
-	//"fmt"
 	"time"
+	"log"
 )
 
 type SimPair struct {
@@ -51,6 +51,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 		patternNodeSet.Add(node)
 	}
 
+	log.Println("zs-log: start PEVal initial")
 	// initial
 	allNodeUnionFO := set.NewNonTS()
 	for v := range g.GetNodes() {
@@ -63,7 +64,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 	preSim := make(map[graph.ID]set.Interface)
 	remove := make(map[graph.ID]set.Interface)
 
-	for _, id := range patternNodeSet.List() {
+	for i, id := range patternNodeSet.List() {
+		log.Printf("zs-log: start PEval initial for Pattern Node %v \n", i)
+
 		patternNode := id.(graph.Node)
 		preSim[patternNode.ID()] = allNodeUnionFO.Copy()
 
@@ -113,6 +116,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 		}
 	}
 
+	log.Println("zs-log: start calculate")
+
 	//calculate
 	iterationStartTime := time.Now()
 	var iterationNum int32 = 0
@@ -125,6 +130,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.Int
 			}
 
 			iterationNum++
+			if iterationNum % 1000000 == 0 {
+				log.Printf("zs-log: have iteration %v times \n", iterationNum)
+			}
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
