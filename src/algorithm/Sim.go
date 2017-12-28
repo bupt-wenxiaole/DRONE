@@ -222,6 +222,10 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.I
 		v := message.DataNode
 
 		sim[u].Remove(v)
+		log.Printf("v:%v\n", v.String())
+		if _, err := g.GetFOs()[v]; err != nil {
+			log.Println("not exist")
+		}
 		for _, tmp := range preSet[v].List() {
 			v_pre := tmp.(graph.ID)
 			if set.Intersection(postSet[v_pre], sim[u]).IsEmpty() {
