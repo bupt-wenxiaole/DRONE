@@ -41,11 +41,16 @@ def generate_json(Graph, MetisPartion, SubGraphJson, PartitionJson):
                     #this two nodes belongs to different subgraphs, Border
                     #   first fills in Fi.I
                     #   then  fills in Fi.O
-                    if str(nodeIndex) in partitionJsonMapList[nodePartition][nodeSubGraphFI]:
-                        partitionJsonMapList[nodePartition][nodeSubGraphFI][str(nodeIndex)][str(r1_lines[j][k])] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
+                    #   we treat the undirected graph as double-edge's directed graph, so there is some diffrent thing in generating F.I
+                    otherNodeInPair = str(r1_lines[j][k])
+                    otherNodeInPairPartition = int(r2_lines[r1_lines[j][k] - 1])
+                    otherNodeInPairPartitionSubGraph = "Graph" + str(otherNodeInPairPartition)
+                    otherNodeInPairPartitionSubGraphFI = otherNodeInPairPartitionSubGraph + "F.I"
+                    if otherNodeInPair in partitionJsonMapList[otherNodeInPairPartition][otherNodeInPairPartitionSubGraphFI]:
+                        partitionJsonMapList[otherNodeInPairPartition][otherNodeInPairPartitionSubGraphFI][otherNodeInPair][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(nodePartition)
                     else:
-                        partitionJsonMapList[nodePartition][nodeSubGraphFI][str(nodeIndex)] = {}
-                        partitionJsonMapList[nodePartition][nodeSubGraphFI][str(nodeIndex)][str(r1_lines[j][k])] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
+                        partitionJsonMapList[otherNodeInPairPartition][otherNodeInPairPartitionSubGraphFI][otherNodeInPair] = {}
+                        partitionJsonMapList[otherNodeInPairPartition][otherNodeInPairPartitionSubGraphFI][otherNodeInPair][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(nodePartition)
                     if str(r1_lines[j][k]) in partitionJsonMapList[nodePartition][nodeSubGraphFO]:
                         partitionJsonMapList[nodePartition][nodeSubGraphFO][str(r1_lines[j][k])][str(nodeIndex)] = str(r1_lines[j][k+1]) + " " + str(r2_lines[r1_lines[j][k] - 1])
                     else:
