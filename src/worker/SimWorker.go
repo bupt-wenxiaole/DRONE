@@ -116,6 +116,7 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 
 func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
 	w.iterationNum++
+	log.Println("aa?")
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.preSet, w.postSet, w.message)
 	w.message = make([]*algorithm.SimPair, 0)
