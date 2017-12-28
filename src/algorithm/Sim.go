@@ -223,7 +223,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]set.I
 
 		sim[u].Remove(v)
 		log.Printf("v:%v\n", v.String())
-		if _, err := g.GetFOs()[v]; err != nil {
+		if _, ok := g.GetFOs()[v]; !ok {
 			log.Println("not exist")
 		}
 		for _, tmp := range preSet[v].List() {
