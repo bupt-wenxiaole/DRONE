@@ -48,12 +48,15 @@ func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
 			wgt, _ := strconv.Atoi(split[0])
 			nextHop, _ := strconv.Atoi(split[1])
 
-			route := &routeMsg{relatedId: StringID(dstID), relatedWgt: wgt, routePartition: nextHop}
+			dstIDInt, _ := strconv.Atoi(dstID)
+
+			route := &routeMsg{relatedId: StringID(dstIDInt), relatedWgt: wgt, routePartition: nextHop}
 
 			msgList = append(msgList, route)
 		}
 
-		ansMap[StringID(srcID)] = msgList
+		srcIdInt, _ := strconv.Atoi(srcID)
+		ansMap[StringID(srcIdInt)] = msgList
 	}
 	return ansMap
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"gopkg.in/fatih/set.v0"
 	"graph"
 	"io"
 	"log"
@@ -29,9 +28,9 @@ type SimWorker struct {
 
 	g       graph.Graph
 	pattern graph.Graph
-	sim     map[graph.ID]set.Interface
-	preSet  map[graph.ID]set.Interface
-	postSet map[graph.ID]set.Interface
+	sim     map[graph.ID]algorithm.Set
+	preSet  map[graph.ID]algorithm.Set
+	postSet map[graph.ID]algorithm.Set
 
 	message []*algorithm.SimPair
 
@@ -159,8 +158,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 
 	result := make([]string, 0)
 	for u, simSets := range w.sim {
-		for _, tmp := range simSets.List() {
-			v := tmp.(graph.ID)
+		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
 				result = append(result, u.String()+"\t"+v.String())
 			}
@@ -197,7 +195,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
-	w.sim = make(map[graph.ID]set.Interface)
+	w.sim = make(map[graph.ID]algorithm.Set)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n

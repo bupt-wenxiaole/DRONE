@@ -3,10 +3,9 @@ package main
 import (
 	"algorithm"
 	"fmt"
-	"gopkg.in/fatih/set.v0"
-	"graph"
 	"log"
 	"os"
+	"graph"
 )
 
 func main() {
@@ -36,19 +35,19 @@ func main() {
 		log.Fatal(err2)
 	}
 
-	sim0 := make(map[graph.ID]set.Interface)
-	sim1 := make(map[graph.ID]set.Interface)
+	sim0 := make(map[graph.ID]algorithm.Set)
+	sim1 := make(map[graph.ID]algorithm.Set)
 
 	pre0, post0 := algorithm.GeneratePrePostFISet(g0)
 	pre1, post1 := algorithm.GeneratePrePostFISet(g1)
 
-	message0, ok0 := algorithm.GraphSim_PEVal(g0, pattern, sim0, pre0, post0)
-	message1, ok1 := algorithm.GraphSim_PEVal(g1, pattern, sim1, pre1, post1)
+	ok0, message0, _, _, _, _, _ := algorithm.GraphSim_PEVal(g0, pattern, sim0, pre0, post0)
+	ok1, message1, _, _, _, _, _ := algorithm.GraphSim_PEVal(g1, pattern, sim1, pre1, post1)
 
 	for u, sim := range sim0 {
 		fmt.Printf("sim0[%v]:", u)
-		for _, vTmp := range sim.List() {
-			fmt.Printf(" %v", vTmp.(graph.ID))
+		for v := range sim {
+			fmt.Printf(" %v", v)
 		}
 		fmt.Printf("\n")
 	}
@@ -63,8 +62,8 @@ func main() {
 
 	for u, sim := range sim1 {
 		fmt.Printf("sim1[%v]:", u)
-		for _, vTmp := range sim.List() {
-			fmt.Printf(" %v", vTmp.(graph.ID))
+		for v := range sim {
+			fmt.Printf(" %v", v)
 		}
 		fmt.Printf("\n")
 	}
@@ -79,8 +78,8 @@ func main() {
 
 	var tmp0, tmp1 map[int][]*algorithm.SimPair
 	for ok0 || ok1 {
-		tmp0, ok0 = algorithm.GraphSim_IncEval(g0, pattern, sim0, pre0, post0, message1[0])
-		tmp1, ok1 = algorithm.GraphSim_IncEval(g1, pattern, sim1, pre1, post1, message0[1])
+		ok0, tmp0, _, _, _, _, _, _, _, _ = algorithm.GraphSim_IncEval(g0, pattern, sim0, pre0, post0, message1[0])
+		ok1, tmp1, _, _, _, _, _, _, _, _ = algorithm.GraphSim_IncEval(g1, pattern, sim1, pre1, post1, message0[1])
 
 		message0 = tmp0
 		message1 = tmp1
@@ -88,17 +87,19 @@ func main() {
 
 	for u, sim := range sim0 {
 		fmt.Printf("sim0[%v]:", u)
-		for _, vTmp := range sim.List() {
-			fmt.Printf(" %v", vTmp.(graph.ID))
+		for v := range sim {
+			fmt.Printf(" %v", v)
 		}
 		fmt.Printf("\n")
 	}
 
 	for u, sim := range sim1 {
 		fmt.Printf("sim1[%v]:", u)
-		for _, vTmp := range sim.List() {
-			fmt.Printf(" %v", vTmp.(graph.ID))
+		for v := range sim {
+			fmt.Printf(" %v", v)
 		}
 		fmt.Printf("\n")
 	}
+
+	fmt.Println("finish")
 }
