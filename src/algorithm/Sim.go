@@ -102,7 +102,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		}
 	}
 
-	messageMap := make(map[int]map[*SimPair]bool)
+	messageMap := make(map[int]map[SimPair]bool)
 
 	for v, msgs := range g.GetFIs() {
 		for u := range sim {
@@ -110,9 +110,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 				for _, msg := range msgs {
 					partitionId := msg.RoutePartition()
 					if _, ok := messageMap[partitionId]; !ok {
-						messageMap[partitionId] = make(map[*SimPair]bool)
+						messageMap[partitionId] = make(map[SimPair]bool)
 					}
-					messageMap[partitionId][&SimPair{PatternNode: u, DataNode: v}] = true
+					messageMap[partitionId][SimPair{PatternNode: u, DataNode: v}] = true
 				}
 			}
 		}
@@ -147,9 +147,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 							for _, routeMsg := range routeMsgs {
 								partitionId := routeMsg.RoutePartition()
 								if _, ok = messageMap[partitionId]; !ok {
-									messageMap[partitionId] = make(map[*SimPair]bool)
+									messageMap[partitionId] = make(map[SimPair]bool)
 								}
-								messageMap[partitionId][&SimPair{PatternNode: u_pre, DataNode: v}] = true
+								messageMap[partitionId][SimPair{PatternNode: u_pre, DataNode: v}] = true
 							}
 						}
 
@@ -178,10 +178,11 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	reducedMsg := make(map[int][]*SimPair)
 	for partitionId, message := range messageMap {
 		updatePairNum += int32(len(message))
-
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for msg := range message {
-			reducedMsg[partitionId] = append(reducedMsg[partitionId], msg)
+			if msg.PatternNode.IntVal() == msg.DataNode.IntVal() % tools.GraphSimulationTypeModel {
+				reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: msg.PatternNode, DataNode: msg.DataNode})
+			}
 		}
 	}
 	combineTime := time.Since(combineStart).Seconds()
@@ -224,9 +225,11 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 	}
 
 	//calculate
-	messageMap := make(map[int]map[*SimPair]bool)
+	messageMap := make(map[int]map[SimPair]bool)
 	iterationStartTime := time.Now()
 	var iterationNum int32 = 0
+
+	fmt.Println("start inc calculate")
 
 	for {
 		iterationFinish := true
@@ -250,9 +253,9 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 							for _, routeMsg := range routeMsgs {
 								partitionId := routeMsg.RoutePartition()
 								if _, ok = messageMap[partitionId]; !ok {
-									messageMap[partitionId] = make(map[*SimPair]bool)
+									messageMap[partitionId] = make(map[SimPair]bool)
 								}
-								messageMap[partitionId][&SimPair{PatternNode: u, DataNode: v}] = true
+								messageMap[partitionId][SimPair{PatternNode: u, DataNode: v}] = true
 							}
 						}
 
@@ -285,7 +288,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for msg := range message {
-			reducedMsg[partitionId] = append(reducedMsg[partitionId], msg)
+			reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode:msg.PatternNode, DataNode:msg.DataNode})
 		}
 	}
 	combineTime := time.Since(combineStart).Seconds()

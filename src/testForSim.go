@@ -41,6 +41,14 @@ func main() {
 	pre0, post0 := algorithm.GeneratePrePostFISet(g0)
 	pre1, post1 := algorithm.GeneratePrePostFISet(g1)
 
+	for v, preSet := range pre0 {
+		fmt.Printf("pre[%v]:", v)
+		for s := range preSet {
+			fmt.Printf(" %v", s)
+		}
+		fmt.Printf("\n")
+	}
+
 	ok0, message0, _, _, _, _, _ := algorithm.GraphSim_PEVal(g0, pattern, sim0, pre0, post0)
 	ok1, message1, _, _, _, _, _ := algorithm.GraphSim_PEVal(g1, pattern, sim1, pre1, post1)
 
