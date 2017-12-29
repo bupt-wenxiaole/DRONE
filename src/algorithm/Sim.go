@@ -114,7 +114,6 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	}
 
 	log.Println("zs-log: start calculate")
-	log.Printf("zs-log: node size:%v \n", allNodeUnionFO.Size())
 
 	//calculate
 	iterationStartTime := time.Now()
@@ -133,14 +132,6 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 				for v := range remove[u] {
 
 					iterationNum++
-					if iterationNum % 10000 == 0 {
-						log.Printf("zs-log: have iteration %v times \n", iterationNum)
-						sum := 0
-						for uTmp := range pattern.GetNodes() {
-							sum += sim[uTmp].Size()
-						}
-						log.Printf("zs-log: sum of sim size:%v\n", sum)
-					}
 
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)

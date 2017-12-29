@@ -177,12 +177,17 @@ func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (
 }
 
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
-	w.Lock()
-	defer w.UnLock()
+	log.Println("zs-log: receive send")
 
+	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {
-		w.message = append(w.message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
+		message = append(message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
 	}
+
+	w.Lock()
+	w.message = append(w.message, message...)
+	w.UnLock()
+
 	return &pb.SimMessageResponse{}, nil
 }
 
