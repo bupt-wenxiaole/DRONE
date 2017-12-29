@@ -4,6 +4,7 @@ import (
 	"graph"
 	"time"
 	"log"
+	"fmt"
 )
 
 type SimPair struct {
@@ -195,16 +196,20 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 	}
 
 	// initial
+	log.Println("start inc initial")
 	preSim := make(map[graph.ID]Set)
 	remove := make(map[graph.ID]Set)
 	for u := range patternNodeSet {
 		preSim[u] = sim[u].Copy()
 		remove[u] = NewSet()
 	}
-	for _, message := range messages {
+	for i, message := range messages {
 		u := message.PatternNode
 		v := message.DataNode
 
+		if i % 100000 == 0 {
+			fmt.Printf("finish %v inital iteration\n", i)
+		}
 
 		sim[u].Remove(v)
 		for v_pre := range preSet[v] {
@@ -226,7 +231,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 			if remove[u].Size() == 0 {
 				continue
 			}
-
+			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {

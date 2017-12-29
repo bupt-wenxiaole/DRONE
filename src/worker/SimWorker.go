@@ -123,8 +123,6 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
 			go Peer2PeerSimSend(client, encodeMessage)
-			log.Printf("send partition id:%v\n", partitionId)
-
 		}
 		fullSendDuration = time.Since(fullSendStart).Seconds()
 	}
