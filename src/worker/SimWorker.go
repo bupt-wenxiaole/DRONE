@@ -63,6 +63,28 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
+
+// rpc send has max size limit, so we spilt our transfer into many small block
+func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct)  {
+
+	for len(message) > tools.RPCSendSize {
+		slice := message[0:tools.RPCSendSize]
+		message = message[tools.RPCSendSize:]
+		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: slice})
+		if err != nil {
+			log.Println("send error")
+			log.Fatal(err)
+		}
+	}
+	if len(message) != 0 {
+		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: message})
+		if err != nil {
+			log.Println("send error")
+			log.Fatal(err)
+		}
+	}
+}
+
 func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
 	// init grpc handler and store it
 	// cause until now, we can ensure all workers have in work,
@@ -100,12 +122,9 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
+			Peer2PeerSimSend(client, encodeMessage)
 			log.Printf("send partition id:%v\n", partitionId)
-			_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: encodeMessage})
-			if err != nil {
-				log.Println("send error")
-				log.Fatal(err)
-			}
+
 		}
 		fullSendDuration = time.Since(fullSendStart).Seconds()
 	}
@@ -137,10 +156,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 			}
-			_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: encodeMessage})
-			if err != nil {
-				log.Fatal(err)
-			}
+			go Peer2PeerSimSend(client, encodeMessage)
 		}
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()

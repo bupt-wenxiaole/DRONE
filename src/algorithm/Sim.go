@@ -42,6 +42,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 	return preSet, postSet
 }
 
+
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
 func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set) (bool, map[int][]*SimPair, float64, float64, int32, int32, int32) {
 	nodeMap := pattern.GetNodes()
