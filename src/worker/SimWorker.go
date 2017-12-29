@@ -136,7 +136,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.String(), DataId: msg.DataNode.String()})
+				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 			}
 			_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: encodeMessage})
 			if err != nil {
