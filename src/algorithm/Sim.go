@@ -46,8 +46,8 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set) (bool, map[int][]*SimPair, float64, float64, int32, int32, int32) {
 	nodeMap := pattern.GetNodes()
 	patternNodeSet := NewSet() // a set for all pattern nodes
-	for _, node := range nodeMap {
-		patternNodeSet.Add(node)
+	for id := range nodeMap {
+		patternNodeSet.Add(id)
 	}
 
 	log.Println("zs-log: start PEVal initial")
@@ -67,34 +67,33 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	for id := range patternNodeSet {
 		log.Printf("zs-log: start PEval initial for Pattern Node %v \n", id.String())
 
-		patternNode := id.(graph.Node)
-		preSim[patternNode.ID()] = allNodeUnionFO.Copy()
+		preSim[id] = allNodeUnionFO.Copy()
 
-		sim[patternNode.ID()] = NewSet()
-		targets, _ := pattern.GetTargets(patternNode.ID())
+		sim[id] = NewSet()
+		targets, _ := pattern.GetTargets(id)
 		if len(targets) == 0 {
 			for v, msg := range g.GetNodes() {
-				if msg.Attr() == patternNode.Attr() {
-					sim[patternNode.ID()].Add(v)
+				if msg.Attr() == nodeMap[id].Attr() {
+					sim[id].Add(v)
 				}
 			}
 		} else {
 			for v, msg := range g.GetNodes() {
-				if postSet[v].Size() != 0 && msg.Attr() == patternNode.Attr() {
-					sim[patternNode.ID()].Add(v)
+				if postSet[v].Size() != 0 && msg.Attr() == nodeMap[id].Attr() {
+					sim[id].Add(v)
 				}
 			}
 		}
 		for v := range g.GetFOs() {
-			sim[patternNode.ID()].Add(v)
+			sim[id].Add(v)
 		}
 
-		remove[patternNode.ID()] = NewSet()
-		for u := range preSim[patternNode.ID()] {
-			remove[patternNode.ID()].Merge(preSet[u])
+		remove[id] = NewSet()
+		for u := range preSim[id] {
+			remove[id].Merge(preSet[u])
 		}
-		for u := range sim[patternNode.ID()] {
-			remove[patternNode.ID()].Separate(preSet[u])
+		for u := range sim[id] {
+			remove[id].Separate(preSet[u])
 		}
 	}
 
