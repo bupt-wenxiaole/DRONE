@@ -133,7 +133,7 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 }
 
 func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
-	log.Println("start IncEval")
+	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.preSet, w.postSet, w.message)
@@ -194,8 +194,6 @@ func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (
 }
 
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
-	log.Println("zs-log: receive send")
-
 	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {
 		message = append(message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
