@@ -97,7 +97,7 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.String(), DataId: msg.DataNode.String()})
+				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
 			log.Printf("send partition id:%v\n", partitionId)

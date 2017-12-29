@@ -18,12 +18,17 @@ import (
 type ID interface {
 	// String returns the string ID.
 	String() string
+	IntVal() int64
 }
 
 type StringID int64
 
 func (s StringID) String() string {
 	return strconv.FormatInt(int64(s), 10)
+}
+
+func (s StringID) IntVal() int64 {
+	return int64(s)
 }
 
 // Node is vertex. The ID must be unique within the graph.
