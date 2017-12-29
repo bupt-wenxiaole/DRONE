@@ -5,6 +5,7 @@ import (
 	"time"
 	"log"
 	"fmt"
+	"tools"
 )
 
 type SimPair struct {
@@ -87,7 +88,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			}
 		}
 		for v := range g.GetFOs() {
-			sim[id].Add(v)
+			if v.IntVal() % tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
+				sim[id].Add(v)
+			}
 		}
 
 		remove[id] = NewSet()
