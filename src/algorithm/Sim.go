@@ -93,6 +93,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			}
 		}
 
+		log.Println("start calculate remove set")
 		remove[id] = NewSet()
 		for u := range preSim[id] {
 			remove[id].Merge(preSet[u])
