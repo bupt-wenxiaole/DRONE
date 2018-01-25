@@ -11,6 +11,5 @@ a.write("0,10.2.152.24:15000\n")
 for i in range(1, num + 1):
     a.write("{0},10.2.152.2{1}:{2}\n".format(i, int((i - 1) // m + 1), 15000 + i))
 
-a.write("\n")
 
 a.close()
