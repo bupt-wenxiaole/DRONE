@@ -11,10 +11,15 @@ f = open(filename)
 m = {}
 
 startInc = 0
+startPEval = 0
 for line in f:
     if 'start IncEval' in line:
         time = line.split(" ")[1]
         startInc = transferTime(time)
+
+    if 'start PEval' in line:
+        time = line.split(" ")[1]
+        startPEval = transferTime(time)
 
     if "dosen't update in the round" in line:
         line = line.split(' ')
@@ -27,18 +32,20 @@ for line in f:
         line = line.split('\n')[0]
         line = line.split(" ")
         id = int(line[3])
-        time = float(line[9])
+        Itime = float(line[9])
         if id not in m.keys():
             m[id] = []
+        time = line[1]
+        time = transferTime(time)
+        time = time - startPEval
+        time = time - Itime
         m[id].append(time)
+        m[id].append(Itime)
 
 iter = len(m[1])
 f.close()
 f = open('time.csv', "w+")
-f.write("time")
-for i in range(1, iter + 1):
-    f.write("," + str(i))
-f.write('\n')
+f.write("workerId,PEval initial Time,PEval iteration time,inc eval time\n")
 for id in m.keys():
     f.write(str(id))
     for v in m[id]:
