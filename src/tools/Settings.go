@@ -11,7 +11,7 @@ const (
 	PatternPath = "../test_data/pattern.txt"
 	GraphSimulationTypeModel = 100
 
-	RPCSendSize = 10000
+	RPCSendSize = 1000
 
 	MaxBufferSize = 1024000
 )
