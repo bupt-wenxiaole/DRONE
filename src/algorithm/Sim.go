@@ -63,11 +63,11 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	for v := range g.GetFOs() {
 		allNodeUnionFO.Add(v)
 	}
-/*	removeInit := NewSet()
+	removeInit := NewSet()
 	for u := range allNodeUnionFO {
 		removeInit.Merge(preSet[u])
 	}
-*/
+
 	preSim := make(map[graph.ID]Set)
 	remove := make(map[graph.ID]Set)
 
@@ -75,8 +75,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		log.Printf("zs-log: start PEval initial for Pattern Node %v \n", id.String())
 
 		preSim[id] = allNodeUnionFO.Copy()
-		/*	remove[id] = removeInit.Copy()
-	    */
+		remove[id] = removeInit.Copy()
+
 		sim[id] = NewSet()
 		targets, _ := pattern.GetTargets(id)
 		if len(targets) == 0 {
@@ -90,19 +90,17 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			for v, msg := range g.GetNodes() {
 				if postSet[v].Size() != 0 && msg.Attr() == nodeMap[id].Attr() {
 					sim[id].Add(v)
-					/*remove[id].Separate(preSet[v])
-					 */
+					remove[id].Separate(preSet[v])
 				}
 			}
 		}
 		for v := range g.GetFOs() {
 			if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
 				sim[id].Add(v)
-				/*remove[id].Separate(preSet[v])
-				 */
+				remove[id].Separate(preSet[v])
 			}
 		}
-
+/*
 		log.Println("start calculate remove set")
 		remove[id] = NewSet()
 		for u := range preSim[id] {
@@ -111,6 +109,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		for u := range sim[id] {
 			remove[id].Separate(preSet[u])
 		}
+*/
 	}
 
 	messageMap := make(map[int]map[SimPair]bool)
