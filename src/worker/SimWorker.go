@@ -270,6 +270,14 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %vs", loadTime)
 
+	fmt.Printf("node size:%v\n", len(w.g.GetNodes()))
+	edgeSize := 0
+	for id := range w.g.GetNodes() {
+		targets, _ := w.g.GetTargets(id)
+		edgeSize += len(targets)
+	}
+	fmt.Printf("edge size:%v\n", edgeSize)
+
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
