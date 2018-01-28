@@ -65,7 +65,7 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 
 
 // rpc send has max size limit, so we spilt our transfer into many small block
-func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct)  {
+func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, wg *sync.WaitGroup)  {
 
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
@@ -83,6 +83,7 @@ func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct)  {
 			log.Fatal(err)
 		}
 	}
+	wg.Done()
 }
 
 func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
@@ -113,6 +114,7 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 			combineTime, updatePairNum, dstPartitionNum, 0, SlicePeerSendNull}}, nil
 	} else {
 		fullSendStart = time.Now()
+		var wg sync.WaitGroup
 		for partitionId, message := range messages {
 			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
 			encodeMessage := make([]*pb.SimMessageStruct, 0)
@@ -122,8 +124,10 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
-			go Peer2PeerSimSend(client, encodeMessage)
+			wg.Add(1)
+			go Peer2PeerSimSend(client, encodeMessage, &wg)
 		}
+		wg.Wait()
 		fullSendDuration = time.Since(fullSendStart).Seconds()
 	}
 	return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{IterationNum: iterationNum, IterationSeconds: iterationTime,
@@ -147,6 +151,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 			PairNum: SlicePeerSendNull}}, nil
 	} else {
 		fullSendStart = time.Now()
+		var wg sync.WaitGroup
 		for partitionId, message := range messages {
 			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
 			encodeMessage := make([]*pb.SimMessageStruct, 0)
@@ -155,8 +160,10 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 			for _, msg := range message {
 				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 			}
-			go Peer2PeerSimSend(client, encodeMessage)
+			wg.Add(1)
+			go Peer2PeerSimSend(client, encodeMessage, &wg)
 		}
+		wg.Wait()
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
