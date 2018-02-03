@@ -65,13 +65,57 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	}
 	removeInit := NewSet()
 	for u := range allNodeUnionFO {
-		removeInit.Merge(preSet[u])
+		//removeInit.Merge(preSet[u])
+		if postSet[u].Size() != 0 {
+			removeInit.Add(u)
+		}
 	}
 
 	preSim := make(map[graph.ID]Set)
 	remove := make(map[graph.ID]Set)
+	allPatternColor := make(map[int64]bool)
 
+	log.Printf("zs-log: start PEval initial for Pattern Node \n")
 	for id := range patternNodeSet {
+		preSim[id] = allNodeUnionFO.Copy()
+		remove[id] = removeInit.Copy()
+		sim[id] = NewSet()
+		allPatternColor[nodeMap[id].Attr()] = true
+	}
+
+	for v, msg := range g.GetNodes() {
+		_, ok := allPatternColor[msg.Attr()]
+		if ok {
+			for id := range patternNodeSet {
+				if msg.Attr() == nodeMap[id].Attr() {
+					targets, _ := pattern.GetTargets(id)
+					if len(targets) == 0 {
+						sim[id].Add(v)
+						remove[id].Separate(preSet[v])
+					} else {
+						if postSet[v].Size() != 0 {
+							sim[id].Add(v)
+							remove[id].Separate(preSet[v])
+						}
+					}
+				}
+			}
+		}
+	}
+	for v := range g.GetFOs() {
+		_, ok := allPatternColor[v.IntVal()%tools.GraphSimulationTypeModel]
+		if ok {
+			for id := range patternNodeSet {
+				if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
+					sim[id].Add(v)
+					remove[id].Separate(preSet[v])
+				}
+			}
+		}
+	}
+
+
+/*	for id := range patternNodeSet {
 		log.Printf("zs-log: start PEval initial for Pattern Node %v \n", id.String())
 
 		preSim[id] = allNodeUnionFO.Copy()
@@ -100,7 +144,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 				remove[id].Separate(preSet[v])
 			}
 		}
-/*
+///*
 		log.Println("start calculate remove set")
 		remove[id] = NewSet()
 		for u := range preSim[id] {
@@ -109,9 +153,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		for u := range sim[id] {
 			remove[id].Separate(preSet[u])
 		}
-*/
+/
 	}
-
+*/
 	messageMap := make(map[int]map[SimPair]bool)
 
 	for v, msgs := range g.GetFIs() {
