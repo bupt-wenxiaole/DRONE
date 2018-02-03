@@ -3,8 +3,8 @@ package tools
 const (
 	AlluxioHost   = "10.2.152.24"
 	ResultPath    = "/GRAPE/result/"
-	GraphPath     = "/GRAPE/simData2/"
-	PartitionPath = "/GRAPE/simData2/"
+	GraphPath     = "/GRAPE/simData/"
+	PartitionPath = "/GRAPE/simData/"
 	//LocalTempFile = "temp.json"
 	ConfigPath = "../test_data/config.txt"
 
