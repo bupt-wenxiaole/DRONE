@@ -18,12 +18,17 @@ import (
 type ID interface {
 	// String returns the string ID.
 	String() string
+	IntVal() int64
 }
 
-type StringID string
+type StringID int64
 
 func (s StringID) String() string {
-	return string(s)
+	return strconv.FormatInt(int64(s), 10)
+}
+
+func (s StringID) IntVal() int64 {
+	return int64(s)
 }
 
 // Node is vertex. The ID must be unique within the graph.
@@ -35,13 +40,13 @@ type Node interface {
 }
 
 type node struct {
-	id   string
+	id   int64
 	attr int64
 }
 
 //var nodeCnt uint64
 
-func NewNode(id string, attr int64) Node {
+func NewNode(id int64, attr int64) Node {
 	return &node{
 		id:   id,
 		attr: attr,
@@ -53,7 +58,7 @@ func (n *node) ID() ID {
 }
 
 func (n *node) String() string {
-	return n.id
+	return strconv.FormatInt(n.id, 10)
 }
 
 func (n *node) Attr() int64 {
@@ -510,14 +515,15 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 
 		line = line[0 : len(line) - 1]
 		msg := strings.Split(line, " ")
-		nodeId := msg[0]
+		nodeId, _ := strconv.Atoi(msg[0])
 		attr, _ := strconv.Atoi(msg[1])
-		node := NewNode(nodeId, int64(attr))
+		node := NewNode(int64(nodeId), int64(attr))
 		g.AddNode(node)
 
 		num, _ := strconv.Atoi(msg[2])
 		for i := 3; i < num + 3; i += 1 {
-			g.AddEdge(StringID(nodeId), StringID(msg[i]), 1)
+			v, _ := strconv.Atoi(msg[i])
+			g.AddEdge(StringID(nodeId), StringID(v), 1)
 		}
 
 	}
@@ -526,7 +532,7 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 }
 
 func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
-	js := make(map[string]map[string]map[string]int)
+	js := make(map[string]map[StringID]map[string]int)
 
 	//var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -550,20 +556,21 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 
 		nd1 := g.GetNode(StringID(id1))
 		if nd1 == nil {
-			intId, _ := strconv.Atoi(id1)
-			nd1 = NewNode(id1, int64(intId % tools.GraphSimulationTypeModel))
+			intId := id1
+			nd1 = NewNode(int64(id1), int64(intId % tools.GraphSimulationTypeModel))
 			if ok := g.AddNode(nd1); !ok {
 				return nil, fmt.Errorf("%s already exists", nd1)
 			}
 		}
 		for id2, weight := range mm {
 			if id2 == "attr" {
-				g.idToNodes[StringID(id1)] = NewNode(id1, int64(weight))
+				g.idToNodes[StringID(id1)] = NewNode(int64(id1), int64(weight))
 			} else {
-				nd2 := g.GetNode(StringID(id2))
+				id2Int, _ := strconv.Atoi(id2)
+				nd2 := g.GetNode(StringID(id2Int))
 				if nd2 == nil {
 					intId, _ := strconv.Atoi(id2)
-					nd2 = NewNode(id2, int64(intId % tools.GraphSimulationTypeModel))
+					nd2 = NewNode(int64(id2Int), int64(intId % tools.GraphSimulationTypeModel))
 					if ok := g.AddNode(nd2); !ok {
 						return nil, fmt.Errorf("%s already exists", nd2)
 					}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"gopkg.in/fatih/set.v0"
 	"graph"
 	"io"
 	"log"
@@ -29,9 +28,9 @@ type SimWorker struct {
 
 	g       graph.Graph
 	pattern graph.Graph
-	sim     map[graph.ID]set.Interface
-	preSet  map[graph.ID]set.Interface
-	postSet map[graph.ID]set.Interface
+	sim     map[graph.ID]algorithm.Set
+	preSet  map[graph.ID]algorithm.Set
+	postSet map[graph.ID]algorithm.Set
 
 	message []*algorithm.SimPair
 
@@ -64,6 +63,29 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
+
+// rpc send has max size limit, so we spilt our transfer into many small block
+func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, wg *sync.WaitGroup)  {
+
+	for len(message) > tools.RPCSendSize {
+		slice := message[0:tools.RPCSendSize]
+		message = message[tools.RPCSendSize:]
+		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: slice})
+		if err != nil {
+			log.Println("send error")
+			log.Fatal(err)
+		}
+	}
+	if len(message) != 0 {
+		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: message})
+		if err != nil {
+			log.Println("send error")
+			log.Fatal(err)
+		}
+	}
+	wg.Done()
+}
+
 func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
 	// init grpc handler and store it
 	// cause until now, we can ensure all workers have in work,
@@ -92,22 +114,20 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 			combineTime, updatePairNum, dstPartitionNum, 0, SlicePeerSendNull}}, nil
 	} else {
 		fullSendStart = time.Now()
+		var wg sync.WaitGroup
 		for partitionId, message := range messages {
 			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
 			encodeMessage := make([]*pb.SimMessageStruct, 0)
 			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.String(), DataId: msg.DataNode.String()})
+				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
 			}
-			log.Printf("send partition id:%v\n", partitionId)
-			_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: encodeMessage})
-			if err != nil {
-				log.Println("send error")
-				log.Fatal(err)
-			}
+			wg.Add(1)
+			go Peer2PeerSimSend(client, encodeMessage, &wg)
 		}
+		wg.Wait()
 		fullSendDuration = time.Since(fullSendStart).Seconds()
 	}
 	return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{IterationNum: iterationNum, IterationSeconds: iterationTime,
@@ -115,8 +135,8 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 }
 
 func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
 	w.iterationNum++
-	log.Println("aa?")
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.preSet, w.postSet, w.message)
 	w.message = make([]*algorithm.SimPair, 0)
@@ -131,19 +151,19 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 			PairNum: SlicePeerSendNull}}, nil
 	} else {
 		fullSendStart = time.Now()
+		var wg sync.WaitGroup
 		for partitionId, message := range messages {
 			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
 			encodeMessage := make([]*pb.SimMessageStruct, 0)
 			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.String(), DataId: msg.DataNode.String()})
+				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 			}
-			_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: encodeMessage})
-			if err != nil {
-				log.Fatal(err)
-			}
+			wg.Add(1)
+			go Peer2PeerSimSend(client, encodeMessage, &wg)
 		}
+		wg.Wait()
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
@@ -159,8 +179,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 
 	result := make([]string, 0)
 	for u, simSets := range w.sim {
-		for _, tmp := range simSets.List() {
-			v := tmp.(graph.ID)
+		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
 				result = append(result, u.String()+"\t"+v.String())
 			}
@@ -180,12 +199,15 @@ func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (
 }
 
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
-	w.Lock()
-	defer w.UnLock()
-
+	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {
-		w.message = append(w.message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
+		message = append(message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
 	}
+
+	w.Lock()
+	w.message = append(w.message, message...)
+	w.UnLock()
+
 	return &pb.SimMessageResponse{}, nil
 }
 
@@ -197,7 +219,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
-	w.sim = make(map[graph.ID]set.Interface)
+	w.sim = make(map[graph.ID]algorithm.Set)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
@@ -246,7 +268,16 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 		log.Fatal(err)
 	}
 	loadTime := time.Since(start)
-	fmt.Printf("loadGraph Time: %vs", loadTime)
+	fmt.Printf("loadGraph Time: %vs\n", loadTime)
+
+	fmt.Printf("node size:%v\n", len(w.g.GetNodes()))
+	edgeSize := 0
+	for id := range w.g.GetNodes() {
+		targets, _ := w.g.GetTargets(id)
+		edgeSize += len(targets)
+	}
+	fmt.Printf("edge size:%v\n", edgeSize)
+	fmt.Printf("FO size:%v\n", len(w.g.GetFOs()))
 
 	if w.g == nil {
 		log.Println("can't load graph")

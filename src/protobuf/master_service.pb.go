@@ -14,14 +14,20 @@
 		ShutDownRequest
 		ShutDownResponse
 		PEvalRequest
+		WorkerCommunicationSize
+		PEvalResponseBody
 		PEvalResponse
 		IncEvalRequest
+		IncEvalResponseBody
 		IncEvalResponse
 		AssembleRequest
 		AssembleResponse
 		SSSPMessageRequest
 		SSSPMessageStruct
 		SSSPMessageResponse
+		SimMessageRequest
+		SimMessageResponse
+		SimMessageStruct
 */
 package protobuf
 
