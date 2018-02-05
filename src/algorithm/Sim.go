@@ -84,7 +84,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()
 		sim[id] = NewSet()
-		for v := g.GetFOs() {
+		for v := range g.GetFOs() {
 			sim[id].Add(v)
 		}
 		allPatternColor[nodeMap[id].Attr()] = true
