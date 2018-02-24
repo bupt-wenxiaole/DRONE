@@ -233,6 +233,10 @@ func newWorker(id, partitionNum int) *Worker {
 	start := time.Now()
 
 	suffix := strconv.Itoa(partitionNum) + "_"
+
+	//if you want to use file with suffix, turn ".json" to ".txt"
+	//if you want to use no-suffix file, delete the ".json" under this
+
 	graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
 	defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
 	defer graphIO.Close()
@@ -241,11 +245,18 @@ func newWorker(id, partitionNum int) *Worker {
 		fmt.Println("graphIO is nil")
 	}
 
-	partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
-	defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-	defer partitionIO.Close()
+	//there's a trouble about how to diff FxI and FxO
 
-	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
+	//partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
+	fxiReader, _ := tools.ReadFromAlluxio(tools.PartitionPath+"I"+suffix+strconv.Itoa(w.selfId-1)+".json", "I"+suffix+strconv.Itoa(w.selfId-1)+".json")
+	fxoReader, _ := tools.ReadFromAlluxio(tools.PartitionPath+"O"+suffix+strconv.Itoa(w.selfId-1)+".json", "O"+suffix+strconv.Itoa(w.selfId-1)+".json")
+	defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
+	//defer partitionIO.Close()
+	defer fxiReader.Close()
+	defer fxoReader.Close()
+
+	//w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
+	w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxiReader, strconv.Itoa(w.selfId-1))
 	if err != nil {
 		log.Fatal(err)
 	}
