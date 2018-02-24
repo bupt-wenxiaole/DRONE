@@ -589,3 +589,72 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 
 	return g, nil
 }
+
+func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID string) (Graph, error) {
+	js := make(map[string]map[string]map[string]int)
+	bufrd := bufio.NewReader(rd)
+	for {
+		line, err := bufrd.ReadString('\n')
+		linelem := strings.Split(line, "\t")
+		if err != nil {
+			if err == io.EOF {
+				if js[linelem[0]] == nil {
+					js[linelem[0]] = make(map[string]map[string]int)
+					if js[linelem[0]][linelem[2]] == nil {
+						js[linelem[0]][linelem[2]] = make(map[string]int)
+					}
+				}
+				integer, err := strconv.Atoi(linelem[6])
+				if err != nil {
+					return nil, err
+				}
+				js[linelem[0]][linelem[2]][linelem[4]] = integer
+				break
+			}
+			return nil, err
+		}
+	}
+
+	gmap := js["Graph"+graphID]
+	g := newGraph()
+	for id1, mm := range gmap {
+
+		nd1 := g.GetNode(StringID(id1))
+		if nd1 == nil {
+			intId, _ := strconv.Atoi(id1)
+			nd1 = NewNode(id1, int64(intId % tools.GraphSimulationTypeModel))
+			if ok := g.AddNode(nd1); !ok {
+				return nil, fmt.Errorf("%s already exists", nd1)
+			}
+		}
+		for id2, weight := range mm {
+			if id2 == "attr" {
+				g.idToNodes[StringID(id1)] = NewNode(id1, int64(weight))
+			} else {
+				nd2 := g.GetNode(StringID(id2))
+				if nd2 == nil {
+					intId, _ := strconv.Atoi(id2)
+					nd2 = NewNode(id2, int64(intId % tools.GraphSimulationTypeModel))
+					if ok := g.AddNode(nd2); !ok {
+						return nil, fmt.Errorf("%s already exists", nd2)
+					}
+				}
+				g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
+			}
+		}
+	}
+
+	graphFI, err1 := LoadRouteMsgFxIFromTxt(fxird)
+	if err1 != nil {
+		return nil, err1
+	}
+	graphFO, err2 := LoadRouteMsgFxOFromTxt(fxord)
+	if err2 != nil {
+		return nil, err2
+	}
+	g.graphFI = graphFI
+	g.graphFO = graphFO
+
+	return g, nil
+
+}
