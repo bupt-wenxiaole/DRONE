@@ -245,7 +245,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	start := time.Now()
 
 	suffix := strconv.Itoa(partitionNum) + "_"
-
+	
 	//if you want to use file with suffix, turn ".json" to ".txt"
 	//if you want to use no-suffix file, delete the ".json" under this
 
@@ -257,6 +257,13 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 		fmt.Println("graphIO is nil")
 	}
 
+	patternFile, err := os.Open(tools.PatternPath)
+	if err != nil {
+		log.Fatal("pattern path error")
+	}
+	defer patternFile.Close()
+	w.pattern, _ = graph.NewPatternGraph(patternFile)
+ 
 	//there's a trouble about how to diff FxI and FxO
 
 	//partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
