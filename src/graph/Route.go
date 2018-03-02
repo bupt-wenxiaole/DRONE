@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	//"fmt"
+	"bufio"
 )
 
 type RouteMsg interface {
@@ -81,4 +82,56 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 	graphFO := resolveJsonMap(FOMap)
 
 	return graphFI, graphFO, nil
+}
+
+func LoadRouteMsgFxIFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
+	stod := make(map[string]map[string]string)
+	bufrd := bufio.NewReader(rd)
+	for {
+		line, err := bufrd.ReadString('\n')
+		linelem := strings.Split(line, "\t")
+		if err != nil {
+			if err == io.EOF {
+				if stod[linelem[0]] == nil {
+					stod[linelem[0]] = make(map[string]string)
+				}
+				stod[linelem[0]][linelem[2]] = linelem[4]
+				break
+			}
+			return nil, err
+		}
+		if stod[linelem[0]] == nil {
+			stod[linelem[0]] = make(map[string]string)
+		}
+		stod[linelem[0]][linelem[2]] = linelem[4]
+	}
+	graphFI := resolveJsonMap(stod)
+
+	return graphFI, nil
+}
+
+func LoadRouteMsgFxOFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
+	stod := make(map[string]map[string]string)
+	bufrd := bufio.NewReader(rd)
+	for {
+		line, err := bufrd.ReadString('\n')
+		linelem := strings.Split(line, "\t")
+		if err != nil {
+			if err == io.EOF {
+				if stod[linelem[0]] == nil {
+					stod[linelem[0]] = make(map[string]string)
+				}
+				stod[linelem[0]][linelem[2]] = linelem[4]
+				break
+			}
+			return nil, err
+		}
+		if stod[linelem[0]] == nil {
+			stod[linelem[0]] = make(map[string]string)
+		}
+		stod[linelem[0]][linelem[2]] = linelem[4]
+	}
+	graphFO := resolveJsonMap(stod)
+
+	return graphFO, nil
 }
