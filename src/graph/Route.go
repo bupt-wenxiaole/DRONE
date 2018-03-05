@@ -8,6 +8,8 @@ import (
 	//"fmt"
 	"bufio"
 	"log"
+	"tools"
+	"fmt"
 )
 
 type RouteMsg interface {
@@ -85,7 +87,8 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 	return graphFI, graphFO, nil
 }
 
-func LoadRouteMsgFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
+// srcInner 为true 意味着src点属于graph内部点，反之意味着dst点是内点
+func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg, error) {
 	ansMap := make(map[ID][]RouteMsg)
 	bufrd := bufio.NewReader(rd)
 	for {
@@ -106,6 +109,26 @@ func LoadRouteMsgFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
 
 		srcId := StringID(parseSrc)
 		dstId := StringID(parseDst)
+
+		if srcInner {
+			nd := g.GetNode(srcId)
+			if nd == nil {
+				intId := srcId.IntVal()
+				nd = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
+				if ok := g.AddNode(nd); !ok {
+					log.Fatal("add node error")
+				}
+			}
+		} else {
+			nd := g.GetNode(dstId)
+			if nd == nil {
+				intId := dstId.IntVal()
+				nd = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
+				if ok := g.AddNode(nd); !ok {
+					log.Fatal("add node error")
+				}
+			}
+		}
 
 		weight, err := strconv.ParseFloat(paras[3], 64)
 		if err != nil {

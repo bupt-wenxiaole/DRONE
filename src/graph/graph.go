@@ -637,11 +637,11 @@ func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID str
 	}
 
 
-	graphFI, err1 := LoadRouteMsgFromTxt(fxird)
+	graphFI, err1 := LoadRouteMsgFromTxt(fxird, false, g)
 	if err1 != nil {
 		return nil, err1
 	}
-	graphFO, err2 := LoadRouteMsgFromTxt(fxord)
+	graphFO, err2 := LoadRouteMsgFromTxt(fxord, true, g)
 	if err2 != nil {
 		return nil, err2
 	}
