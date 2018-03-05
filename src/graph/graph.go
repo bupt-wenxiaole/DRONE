@@ -142,16 +142,16 @@ type Graph interface {
 
 	// AddEdge adds an edge from nd1 to nd2 with the weight.
 	// It returns error if a node does not exist.
-	AddEdge(id1, id2 ID, weight int) error
+	AddEdge(id1, id2 ID, weight float64) error
 
 	// ReplaceEdge replaces an edge from id1 to id2 with the weight.
-	ReplaceEdge(id1, id2 ID, weight int) error
+	ReplaceEdge(id1, id2 ID, weight float64) error
 
 	// DeleteEdge deletes an edge from id1 to id2.
 	DeleteEdge(id1, id2 ID) error
 
 	// GetWeight returns the weight from id1 to id2.
-	GetWeight(id1, id2 ID) (int, error)
+	GetWeight(id1, id2 ID) (float64, error)
 
 	// GetSources returns the map of parent Nodes.
 	// (Nodes that come towards the argument vertex.)
