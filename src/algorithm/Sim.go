@@ -37,6 +37,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 		preSet[v] = NewSet()
 		for _, msg := range routeMsg {
 			preSet[v].Add(msg.RelatedId())
+			fmt.Println("zs-log:" + msg.RelatedId().String())
 			postSet[msg.RelatedId()].Add(v)
 		}
 	}
