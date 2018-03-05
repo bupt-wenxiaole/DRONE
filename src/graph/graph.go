@@ -598,7 +598,7 @@ func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID str
 		if err != nil || io.EOF == err {
 			break
 		}
-		paras := strings.Split(line, " ")
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 
 		parseSrc, err := strconv.ParseInt(paras[0], 10, 64)
 		if err != nil {

@@ -94,7 +94,7 @@ func LoadRouteMsgFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
 			break
 		}
 
-		paras := strings.Split(line, " ")
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 		parseSrc, err := strconv.ParseInt(paras[0], 10, 64)
 		if err != nil {
 			log.Fatal("parse src node id error")
