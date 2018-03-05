@@ -7,17 +7,19 @@ import (
 	"strings"
 	//"fmt"
 	"bufio"
+	"log"
+	"image/draw"
 )
 
 type RouteMsg interface {
 	RelatedId() ID
-	RelatedWgt() int
+	RelatedWgt() float64
 	RoutePartition() int
 }
 
 type routeMsg struct {
 	relatedId      ID
-	relatedWgt     int
+	relatedWgt     float64
 	routePartition int
 }
 
@@ -25,7 +27,7 @@ func (r *routeMsg) RelatedId() ID {
 	return r.relatedId
 }
 
-func (r *routeMsg) RelatedWgt() int {
+func (r *routeMsg) RelatedWgt() float64 {
 	return r.relatedWgt
 }
 
@@ -46,7 +48,7 @@ func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
 
 		for dstID, msg := range dstMsg {
 			split := strings.Split(msg, " ")
-			wgt, _ := strconv.Atoi(split[0])
+			wgt, _ := strconv.ParseFloat(split[0], 64)
 			nextHop, _ := strconv.Atoi(split[1])
 
 			dstIDInt, _ := strconv.Atoi(dstID)
@@ -84,54 +86,44 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 	return graphFI, graphFO, nil
 }
 
-func LoadRouteMsgFxIFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
-	stod := make(map[string]map[string]string)
+func LoadRouteMsgFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
+	ansMap := make(map[ID][]RouteMsg)
 	bufrd := bufio.NewReader(rd)
 	for {
 		line, err := bufrd.ReadString('\n')
-		linelem := strings.Split(line, "\t")
+		if err != nil || io.EOF == err {
+			break
+		}
+
+		paras := strings.Split(line, " ")
+		parseSrc, err := strconv.ParseInt(paras[0], 10, 64)
 		if err != nil {
-			if err == io.EOF {
-				if stod[linelem[0]] == nil {
-					stod[linelem[0]] = make(map[string]string)
-				}
-				stod[linelem[0]][linelem[2]] = linelem[4]
-				break
-			}
-			return nil, err
+			log.Fatal("parse src node id error")
 		}
-		if stod[linelem[0]] == nil {
-			stod[linelem[0]] = make(map[string]string)
-		}
-		stod[linelem[0]][linelem[2]] = linelem[4]
-	}
-	graphFI := resolveJsonMap(stod)
-
-	return graphFI, nil
-}
-
-func LoadRouteMsgFxOFromTxt(rd io.Reader)(map[ID][]RouteMsg, error) {
-	stod := make(map[string]map[string]string)
-	bufrd := bufio.NewReader(rd)
-	for {
-		line, err := bufrd.ReadString('\n')
-		linelem := strings.Split(line, "\t")
+		parseDst, err := strconv.ParseInt(paras[1], 10, 64)
 		if err != nil {
-			if err == io.EOF {
-				if stod[linelem[0]] == nil {
-					stod[linelem[0]] = make(map[string]string)
-				}
-				stod[linelem[0]][linelem[2]] = linelem[4]
-				break
-			}
-			return nil, err
+			log.Fatal("parse dst node id error")
 		}
-		if stod[linelem[0]] == nil {
-			stod[linelem[0]] = make(map[string]string)
-		}
-		stod[linelem[0]][linelem[2]] = linelem[4]
-	}
-	graphFO := resolveJsonMap(stod)
 
-	return graphFO, nil
+		srcId := StringID(parseSrc)
+		dstId := StringID(parseDst)
+
+		weight, err := strconv.ParseFloat(paras[3], 64)
+		if err != nil {
+			log.Fatal("parse weight error")
+		}
+
+		partition, err := strconv.Atoi(paras[2])
+		if err != nil {
+			log.Fatal("parse partition error")
+		}
+
+		if _, ok := ansMap[dstId]; !ok {
+			ansMap[dstId] = make([]RouteMsg, 0)
+		}
+		route := &routeMsg{relatedId: srcId, relatedWgt: weight, routePartition: partition}
+		ansMap[dstId] = append(ansMap[dstId], route)
+	}
+
+	return ansMap, nil
 }
