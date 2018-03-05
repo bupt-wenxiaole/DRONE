@@ -614,8 +614,8 @@ func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID str
 
 		weight, err := strconv.ParseFloat(paras[3], 64)
 		if err != nil {
-			log.Fatal("parse weight error")
 			fmt.Println("zs-log: " + paras[3])
+			log.Fatal("parse weight error")
 		}
 
 		nd1 := g.GetNode(srcId)
