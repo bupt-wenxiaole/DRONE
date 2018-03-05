@@ -298,7 +298,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 			g.nodeToTargets[id1][id2] = weight
 		}
 	} else {
-		tmap := make(map[ID]int)
+		tmap := make(map[ID]float64)
 		tmap[id2] = weight
 		g.nodeToTargets[id1] = tmap
 	}
@@ -309,7 +309,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 			g.nodeToSources[id2][id1] = weight
 		}
 	} else {
-		tmap := make(map[ID]int)
+		tmap := make(map[ID]float64)
 		tmap[id1] = weight
 		g.nodeToSources[id2] = tmap
 	}
