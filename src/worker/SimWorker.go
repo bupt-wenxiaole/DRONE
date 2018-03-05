@@ -258,7 +258,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxiReader, strconv.Itoa(w.selfId-1))
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -288,7 +288,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.pattern, _ = graph.NewPatternGraph(patternFile)
 
 	loadTime := time.Since(start)
-	fmt.Printf("loadGraph Time: %vs\n", loadTime)
+	fmt.Printf("loadGraph Time: %v\n", loadTime)
 
 	fmt.Printf("node size:%v\n", len(w.g.GetNodes()))
 	edgeSize := 0

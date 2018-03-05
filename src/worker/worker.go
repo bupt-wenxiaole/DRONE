@@ -245,7 +245,7 @@ func newWorker(id, partitionNum int) *Worker {
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxiReader, strconv.Itoa(w.selfId-1))
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -268,7 +268,7 @@ func newWorker(id, partitionNum int) *Worker {
 	}
 
 	loadTime := time.Since(start)
-	fmt.Printf("loadGraph Time: %vs", loadTime)
+	fmt.Printf("loadGraph Time: %v", loadTime)
 
 	if w.g == nil {
 		log.Println("can't load graph")
