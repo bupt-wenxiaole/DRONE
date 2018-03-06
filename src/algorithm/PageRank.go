@@ -3,6 +3,7 @@ package algorithm
 import (
 	"graph"
 	"math"
+	"log"
 )
 
 const eps = 0.01
@@ -50,6 +51,9 @@ func PageRank_PEVal(g graph.Graph, prVal map[graph.ID]float64, workerNum int) in
 
 		prVal = tempPr
 		tempPr = make(map[graph.ID]float64)
+	}
+	for id, val := range prVal {
+		log.Printf("id:%v prval:%v", id.IntVal(), val)
 	}
 	return int64(nodeNum)
 }
