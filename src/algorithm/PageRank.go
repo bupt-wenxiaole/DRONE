@@ -68,7 +68,7 @@ func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
 	for fo, msgs := range FO {
 		for _, msg := range msgs {
 			srcId := msg.RelatedId()
-			if _, ok := outerMsg[srcId]; !ok {
+			if _, ok := outerMsg[srcId.IntVal()]; !ok {
 				outerMsg[srcId.IntVal()] = make([]int64, 0)
 			}
 
@@ -107,12 +107,12 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 
 	for id := range g.GetNodes() {
 		targets, _ := g.GetTargets(id)
-		sonNum := len(targets) + len(outerMsg[id])
-		tempPr[id] += 0.15 * initVal
+		sonNum := len(targets) + len(outerMsg[id.IntVal()])
+		tempPr[id.IntVal()] += 0.15 * initVal
 		if sonNum == 0 {
-			still += prVal[id] / float64(totalVertexNum)
+			still += prVal[id.IntVal()] / float64(totalVertexNum)
 		} else {
-			val := prVal[id] / float64(sonNum)
+			val := prVal[id.IntVal()] / float64(sonNum)
 			log.Printf("val: %v\n", val)
 			for target := range targets {
 				tempPr[target.IntVal()] += 0.85 * val
