@@ -54,7 +54,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[graph.ID]float64, workerNum int) in
 	return int64(nodeNum)
 }
 
-func generateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*graph.ID {
+func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*graph.ID {
 	outerMsg := make(map[graph.ID][]*graph.ID)
 	for fo, msgs := range FO {
 		for _, msg := range msgs {
@@ -70,25 +70,25 @@ func generateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*graph.ID
 	return outerMsg
 }
 
-func PageRank_IncEval(g graph.Graph, prVal map[graph.ID]float64, tempPr map[graph.ID]float64, workerNum int, partitionId int, outerMsg map[graph.ID][]*graph.ID, messages []*PRMessage, totalVertexNum int64) (bool, map[int][]*PRMessage) {
+func PageRank_IncEval(g graph.Graph, prVal map[graph.ID]float64, oldPr map[graph.ID]float64, workerNum int, partitionId int, outerMsg map[graph.ID][]*graph.ID, messages map[graph.ID]float64, totalVertexNum int64) (bool, map[int][]*PRMessage) {
 	still := 0.0
 	initVal := 1.0 / float64(totalVertexNum)
 	updated := false
-	for _, msg := range messages {
-		if msg.ID.IntVal() != -1 {
-			prVal[msg.ID] += msg.PRValue * 0.85
+	for id, msg := range messages {
+		if id.IntVal() != -1 {
+			prVal[id] += msg * 0.85
 		} else {
-			still += msg.PRValue
+			still += msg
 		}
 	}
 	for id := range g.GetNodes() {
 		prVal[id] += still * 0.85
-		if math.Abs(prVal[id] - tempPr[id]) > eps * initVal {
+		if math.Abs(prVal[id] - oldPr[id]) > eps * initVal {
 			updated = true
 		}
 	}
 
-	tempPr = make(map[graph.ID]float64)
+	tempPr := make(map[graph.ID]float64)
 	still = 0
 
 	for id := range g.GetNodes() {
@@ -125,6 +125,9 @@ func PageRank_IncEval(g graph.Graph, prVal map[graph.ID]float64, tempPr map[grap
 		partition := routeMsg[0].RoutePartition()
 		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:prVal[fo],ID:fo})
 	}
+
+	oldPr = prVal
+	prVal = tempPr
 
 	return updated, reduceMsg
 }

@@ -198,6 +198,10 @@ func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (
 	return nil, nil
 }
 
+func (w *SimWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
+	return nil, nil
+}
+
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
 	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {

@@ -199,6 +199,9 @@ func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb
 func (w *Worker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
 	return nil, nil
 }
+func (w *Worker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
+	return nil, nil
+}
 
 func newWorker(id, partitionNum int) *Worker {
 	w := new(Worker)
