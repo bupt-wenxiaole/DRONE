@@ -17,7 +17,7 @@ service Worker {
 	//service to worker
 	rpc SSSPSend (sSSPMessageRequest) returns (sSSPMessageResponse) {}
     rpc simSend (simMessageRequest) returns (simMessageResponse) {}
-
+    rpc PRSend (pRMessageRequest) returns (pRMessageResponse) {}
 }
 
 message shutDownRequest {
@@ -101,4 +101,14 @@ message simMessageResponse {
 message simMessageStruct {
     int64 patternId = 1;
     int64 dataId = 2;
+}
+
+message pRMessageRequest {
+    repeated pRMessageStruct pair = 1;
+}
+message pRMessageResponse {
+}
+message pRMessageStruct {
+    int64 nodeID = 1;
+    double prVal = 2;
 }
