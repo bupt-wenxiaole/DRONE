@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 	"tools"
-	"math/big"
 )
 
 type PRWorker struct {
