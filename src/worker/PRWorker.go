@@ -27,12 +27,12 @@ type PRWorker struct {
 	grpcHandlers []*grpc.ClientConn
 
 	g            graph.Graph
-	prVal        map[graph.ID]float64
-	oldPr        map[graph.ID]float64
+	prVal        map[int64]float64
+	oldPr        map[int64]float64
 	partitionNum int
 	totalVertexNum int64
-	updated      map[graph.ID]float64
-	outerMsg    map[graph.ID][]*graph.ID
+	updated      map[int64]float64
+	outerMsg    map[int64][]int64
 
 	iterationNum int
 	stopChannel  chan bool
@@ -188,8 +188,8 @@ func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.P
 	log.Println("send receive")
 	w.Lock()
 	for _, msg := range args.Pair {
-		w.updated[graph.StringID(msg.NodeID)] += msg.PrVal
-		log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
+		w.updated[msg.NodeID] += msg.PrVal
+	//	log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
 	}
 	w.UnLock()
 
@@ -203,10 +203,10 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.peers = make([]string, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
-	w.prVal = make(map[graph.ID]float64, 0)
-	w.oldPr = make(map[graph.ID]float64, 0)
+	w.prVal = make(map[int64]float64, 0)
+	w.oldPr = make(map[int64]float64, 0)
 	w.partitionNum = partitionNum
-	w.updated = make(map[graph.ID]float64, 0)
+	w.updated = make(map[int64]float64, 0)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
