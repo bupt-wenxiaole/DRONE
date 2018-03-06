@@ -21,9 +21,11 @@ func PageRank_PEVal(g graph.Graph, prVal map[graph.ID]float64, workerNum int) in
 	}
 
 	tempPr := make(map[graph.ID]float64)
+	loopTime := 0
 	for {
 		updated := false
 		still := 0.0
+		loopTime++
 
 		for id := range g.GetNodes() {
 			targets, _ := g.GetTargets(id)
@@ -52,9 +54,12 @@ func PageRank_PEVal(g graph.Graph, prVal map[graph.ID]float64, workerNum int) in
 		prVal = tempPr
 		tempPr = make(map[graph.ID]float64)
 	}
+	/*
 	for id, val := range prVal {
-		log.Printf("id:%v prval:%v", id.IntVal(), val)
+		log.Printf("id:%v prval:%v\n", id.IntVal(), val)
 	}
+	*/
+	log.Printf("loop time:%v\n", loopTime)
 	return int64(nodeNum)
 }
 
@@ -75,6 +80,11 @@ func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*graph.ID
 }
 
 func PageRank_IncEval(g graph.Graph, prVal map[graph.ID]float64, oldPr map[graph.ID]float64, workerNum int, partitionId int, outerMsg map[graph.ID][]*graph.ID, messages map[graph.ID]float64, totalVertexNum int64) (bool, map[int][]*PRMessage) {
+	for id, val := range prVal {
+		log.Printf("id:%v prval:%v\n", id.IntVal(), val)
+	}
+
+
 	still := 0.0
 	initVal := 1.0 / float64(totalVertexNum)
 	updated := false
