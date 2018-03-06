@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 	"tools"
+	"math/big"
 )
 
 type PRWorker struct {
@@ -127,13 +128,13 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
 	w.iterationNum++
 	if w.iterationNum == 1 {
-		w.totalVertexNum += int64(w.updated[graph.StringID(-1)])
-		w.updated = make(map[graph.ID]float64, 0)
+		w.totalVertexNum += int64(w.updated[-1])
+		w.updated = make(map[int64]float64, 0)
 		log.Printf("total vertex num:%v", w.totalVertexNum)
 	}
 
 	isMessageToSend, messages := algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
-	w.updated = make(map[graph.ID]float64, 0)
+	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
@@ -166,7 +167,7 @@ func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 
 	result := make([]string, 0)
 	for id, pr := range w.prVal {
-		result = append(result, id.String()+"\t"+strconv.FormatFloat(pr, 'E', -1, 64))
+		result = append(result, strconv.FormatInt(id, 10) +"\t"+strconv.FormatFloat(pr, 'E', -1, 64))
 	}
 
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
