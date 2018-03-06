@@ -103,7 +103,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[graph.ID]float64, oldPr map[graph
 				tempPr[target] += 0.85 * val
 			}
 			for _, outer := range outerMsg[id] {
-				tempPr[outer] += 0.85 * val
+				tempPr[*outer] += 0.85 * val
 			}
 		}
 	}
