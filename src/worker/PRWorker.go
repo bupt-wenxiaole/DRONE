@@ -84,11 +84,12 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 	//var fullSendStart time.Time
 	//var fullSendDuration float64
 	//var SlicePeerSend []*pb.WorkerCommunicationSize
-	nodeNum := algorithm.PageRank_PEVal(w.g, w.prVal, w.partitionNum)
+	var nodeNum int64
+	nodeNum, w.prVal = algorithm.PageRank_PEVal(w.g, w.prVal, w.partitionNum)
 
-	for id, val := range w.prVal {
+	/*for id, val := range w.prVal {
 		log.Printf("PEVal id:%v prval:%v\n", id, val)
-	}
+	}*/
 
 	w.totalVertexNum = nodeNum
 	for partitionId := 1; partitionId <= w.partitionNum; partitionId++ {
@@ -137,7 +138,9 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 		log.Printf("total vertex num:%v", w.totalVertexNum)
 	}
 
-	isMessageToSend, messages := algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
+	var isMessageToSend bool
+	var messages map[int][]*algorithm.PRMessage
+	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64

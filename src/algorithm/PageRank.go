@@ -13,7 +13,7 @@ type PRMessage struct {
 	ID graph.ID
 }
 
-func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) int64 {
+func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int64, map[int64]float64) {
 	nodeNum := len(g.GetNodes())
 	initVal := 1.0 / float64(nodeNum * workerNum)
 	for id := range g.GetNodes() {
@@ -60,7 +60,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) int64
 	}
 	*/
 	log.Printf("loop time:%v\n", loopTime)
-	return int64(nodeNum)
+	return int64(nodeNum), prVal
 }
 
 func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
@@ -79,7 +79,7 @@ func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
 	return outerMsg
 }
 
-func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage) {
+func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage, map[int64]float64, map[int64]float64) {
 	/*for id, val := range prVal {
 		log.Printf("id:%v prval:%v\n", id, val)
 	}*/
@@ -147,10 +147,5 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:prVal[fo.IntVal()],ID:fo})
 	}
 
-	oldPr = prVal
-	prVal = tempPr
-
-	log.Printf("older pr 944: %v\n", oldPr[944])
-	log.Printf("pr val 944: %v\n", prVal[944])
-	return updated, reduceMsg
+	return updated, reduceMsg, prVal, tempPr
 }
