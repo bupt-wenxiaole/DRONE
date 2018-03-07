@@ -23,7 +23,12 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 	tempPr := make(map[int64]float64)
 	loopTime := 0
 	for {
+		if loopTime == 0 {
+			log.Printf("accuracy: %v\n", eps * initVal)
+		}
 		log.Printf("loop time:%v\n", loopTime)
+		var maxerr float64 = 0
+
 		updated := false
 		still := 0.0
 		loopTime++
@@ -45,7 +50,9 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 			if math.Abs(tempPr[id.IntVal()] - prVal[id.IntVal()]) > eps * initVal {
 				updated = true
 			}
+			maxerr = math.Max(maxerr, math.Abs(tempPr[id.IntVal()] - prVal[id.IntVal()]))
 		}
+		log.Printf("max error:%v\n", maxerr)
 
 		if !updated {
 			prVal = tempPr
