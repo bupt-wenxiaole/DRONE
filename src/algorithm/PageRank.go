@@ -55,7 +55,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 		tempPr = make(map[int64]float64)
 	}
 
-	for id, val := range prVal {
+	for id := range prVal {
 		if id == 944 {
 			prVal[id] = 1
 		} else {
