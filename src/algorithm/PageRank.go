@@ -80,33 +80,40 @@ func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
 }
 
 func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage, map[int64]float64, map[int64]float64) {
-	/*for id, val := range prVal {
-		log.Printf("id:%v prval:%v\n", id, val)
-	}*/
-
 	maxerr := 0.0
 
 	still := 0.0
 	initVal := 1.0 / float64(totalVertexNum)
 	updated := false
+
+	testMap := make(map[int64]bool)
+	for id := range g.GetNodes() {
+		testMap[id.IntVal()] = true
+	}
+
 	for id, msg := range messages {
 		if id != -1 {
 			prVal[id] += msg * 0.85
+			if !testMap[id] {
+				log.Println("message out of range")
+			}
 		} else {
 			still += msg
 		}
 	}
+
+	var sum float64 = 0
 	for id := range g.GetNodes() {
 		prVal[id.IntVal()] += still * 0.85
 		if math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]) > eps * initVal {
 			updated = true
 		}
 		maxerr = math.Max(maxerr, math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]))
+		sum += prVal[id.IntVal()]
 	}
+	log.Printf("total vertex num:%v\n", totalVertexNum)
 	log.Printf("max error:%v\n", maxerr)
-	log.Printf("need val:%v\n", eps*initVal)
-	log.Printf("older pr 944: %v\n", oldPr[944])
-	log.Printf("pr val 944: %v\n", prVal[944])
+	log.Printf("sum value: %v\n", sum)
 
 	tempPr := make(map[int64]float64)
 	still = 0
@@ -124,6 +131,9 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 				tempPr[target.IntVal()] += 0.85 * val
 			}
 			for _, outer := range outerMsg[id.IntVal()] {
+				if id.IntVal() == 944 {
+					log.Printf("out node:%v\n", outer)
+				}
 				tempPr[outer] += 0.85 * val
 			}
 		}

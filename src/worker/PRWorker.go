@@ -193,7 +193,6 @@ func (w *PRWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb
 }
 
 func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
-	log.Println("send receive")
 	w.Lock()
 	for _, msg := range args.Pair {
 		w.updated[msg.NodeID] += msg.PrVal
