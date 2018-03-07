@@ -85,6 +85,11 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 	//var fullSendDuration float64
 	//var SlicePeerSend []*pb.WorkerCommunicationSize
 	nodeNum := algorithm.PageRank_PEVal(w.g, w.prVal, w.partitionNum)
+
+	for id, val := range w.prVal {
+		log.Printf("PEVal id:%v prval:%v\n", id, val)
+	}
+
 	w.totalVertexNum = nodeNum
 	for partitionId := 1; partitionId <= w.partitionNum; partitionId++ {
 		if partitionId == w.selfId {

@@ -150,5 +150,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	oldPr = prVal
 	prVal = tempPr
 
+	log.Printf("older pr 944: %v\n", oldPr[944])
+	log.Printf("pr val 944: %v\n", prVal[944])
 	return updated, reduceMsg
 }
