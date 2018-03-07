@@ -110,7 +110,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		sum += prVal[id.IntVal()]
 	}
 	//log.Printf("total vertex num:%v\n", totalVertexNum)
-	log.Printf("still:%v\n", still)
+	log.Printf("still receive:%v\n", still)
 	log.Printf("max error:%v\n", maxerr)
 	log.Printf("sum value: %v\n", sum)
 
@@ -150,6 +150,8 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		reduceMsg[i] = make([]*PRMessage, 0)
 		reduceMsg[i] = append(reduceMsg[i], &PRMessage{PRValue:still,ID:graph.StringID(-1)})
 	}
+
+	log.Printf("still send:%v\n", still)
 
 	for fo, routeMsg := range g.GetFOs() {
 		partition := routeMsg[0].RoutePartition()
