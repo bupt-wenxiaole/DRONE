@@ -81,9 +81,9 @@ func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
 
 func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage) {
 	/*for id, val := range prVal {
-		log.Printf("id:%v prval:%v\n", id.IntVal(), val)
-	}
-    */
+		log.Printf("id:%v prval:%v\n", id, val)
+	}*/
+
 	maxerr := 0.0
 
 	still := 0.0
@@ -105,6 +105,8 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	}
 	log.Printf("max error:%v\n", maxerr)
 	log.Printf("need val:%v\n", eps*initVal)
+	log.Printf("older pr 944: %v\n", oldPr[944])
+	log.Printf("pr val 944: %v\n", prVal[944])
 
 	tempPr := make(map[int64]float64)
 	still = 0
