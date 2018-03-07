@@ -83,7 +83,8 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	/*for id, val := range prVal {
 		log.Printf("id:%v prval:%v\n", id.IntVal(), val)
 	}
-*/
+    */
+	maxerr := 0.0
 
 	still := 0.0
 	initVal := 1.0 / float64(totalVertexNum)
@@ -100,7 +101,10 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		if math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]) > eps * initVal {
 			updated = true
 		}
+		maxerr = math.Max(maxerr, math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]))
 	}
+	log.Printf("max error:%v\n", maxerr)
+	log.Printf("need val:%v\n", eps*initVal)
 
 	tempPr := make(map[int64]float64)
 	still = 0
@@ -113,7 +117,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 			still += prVal[id.IntVal()] / float64(totalVertexNum)
 		} else {
 			val := prVal[id.IntVal()] / float64(sonNum)
-			log.Printf("val: %v\n", val)
+			//log.Printf("val: %v\n", val)
 			for target := range targets {
 				tempPr[target.IntVal()] += 0.85 * val
 			}
