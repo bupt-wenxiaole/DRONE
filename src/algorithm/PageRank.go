@@ -23,6 +23,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 	tempPr := make(map[int64]float64)
 	loopTime := 0
 	for {
+		log.Printf("loop time:%v\n", loopTime)
 		updated := false
 		still := 0.0
 		loopTime++
