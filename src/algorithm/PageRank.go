@@ -93,7 +93,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 
 	for id, msg := range messages {
 		if id != -1 {
-			prVal[id] += msg * 0.85
+			prVal[id] += msg
 			if !testMap[id] {
 				log.Println("message out of range")
 			}
@@ -131,9 +131,9 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 				tempPr[target.IntVal()] += 0.85 * val
 			}
 			for _, outer := range outerMsg[id.IntVal()] {
-				if id.IntVal() == 944 {
+				/*if id.IntVal() == 944 {
 					log.Printf("out node:%v\n", outer)
-				}
+				}*/
 				tempPr[outer] += 0.85 * val
 			}
 		}
