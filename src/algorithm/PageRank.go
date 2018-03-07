@@ -86,17 +86,11 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	initVal := 1.0 / float64(totalVertexNum)
 	updated := false
 
-	testMap := make(map[int64]bool)
-	for id := range g.GetNodes() {
-		testMap[id.IntVal()] = true
-	}
+
 
 	for id, msg := range messages {
 		if id != -1 {
 			prVal[id] += msg
-			if !testMap[id] {
-				log.Println("message out of range")
-			}
 		} else {
 			still += msg
 		}
@@ -111,7 +105,8 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		maxerr = math.Max(maxerr, math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]))
 		sum += prVal[id.IntVal()]
 	}
-	log.Printf("total vertex num:%v\n", totalVertexNum)
+	//log.Printf("total vertex num:%v\n", totalVertexNum)
+	log.Printf("still:%v\n", still)
 	log.Printf("max error:%v\n", maxerr)
 	log.Printf("sum value: %v\n", sum)
 
