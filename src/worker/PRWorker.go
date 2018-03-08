@@ -141,6 +141,10 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
+	if w.iterationNum == 1 {
+		log.Printf("zs-log: pr0[5]:%v\n", w.prVal[5])
+	}
+
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
@@ -162,6 +166,10 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	}
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
+
+	if w.iterationNum == 2 {
+		isMessageToSend = false
+	}
 
 	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: 0,
@@ -196,7 +204,7 @@ func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.P
 	w.Lock()
 	for _, msg := range args.Pair {
 		w.updated[msg.NodeID] += msg.PrVal
-	//	log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
+		log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
 	}
 	w.UnLock()
 
