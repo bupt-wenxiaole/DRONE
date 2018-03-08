@@ -147,8 +147,10 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
 	if w.iterationNum == 2 {
-		log.Printf("zs-log: old[5]:%v\n", w.oldPr[5])
-		log.Printf("zs-log: pr0[5]:%v\n", w.prVal[5])
+		for id := range w.g.GetNodes() {
+			log.Printf("zs-log: old[%v]:%v\n", id.IntVal(), w.oldPr[id.IntVal()])
+			log.Printf("zs-log: pr0[%v]:%v\n", id.IntVal(), w.prVal[id.IntVal()])
+		}
 	}
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
 	if w.iterationNum == 1 {

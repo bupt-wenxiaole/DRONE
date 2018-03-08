@@ -52,8 +52,10 @@ func main() {
 		}
 		iterationNum++
 		if iterationNum == 2 {
-			log.Printf("zs-log: old[5]:%v\n", oldpr0[5])
-			log.Printf("zs-log: pr0[5]:%v\n", pr0[5])
+			for i := 5; i <= 7; i++ {
+				log.Printf("zs-log: old[%v]:%v\n", i, oldpr0[int64(i)])
+				log.Printf("zs-log: pr0[%v]:%v\n", i, pr0[int64(i)])
+			}
 		}
 		up0, messages0, oldpr0, pr0 = algorithm.PageRank_IncEval(g0, pr0, oldpr0, 2, 0, om0, msg0, nm0 + nm1)
 		up1, messages1, oldpr1, pr1 = algorithm.PageRank_IncEval(g1, pr1, oldpr1, 2, 1, om1, msg1, nm0 + nm1)
