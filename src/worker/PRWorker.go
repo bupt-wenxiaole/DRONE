@@ -177,7 +177,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	if w.iterationNum == 3 {
+	if w.iterationNum == 40 {
 		isMessageToSend = false
 	}
 
