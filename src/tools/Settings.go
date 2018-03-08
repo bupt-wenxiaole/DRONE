@@ -6,7 +6,7 @@ const (
 	GraphPath     = "/GRAPE/simData/"
 	PartitionPath = "/GRAPE/simData/"
 	NFSPath       = "/mnt/nfs/xwen/generate_graph/"
-	ReadFromTxt   = true
+	ReadFromTxt   = false
 	//LocalTempFile = "temp.json"
 	ConfigPath = "../test_data/config.txt"
 
