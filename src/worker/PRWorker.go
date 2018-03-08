@@ -175,9 +175,9 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	if w.iterationNum == 2 {
+	/*if w.iterationNum == 2 {
 		isMessageToSend = false
-	}
+	}*/
 
 	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: 0,
