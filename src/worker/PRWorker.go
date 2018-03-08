@@ -206,7 +206,7 @@ func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.P
 	w.Lock()
 	for _, msg := range args.Pair {
 		w.updated[msg.NodeID] += msg.PrVal
-		//log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
+		log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
 	}
 	w.UnLock()
 
