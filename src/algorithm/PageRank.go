@@ -162,7 +162,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	for fo, routeMsg := range g.GetFOs() {
 		partition := routeMsg[0].RoutePartition()
 		//log.Printf("send id:%v, val:%v partition:%v\n", fo.IntVal(), tempPr[fo.IntVal()], partition)
-		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:tempPr[fo.IntVal()],ID:fo})
+		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:messagePr[fo.IntVal()],ID:fo})
 	}
 
 	//log.Printf("receive sum:%v\n", receiveSum)
