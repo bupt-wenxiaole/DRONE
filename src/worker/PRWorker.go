@@ -154,7 +154,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	}
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
 	if w.iterationNum == 1 {
-		log.Printf("zs-log: pr0[5]:%v\n", w.prVal[5])
+		log.Printf("zs-log: pr0[6]:%v\n", w.prVal[6])
 	}
 
 	w.updated = make(map[int64]float64, 0)

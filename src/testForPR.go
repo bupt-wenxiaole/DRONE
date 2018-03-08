@@ -60,7 +60,7 @@ func main() {
 		up0, messages0, oldpr0, pr0 = algorithm.PageRank_IncEval(g0, pr0, oldpr0, 2, 0, om0, msg0, nm0 + nm1)
 		up1, messages1, oldpr1, pr1 = algorithm.PageRank_IncEval(g1, pr1, oldpr1, 2, 1, om1, msg1, nm0 + nm1)
 		if iterationNum == 1 {
-			log.Printf("zs-log: pr0[5]:%v\n", pr0[5])
+			log.Printf("zs-log: pr0[6]:%v\n", pr0[6])
 		}
 
 		msg0 = make(map[int64]float64, 0)
