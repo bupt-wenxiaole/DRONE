@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 	"tools"
-	"golang.org/x/text/unicode/bidi"
 )
 
 type PRWorker struct {
