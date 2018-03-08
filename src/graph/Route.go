@@ -90,8 +90,6 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg, error) {
 	ansMap := make(map[ID][]RouteMsg)
 	bufrd := bufio.NewReader(rd)
-
-	filter := make(map[int64]bool, 0)
 	for {
 		line, err := bufrd.ReadString('\n')
 		if err != nil || io.EOF == err {
@@ -110,10 +108,6 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 
 		srcId := StringID(parseSrc)
 		dstId := StringID(parseDst)
-		if filter[srcId.IntVal() * 3 + dstId.IntVal()] {
-			continue
-		}
-		filter[srcId.IntVal() * 3 + dstId.IntVal()] = true
 
 		if srcInner {
 			nd := g.GetNode(srcId)

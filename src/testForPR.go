@@ -68,8 +68,8 @@ func main() {
 
 		for _, m := range messages1[0] {
 			msg0[m.ID.IntVal()] += m.PRValue
-			if iterationNum == 1 && m.ID.IntVal() == 5 {
-				log.Printf("zs-log: receive msg for node 5:%v\n", m.PRValue)
+			if iterationNum == 1 && m.ID.IntVal() == 6 {
+				log.Printf("zs-log: receive msg for node 6:%v\n", m.PRValue)
 			}
 		}
 		for _, m := range messages0[1] {
