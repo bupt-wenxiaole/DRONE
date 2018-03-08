@@ -50,7 +50,7 @@ func (w *PRWorker) UnLock() {
 func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
 	w.Lock()
-	defer w.Lock()
+	defer w.UnLock()
 	log.Println("shutdown ing")
 
 	for i, handle := range w.grpcHandlers {
@@ -141,32 +141,18 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	if w.iterationNum == 1 {
 		w.totalVertexNum += int64(w.updated[-1])
 		w.updated = make(map[int64]float64, 0)
-		/*log.Printf("total vertex num:%v\n", w.totalVertexNum)
-
-		log.Println(w.outerMsg[5])
-		*/
 	}
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
-	/*if w.iterationNum == 2 {
-		for id := range w.g.GetNodes() {
-			log.Printf("zs-log: old[%v]:%v\n", id.IntVal(), w.oldPr[id.IntVal()])
-			log.Printf("zs-log: pr0[%v]:%v\n", id.IntVal(), w.prVal[id.IntVal()])
-		}
-	}
-	*/
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
-	/*if w.iterationNum == 1 {
-		log.Printf("zs-log: pr0[6]:%v\n", w.prVal[6])
-	}*/
 
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	time.Sleep(time.Second)
+	//time.Sleep(time.Second)
 
 	fullSendStart = time.Now()
 	for partitionId, message := range messages {
@@ -186,10 +172,6 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	}
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
-
-	if w.iterationNum == 40 {
-		isMessageToSend = false
-	}
 
 	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: 0,

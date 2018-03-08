@@ -34,6 +34,8 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 		still := 0.0
 		loopTime++
 
+		log.Printf("loop time:%v\n", loopTime)
+
 		for id := range g.GetNodes() {
 			targets, _ := g.GetTargets(id)
 			if len(targets) == 0 {
@@ -91,18 +93,20 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	initVal := 1.0 / float64(totalVertexNum)
 	updated := false
 
-	var receiveSum float64 = 0
-	var sendSum float64 = 0
+	//var receiveSum float64 = 0
+	//var sendSum float64 = 0
 
 	for id, msg := range messages {
 		//log.Printf("id:%v, val:%v\n", id, msg)
 		if id != -1 {
 			prVal[id] += msg
-			receiveSum += msg
+			//receiveSum += msg
 		} else {
 			still += msg
 		}
 	}
+
+	log.Printf("threshold:%v\n", eps * initVal)
 
 	var sum float64 = 0
 	for id := range g.GetNodes() {
@@ -139,7 +143,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 				//log.Printf("out node:%v\n", outer)
 
 				messagePr[outer] += 0.85 * val
-				sendSum += 0.85 * val
+				//sendSum += 0.85 * val
 			}
 		}
 	}
