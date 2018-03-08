@@ -152,12 +152,14 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	fullSendStart = time.Now()
 	for partitionId, message := range messages {
+		log.Printf("message send partition id:%v\n", partitionId)
 		client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
 		encodeMessage := make([]*pb.PRMessageStruct, 0)
 		eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 		SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 		for _, msg := range message {
 			encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID: msg.ID.IntVal(), PrVal:msg.PRValue})
+			log.Printf("send id:%v prVal:%v\n", msg.ID.IntVal(), msg.PRValue)
 		}
 		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: encodeMessage})
 		if err != nil {
@@ -204,7 +206,7 @@ func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.P
 	w.Lock()
 	for _, msg := range args.Pair {
 		w.updated[msg.NodeID] += msg.PrVal
-		log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
+		//log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
 	}
 	w.UnLock()
 
