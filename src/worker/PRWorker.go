@@ -32,6 +32,7 @@ type PRWorker struct {
 	partitionNum int
 	totalVertexNum int64
 	updated      map[int64]float64
+	receiveBuffer map[int64]float64
 	outerMsg    map[int64][]int64
 
 	iterationNum int
@@ -131,6 +132,11 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 }
 
 func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+	w.Lock()
+	w.updated = w.receiveBuffer
+	w.receiveBuffer = make(map[int64]float64, 0)
+	w.UnLock()
+
 	w.iterationNum++
 	if w.iterationNum == 1 {
 		w.totalVertexNum += int64(w.updated[-1])
@@ -205,7 +211,7 @@ func (w *PRWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb
 func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
 	w.Lock()
 	for _, msg := range args.Pair {
-		w.updated[msg.NodeID] += msg.PrVal
+		w.receiveBuffer[msg.NodeID] += msg.PrVal
 		log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
 	}
 	w.UnLock()
@@ -224,6 +230,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.oldPr = make(map[int64]float64, 0)
 	w.partitionNum = partitionNum
 	w.updated = make(map[int64]float64, 0)
+	w.receiveBuffer = make(map[int64]float64, 0)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
