@@ -141,23 +141,25 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	if w.iterationNum == 1 {
 		w.totalVertexNum += int64(w.updated[-1])
 		w.updated = make(map[int64]float64, 0)
-		log.Printf("total vertex num:%v\n", w.totalVertexNum)
+		/*log.Printf("total vertex num:%v\n", w.totalVertexNum)
 
 		log.Println(w.outerMsg[5])
+		*/
 	}
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
-	if w.iterationNum == 2 {
+	/*if w.iterationNum == 2 {
 		for id := range w.g.GetNodes() {
 			log.Printf("zs-log: old[%v]:%v\n", id.IntVal(), w.oldPr[id.IntVal()])
 			log.Printf("zs-log: pr0[%v]:%v\n", id.IntVal(), w.prVal[id.IntVal()])
 		}
 	}
+	*/
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
-	if w.iterationNum == 1 {
+	/*if w.iterationNum == 1 {
 		log.Printf("zs-log: pr0[6]:%v\n", w.prVal[6])
-	}
+	}*/
 
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
@@ -168,14 +170,14 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	fullSendStart = time.Now()
 	for partitionId, message := range messages {
-		log.Printf("message send partition id:%v\n", partitionId)
+		//log.Printf("message send partition id:%v\n", partitionId)
 		client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
 		encodeMessage := make([]*pb.PRMessageStruct, 0)
 		eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
 		SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 		for _, msg := range message {
 			encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID: msg.ID.IntVal(), PrVal:msg.PRValue})
-			log.Printf("send id:%v prVal:%v\n", msg.ID.IntVal(), msg.PRValue)
+			//log.Printf("send id:%v prVal:%v\n", msg.ID.IntVal(), msg.PRValue)
 		}
 		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: encodeMessage})
 		if err != nil {
@@ -222,7 +224,7 @@ func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.P
 	w.Lock()
 	for _, msg := range args.Pair {
 		w.receiveBuffer[msg.NodeID] += msg.PrVal
-		log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
+	//	log.Printf("received msg: nodeId:%v prVal:%v\n", graph.StringID(msg.NodeID), msg.PrVal)
 	}
 	w.UnLock()
 
