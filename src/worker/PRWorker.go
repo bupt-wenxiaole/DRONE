@@ -156,6 +156,8 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
+	time.Sleep(time.Second)
+
 	fullSendStart = time.Now()
 	for partitionId, message := range messages {
 		log.Printf("message send partition id:%v\n", partitionId)
