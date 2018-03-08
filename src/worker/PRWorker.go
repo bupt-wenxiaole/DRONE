@@ -135,7 +135,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	if w.iterationNum == 1 {
 		w.totalVertexNum += int64(w.updated[-1])
 		w.updated = make(map[int64]float64, 0)
-		log.Printf("total vertex num:%v", w.totalVertexNum)
+		log.Printf("total vertex num:%v\n", w.totalVertexNum)
 	}
 
 	var isMessageToSend bool
