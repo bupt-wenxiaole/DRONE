@@ -120,6 +120,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	log.Printf("sum value: %v\n", sum)
 
 	tempPr := make(map[int64]float64)
+	messagePr := make(map[int64]float64)
 	still = 0
 
 	for id := range g.GetNodes() {
@@ -137,7 +138,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 			for _, outer := range outerMsg[id.IntVal()] {
 				//log.Printf("out node:%v\n", outer)
 
-				tempPr[outer] += 0.85 * val
+				messagePr[outer] += 0.85 * val
 				sendSum += 0.85 * val
 			}
 		}
