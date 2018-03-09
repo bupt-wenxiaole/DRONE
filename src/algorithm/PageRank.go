@@ -30,6 +30,11 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 		log.Printf("loop time:%v\n", loopTime)
 		var maxerr float64 = 0
 		*/
+		if loopTime == 0 {
+			log.Println("finish peval")
+			break
+		}
+
 		updated := false
 		still := 0.0
 		loopTime++
