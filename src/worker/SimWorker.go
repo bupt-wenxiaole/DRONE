@@ -174,24 +174,36 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 }
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
 	innerNodes := w.g.GetNodes()
+///////////////////////
+	f, err:= os.Create("result_" + strconv.Itoa(w.selfId - 1))
+	if err != nil {
+		log.Panic(err)
+	}
+	writer := bufio.NewWriter(f)
+///////////////////////////////
 
-	result := make([]string, 0)
+	//result := make([]string, 0)
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				result = append(result, u.String()+"\t"+v.String())
+				//result = append(result, u.String()+"\t"+v.String())
+				writer.WriteString(u.String()+"\t"+v.String())
 			}
 		}
 	}
 
+	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
+	*/
+
 	if err != nil {
 		log.Panic(err)
 	}
 
-	return &pb.AssembleResponse{Ok: ok}, nil
+	//return &pb.AssembleResponse{Ok: ok}, nil
+	return &pb.AssembleResponse{Ok: true}, nil
 }
 
 func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
@@ -250,15 +262,16 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	suffix := strconv.Itoa(partitionNum) + "_"
 	if tools.ReadFromTxt {
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
+		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
