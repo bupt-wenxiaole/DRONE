@@ -9,7 +9,8 @@ const (
 	NFSPath = "/home/acgict/inputgraph/node"
 	ReadFromTxt   = true
 	//LocalTempFile = "temp.json"
-	ConfigPath = "../test_data/config.txt"
+	//ConfigPath = "../test_data/config.txt"
+	ConfigPath = "config.txt"
 
 	PatternPath = "../test_data/pattern.txt"
 	GraphSimulationTypeModel = 100
