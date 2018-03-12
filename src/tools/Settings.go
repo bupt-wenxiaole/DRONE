@@ -5,8 +5,9 @@ const (
 	ResultPath    = "/GRAPE/result/"
 	GraphPath     = "/GRAPE/simData/"
 	PartitionPath = "/GRAPE/simData/"
-	NFSPath       = "/mnt/nfs/xwen/generate_graph/"
-	ReadFromTxt   = false
+	//NFSPath       = "/mnt/nfs/xwen/generate_graph/"
+	NFSPath = "/home/acgict/inputgraph/node"
+	ReadFromTxt   = true
 	//LocalTempFile = "temp.json"
 	ConfigPath = "../test_data/config.txt"
 
