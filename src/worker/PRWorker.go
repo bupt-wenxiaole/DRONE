@@ -189,7 +189,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 			//log.Printf("send id:%v prVal:%v\n", msg.ID.IntVal(), msg.PRValue)
 		}
 		wg.Add(1)
-		go Peer2PeerPRSend(client, encodeMessage, wg)
+		go Peer2PeerPRSend(client, encodeMessage, &wg)
 	}
 	wg.Wait()
 	fullSendDuration = time.Since(fullSendStart).Seconds()
