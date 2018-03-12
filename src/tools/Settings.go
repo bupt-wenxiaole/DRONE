@@ -15,5 +15,5 @@ const (
 
 	RPCSendSize = 100000
 
-	MaxBufferSize = 102400
+	MaxBufferSize = 1024000
 )
