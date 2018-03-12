@@ -37,6 +37,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 		preSet[v] = NewSet()
 		for _, msg := range routeMsg {
 			preSet[v].Add(msg.RelatedId())
+			fmt.Println("zs-log:" + msg.RelatedId().String())
 			postSet[msg.RelatedId()].Add(v)
 		}
 	}
@@ -70,11 +71,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			removeInit.Add(u)
 		}
 	}
-	//----------------//
-	for v := range g.GetFOs() {
-		removeInit.Separate(preSet[v])
-	}
-	//----------------//
+
 	preSim := make(map[graph.ID]Set)
 	remove := make(map[graph.ID]Set)
 	allPatternColor := make(map[int64]bool)
@@ -109,7 +106,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			}
 		}
 	}
-	/*
+
 	for v := range g.GetFOs() {
 		_, ok := allPatternColor[v.IntVal()%tools.GraphSimulationTypeModel]
 		if ok {
@@ -121,7 +118,6 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			}
 		}
 	}
-	*/
 
 	messageMap := make(map[int]map[SimPair]bool)
 

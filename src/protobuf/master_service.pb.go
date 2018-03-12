@@ -28,6 +28,9 @@
 		SimMessageRequest
 		SimMessageResponse
 		SimMessageStruct
+		PRMessageRequest
+		PRMessageResponse
+		PRMessageStruct
 */
 package protobuf
 

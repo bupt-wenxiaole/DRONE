@@ -69,7 +69,7 @@ func (n *node) Attr() int64 {
 type Edge interface {
 	Source() Node
 	Target() Node
-	Weight() int
+	Weight() float64
 	String() string
 }
 
@@ -77,10 +77,10 @@ type Edge interface {
 type edge struct {
 	src Node
 	tgt Node
-	wgt int
+	wgt float64
 }
 
-func NewEdge(src, tgt Node, wgt int) Edge {
+func NewEdge(src, tgt Node, wgt float64) Edge {
 	return &edge{
 		src: src,
 		tgt: tgt,
@@ -96,7 +96,7 @@ func (e *edge) Target() Node {
 	return e.tgt
 }
 
-func (e *edge) Weight() int {
+func (e *edge) Weight() float64 {
 	return e.wgt
 }
 
@@ -142,16 +142,16 @@ type Graph interface {
 
 	// AddEdge adds an edge from nd1 to nd2 with the weight.
 	// It returns error if a node does not exist.
-	AddEdge(id1, id2 ID, weight int) error
+	AddEdge(id1, id2 ID, weight float64) error
 
 	// ReplaceEdge replaces an edge from id1 to id2 with the weight.
-	ReplaceEdge(id1, id2 ID, weight int) error
+	ReplaceEdge(id1, id2 ID, weight float64) error
 
 	// DeleteEdge deletes an edge from id1 to id2.
 	DeleteEdge(id1, id2 ID) error
 
 	// GetWeight returns the weight from id1 to id2.
-	GetWeight(id1, id2 ID) (int, error)
+	GetWeight(id1, id2 ID) (float64, error)
 
 	// GetSources returns the map of parent Nodes.
 	// (Nodes that come towards the argument vertex.)
@@ -180,10 +180,10 @@ type graph struct {
 	idToNodes map[ID]Node
 
 	// nodeToSources maps a Node identifer to sources(parents) with edge weights.
-	nodeToSources map[ID]map[ID]int
+	nodeToSources map[ID]map[ID]float64
 
 	// nodeToTargets maps a Node identifer to targets(children) with edge weights.
-	nodeToTargets map[ID]map[ID]int
+	nodeToTargets map[ID]map[ID]float64
 
 	// store Fi.I, Fi.O of graph i
 	graphFI map[ID][]RouteMsg
@@ -194,8 +194,8 @@ type graph struct {
 func newGraph() *graph {
 	return &graph{
 		idToNodes:     make(map[ID]Node),
-		nodeToSources: make(map[ID]map[ID]int),
-		nodeToTargets: make(map[ID]map[ID]int),
+		nodeToSources: make(map[ID]map[ID]float64),
+		nodeToTargets: make(map[ID]map[ID]float64),
 		graphFI:       make(map[ID][]RouteMsg),
 		graphFO:       make(map[ID][]RouteMsg),
 		//
@@ -218,8 +218,8 @@ func (g *graph) Init() {
 	// assignment copies lock value
 
 	g.idToNodes = make(map[ID]Node)
-	g.nodeToSources = make(map[ID]map[ID]int)
-	g.nodeToTargets = make(map[ID]map[ID]int)
+	g.nodeToSources = make(map[ID]map[ID]float64)
+	g.nodeToTargets = make(map[ID]map[ID]float64)
 	g.graphFI = make(map[ID][]RouteMsg)
 	g.graphFO = make(map[ID][]RouteMsg)
 }
@@ -287,7 +287,7 @@ func (g *graph) DeleteNode(id ID) bool {
 	return true
 }
 
-func (g *graph) AddEdge(id1, id2 ID, weight int) error {
+func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -298,7 +298,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight int) error {
 			g.nodeToTargets[id1][id2] = weight
 		}
 	} else {
-		tmap := make(map[ID]int)
+		tmap := make(map[ID]float64)
 		tmap[id2] = weight
 		g.nodeToTargets[id1] = tmap
 	}
@@ -309,7 +309,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight int) error {
 			g.nodeToSources[id2][id1] = weight
 		}
 	} else {
-		tmap := make(map[ID]int)
+		tmap := make(map[ID]float64)
 		tmap[id1] = weight
 		g.nodeToSources[id2] = tmap
 	}
@@ -317,7 +317,7 @@ func (g *graph) AddEdge(id1, id2 ID, weight int) error {
 	return nil
 }
 
-func (g *graph) ReplaceEdge(id1, id2 ID, weight int) error {
+func (g *graph) ReplaceEdge(id1, id2 ID, weight float64) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -331,14 +331,14 @@ func (g *graph) ReplaceEdge(id1, id2 ID, weight int) error {
 	if _, ok := g.nodeToTargets[id1]; ok {
 		g.nodeToTargets[id1][id2] = weight
 	} else {
-		tmap := make(map[ID]int)
+		tmap := make(map[ID]float64)
 		tmap[id2] = weight
 		g.nodeToTargets[id1] = tmap
 	}
 	if _, ok := g.nodeToSources[id2]; ok {
 		g.nodeToSources[id2][id1] = weight
 	} else {
-		tmap := make(map[ID]int)
+		tmap := make(map[ID]float64)
 		tmap[id1] = weight
 		g.nodeToSources[id2] = tmap
 	}
@@ -369,7 +369,7 @@ func (g *graph) DeleteEdge(id1, id2 ID) error {
 	return nil
 }
 
-func (g *graph) GetWeight(id1, id2 ID) (int, error) {
+func (g *graph) GetWeight(id1, id2 ID) (float64, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
@@ -532,7 +532,7 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 }
 
 func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
-	js := make(map[string]map[StringID]map[string]int)
+	js := make(map[string]map[StringID]map[string]float64)
 
 	//var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
@@ -591,64 +591,57 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 }
 
 func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID string) (Graph, error) {
-	js := make(map[string]map[string]map[string]int)
-	bufrd := bufio.NewReader(rd)
-	for {
-		line, err := bufrd.ReadString('\n')
-		linelem := strings.Split(line, "\t")
-		if err != nil {
-			if err == io.EOF {
-				if js[linelem[0]] == nil {
-					js[linelem[0]] = make(map[string]map[string]int)
-					if js[linelem[0]][linelem[2]] == nil {
-						js[linelem[0]][linelem[2]] = make(map[string]int)
-					}
-				}
-				integer, err := strconv.Atoi(linelem[6])
-				if err != nil {
-					return nil, err
-				}
-				js[linelem[0]][linelem[2]][linelem[4]] = integer
-				break
-			}
-			return nil, err
-		}
-	}
-
-	gmap := js["Graph"+graphID]
 	g := newGraph()
-	for id1, mm := range gmap {
+	reader := bufio.NewReader(rd)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 
-		nd1 := g.GetNode(StringID(id1))
+		parseSrc, err := strconv.ParseInt(paras[0], 10, 64)
+		if err != nil {
+			log.Fatal("parse src node id error")
+		}
+		parseDst, err := strconv.ParseInt(paras[1], 10, 64)
+		if err != nil {
+			log.Fatal("parse dst node id error")
+		}
+
+		srcId := StringID(parseSrc)
+		dstId := StringID(parseDst)
+
+		weight, err := strconv.ParseFloat(paras[3], 64)
+		if err != nil {
+			fmt.Println("zs-log: " + paras[3])
+			log.Fatal("parse weight error")
+		}
+
+		nd1 := g.GetNode(srcId)
 		if nd1 == nil {
-			intId, _ := strconv.Atoi(id1)
-			nd1 = NewNode(id1, int64(intId % tools.GraphSimulationTypeModel))
+			intId := srcId.IntVal()
+			nd1 = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
 			if ok := g.AddNode(nd1); !ok {
 				return nil, fmt.Errorf("%s already exists", nd1)
 			}
 		}
-		for id2, weight := range mm {
-			if id2 == "attr" {
-				g.idToNodes[StringID(id1)] = NewNode(id1, int64(weight))
-			} else {
-				nd2 := g.GetNode(StringID(id2))
-				if nd2 == nil {
-					intId, _ := strconv.Atoi(id2)
-					nd2 = NewNode(id2, int64(intId % tools.GraphSimulationTypeModel))
-					if ok := g.AddNode(nd2); !ok {
-						return nil, fmt.Errorf("%s already exists", nd2)
-					}
-				}
-				g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
+		nd2 := g.GetNode(dstId)
+		if nd2 == nil {
+			nd2 = NewNode(dstId.IntVal(), int64(dstId.IntVal()%tools.GraphSimulationTypeModel))
+			if ok := g.AddNode(nd2); !ok {
+				return nil, fmt.Errorf("%s already exists", nd2)
 			}
 		}
+		g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
 	}
 
-	graphFI, err1 := LoadRouteMsgFxIFromTxt(fxird)
+
+	graphFI, err1 := LoadRouteMsgFromTxt(fxird, false, g)
 	if err1 != nil {
 		return nil, err1
 	}
-	graphFO, err2 := LoadRouteMsgFxOFromTxt(fxord)
+	graphFO, err2 := LoadRouteMsgFromTxt(fxord, true, g)
 	if err2 != nil {
 		return nil, err2
 	}

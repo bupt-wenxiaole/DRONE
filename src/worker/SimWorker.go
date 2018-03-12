@@ -198,6 +198,10 @@ func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (
 	return nil, nil
 }
 
+func (w *SimWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
+	return nil, nil
+}
+
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
 	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {
@@ -245,16 +249,39 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	start := time.Now()
 
 	suffix := strconv.Itoa(partitionNum) + "_"
-	
-	//if you want to use file with suffix, turn ".json" to ".txt"
-	//if you want to use no-suffix file, delete the ".json" under this
+	if tools.ReadFromTxt {
+		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		defer graphIO.Close()
 
-	graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
-	defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-	defer graphIO.Close()
+		if graphIO == nil {
+			fmt.Println("graphIO is nil")
+		}
 
-	if graphIO == nil {
-		fmt.Println("graphIO is nil")
+		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".I")
+		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		defer fxiReader.Close()
+		defer fxoReader.Close()
+
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
+		defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
+		defer graphIO.Close()
+
+		if graphIO == nil {
+			fmt.Println("graphIO is nil")
+		}
+
+		partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
+		defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
+		defer partitionIO.Close()
+		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	patternFile, err := os.Open(tools.PatternPath)
@@ -263,24 +290,9 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	}
 	defer patternFile.Close()
 	w.pattern, _ = graph.NewPatternGraph(patternFile)
- 
-	//there's a trouble about how to diff FxI and FxO
 
-	//partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
-	fxiReader, _ := tools.ReadFromAlluxio(tools.PartitionPath+"I"+suffix+strconv.Itoa(w.selfId-1)+".json", "I"+suffix+strconv.Itoa(w.selfId-1)+".json")
-	fxoReader, _ := tools.ReadFromAlluxio(tools.PartitionPath+"O"+suffix+strconv.Itoa(w.selfId-1)+".json", "O"+suffix+strconv.Itoa(w.selfId-1)+".json")
-	defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-	//defer partitionIO.Close()
-	defer fxiReader.Close()
-	defer fxoReader.Close()
-
-	//w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
-	w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxiReader, strconv.Itoa(w.selfId-1))
-	if err != nil {
-		log.Fatal(err)
-	}
 	loadTime := time.Since(start)
-	fmt.Printf("loadGraph Time: %vs\n", loadTime)
+	fmt.Printf("loadGraph Time: %v\n", loadTime)
 
 	fmt.Printf("node size:%v\n", len(w.g.GetNodes()))
 	edgeSize := 0

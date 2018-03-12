@@ -211,7 +211,7 @@ func (mr *Master) IncEvalALL() bool {
 				client := pb.NewWorkerClient(handler)
 				incEvalRequest := &pb.IncEvalRequest{}
 				if reply, err := client.IncEval(context.Background(), incEvalRequest); err != nil {
-					log.Fatal("Fail to execute IncEval worker %v", id)
+					log.Fatalf("Fail to execute IncEval worker %v", id)
 				} else if !reply.Update {
 					log.Printf("This worker %v dosen't update in the round %v\n!", id, stepCount)
 					mr.Lock()
