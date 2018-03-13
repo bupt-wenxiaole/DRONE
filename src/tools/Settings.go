@@ -10,8 +10,8 @@ const (
 	NFSPath = "/home/zpltys/code/GRAPE/16p/node"
 	ReadFromTxt   = true
 	//LocalTempFile = "temp.json"
-	ConfigPath = "../test_data/config.txt"
-	//ConfigPath = "config.txt"
+	//ConfigPath = "../test_data/config.txt"
+	ConfigPath = "config.txt"
 
 	//PatternPath = "../test_data/pattern.txt"
 	PatternPath = "pattern.txt"
