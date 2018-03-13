@@ -256,8 +256,6 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	start := time.Now()
 
-	suffix := strconv.Itoa(partitionNum) + "_"
-
 	//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
 	log.Printf("graph path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/G."+strconv.Itoa(w.selfId-1))
 	graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId-1)/16) + "/G." + strconv.Itoa(w.selfId-1))
