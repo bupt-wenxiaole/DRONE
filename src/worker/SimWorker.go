@@ -175,6 +175,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
 	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
 ///////////////////////
 	f, err:= os.Create("result_" + strconv.Itoa(w.selfId - 1))
@@ -198,7 +199,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
 	*/
-
+	f.Close()
 	if err != nil {
 		log.Panic(err)
 	}
