@@ -264,6 +264,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	suffix := strconv.Itoa(partitionNum) + "_"
 	if tools.ReadFromTxt {
 		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		log.Printf("graph path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
 		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
 		defer graphIO.Close()
 
@@ -271,8 +272,16 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 			fmt.Println("graphIO is nil")
 		}
 
-		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		log.Printf("FI path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
+		log.Printf("FO path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		fxiReader, err1 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		if err1 != nil {
+			log.Fatal(err1)
+		}
+		if err2 != nil {
+			log.Fatal(err2)
+		}
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
