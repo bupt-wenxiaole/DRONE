@@ -174,11 +174,10 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 }
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
 	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
 ///////////////////////
-	f, err:= os.Create("result_" + strconv.Itoa(w.selfId - 1))
+	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -189,15 +188,11 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				//result = append(result, u.String()+"\t"+v.String())
 				writer.WriteString(u.String()+"\t"+v.String() + "\n")
 			}
 		}
 	}
 	writer.Flush()
-	/*
-	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
-	*/
 	f.Close()
 	if err != nil {
 		log.Panic(err)
@@ -262,49 +257,32 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	start := time.Now()
 
 	suffix := strconv.Itoa(partitionNum) + "_"
-	if tools.ReadFromTxt {
-		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
-		log.Printf("graph path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
-		defer graphIO.Close()
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
+	//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+	log.Printf("graph path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/G."+strconv.Itoa(w.selfId-1))
+	graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId-1)/16) + "/G." + strconv.Itoa(w.selfId-1))
+	defer graphIO.Close()
 
-		log.Printf("FI path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		log.Printf("FO path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
-		fxiReader, err1 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
-		if err1 != nil {
-			log.Fatal(err1)
-		}
-		if err2 != nil {
-			log.Fatal(err2)
-		}
-		defer fxiReader.Close()
-		defer fxoReader.Close()
+	if graphIO == nil {
+		fmt.Println("graphIO is nil")
+	}
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer graphIO.Close()
+	log.Printf("FI path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/F"+strconv.Itoa(w.selfId-1)+".I")
+	log.Printf("FO path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/F"+strconv.Itoa(w.selfId-1)+".O")
+	fxiReader, err1 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId-1)/16) + "/F" + strconv.Itoa(w.selfId-1) + ".I")
+	fxoReader, err2 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId-1)/16) + "/F" + strconv.Itoa(w.selfId-1) + ".O")
+	if err1 != nil {
+		log.Fatal(err1)
+	}
+	if err2 != nil {
+		log.Fatal(err2)
+	}
+	defer fxiReader.Close()
+	defer fxoReader.Close()
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-
-		partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer partitionIO.Close()
-		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
+	w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	patternFile, err := os.Open(tools.PatternPath)
