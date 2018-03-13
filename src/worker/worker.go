@@ -166,19 +166,19 @@ func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncE
 }
 
 func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
-
-	result := make([]string, 0)
-	for id, dist := range w.distance {
-		result = append(result, id.String()+"\t"+strconv.FormatInt(dist, 10))
-	}
-
-	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
+	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Panic(err)
 	}
+	writer := bufio.NewWriter(f)
+	defer writer.Flush()
+	defer f.Close()
 
-	return &pb.AssembleResponse{Ok: ok}, nil
+	for id, dist := range w.distance {
+		writer.WriteString(id.String()+"\t"+strconv.FormatInt(dist, 10) + "\n")
+	}
+
+	return &pb.AssembleResponse{Ok: true}, nil
 }
 
 func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
@@ -234,40 +234,23 @@ func newWorker(id, partitionNum int) *Worker {
 	}
 
 	start := time.Now()
-	suffix := strconv.Itoa(partitionNum) + "_"
-	if tools.ReadFromTxt {
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
-		defer graphIO.Close()
+	//suffix := strconv.Itoa(partitionNum) + "_"
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
+	graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId-1))
+	defer graphIO.Close()
 
-		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".O")
-		defer fxiReader.Close()
-		defer fxoReader.Close()
+	if graphIO == nil {
+		fmt.Println("graphIO is nil")
+	}
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer graphIO.Close()
+	fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId-1) + ".I")
+	fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId-1) + ".O")
+	defer fxiReader.Close()
+	defer fxoReader.Close()
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-
-		partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer partitionIO.Close()
-		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
+	w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	loadTime := time.Since(start)
