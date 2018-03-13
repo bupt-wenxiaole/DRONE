@@ -189,6 +189,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
 				//result = append(result, u.String()+"\t"+v.String())
+				log.Println("result:" + u.String() + "\t" + v.String())
 				writer.WriteString(u.String()+"\t"+v.String())
 			}
 		}
