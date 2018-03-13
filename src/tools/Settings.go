@@ -14,7 +14,8 @@ const (
 	ConfigPath = "config.txt"
 
 	//PatternPath = "../test_data/pattern.txt"
-	PatternPath = "pattern.txt"
+	//PatternPath = "pattern.txt"
+	PatternPath = "/home/acgict/DRONE_launcher/pattern.txt"
 	GraphSimulationTypeModel = 100
 
 	RPCSendSize = 100000
