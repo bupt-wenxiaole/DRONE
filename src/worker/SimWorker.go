@@ -196,6 +196,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	}
 
 	writer.WriteString("mmp")
+	writer.Flush()
 	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
 	*/
