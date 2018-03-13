@@ -190,12 +190,10 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
 				//result = append(result, u.String()+"\t"+v.String())
-				writer.WriteString(u.String()+"\t"+v.String())
+				writer.WriteString(u.String()+"\t"+v.String() + "\n")
 			}
 		}
 	}
-
-	writer.WriteString("mmp")
 	writer.Flush()
 	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
