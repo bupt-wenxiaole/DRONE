@@ -268,21 +268,18 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	}
 
 	start := time.Now()
-	suffix := strconv.Itoa(partitionNum) + "_"
 
-	graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId-1))
+	graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId - 1) + ".json")
 	defer graphIO.Close()
 
 	if graphIO == nil {
 		fmt.Println("graphIO is nil")
 	}
 
-	fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId-1) + ".I")
-	fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId-1) + ".O")
-	defer fxiReader.Close()
-	defer fxoReader.Close()
+	partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+	defer partitionIO.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
 	if err != nil {
 		log.Fatal(err)
 	}
