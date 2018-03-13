@@ -6,8 +6,8 @@ const (
 	GraphPath     = "/GRAPE/simData/"
 	PartitionPath = "/GRAPE/simData/"
 	//NFSPath       = "/mnt/nfs/xwen/generate_graph/"
-	//NFSPath = "/home/acgict/inputgraph/node"
-	NFSPath = "/home/zpltys/code/GRAPE/16p/node"
+	NFSPath = "/home/acgict/inputgraph/node"
+	//NFSPath = "/home/zpltys/code/GRAPE/16p/node"
 	ReadFromTxt   = true
 	//LocalTempFile = "temp.json"
 	//ConfigPath = "../test_data/config.txt"
