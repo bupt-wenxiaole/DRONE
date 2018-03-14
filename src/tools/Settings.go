@@ -6,6 +6,9 @@ const (
 	//NFSPath = "/home/acgict/inputgraph/node"
 	//NFSPath = "/home/zpltys/code/GRAPE/16p/node"
 	NFSPath = "/mnt/nfs/xwen/generate_graph/16p/"
+
+	LoadFromJson = true
+
 	//LocalTempFile = "temp.json"
 	ConfigPath = "../test_data/config.txt"
 	//ConfigPath = "config.txt"

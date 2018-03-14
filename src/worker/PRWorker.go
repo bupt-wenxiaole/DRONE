@@ -272,19 +272,43 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 
 	start := time.Now()
 
-	graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId - 1) + ".json")
-	defer graphIO.Close()
+	if (!tools.LoadFromJson) {
+		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		defer graphIO.Close()
 
-	if graphIO == nil {
-		fmt.Println("graphIO is nil")
-	}
+		if graphIO == nil {
+			fmt.Println("graphIO is nil")
+		}
 
-	partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
-	defer partitionIO.Close()
+		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		defer partitionIO.Close()
 
-	w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
-	if err != nil {
-		log.Fatal(err)
+		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+		defer graphIO.Close()
+
+		if graphIO == nil {
+			fmt.Println("graphIO is nil")
+		}
+		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
+		if err1 != nil {
+			log.Fatal(err1)
+		}
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+		defer fxiReader.Close()
+		defer fxoReader.Close()
+
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	loadTime := time.Since(start)
