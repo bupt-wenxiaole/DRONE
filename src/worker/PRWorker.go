@@ -167,7 +167,10 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
+
+	runStart := time.Now()
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
+	runTime := time.Since(runStart).Seconds()
 
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
@@ -195,7 +198,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
 	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: runTime,
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend}}, nil
 }
