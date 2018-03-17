@@ -185,15 +185,20 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	writer := bufio.NewWriter(f)
 ///////////////////////////////
 
+    count := 0
+
 	//result := make([]string, 0)
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				//result = append(result, u.String()+"\t"+v.String())
-				writer.WriteString(u.String()+"\t"+v.String() + "\n")
+				count++
+				if count < 100 {
+					writer.WriteString(u.String() + "\t" + v.String() + "\n")
+				}
 			}
 		}
 	}
+	writer.WriteString(strconv.Itoa(count))
 	writer.Flush()
 	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
@@ -264,18 +269,18 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	suffix := strconv.Itoa(partitionNum) + "_"
 	if tools.ReadFromTxt {
 		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
-		log.Printf("graph path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/G." + strconv.Itoa(w.selfId - 1))
+		log.Printf("graph path:%v\n", tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
+		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		log.Printf("FI path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		log.Printf("FO path:%v\n", tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
-		fxiReader, err1 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath + strconv.Itoa((w.selfId - 1) / 16) + "/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		log.Printf("FI path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
+		log.Printf("FO path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
+		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
 		if err1 != nil {
 			log.Fatal(err1)
 		}
