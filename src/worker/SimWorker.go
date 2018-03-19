@@ -32,9 +32,11 @@ type SimWorker struct {
 	preSet  map[graph.ID]algorithm.Set
 	postSet map[graph.ID]algorithm.Set
 
+	//edge_count int64
+
 	message []*algorithm.SimPair
 
-	iterationNum int
+	iterationNum int64
 	stopChannel  chan bool
 }
 
@@ -66,7 +68,6 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 
 // rpc send has max size limit, so we spilt our transfer into many small block
 func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, wg *sync.WaitGroup)  {
-
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
@@ -188,7 +189,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				writer.WriteString(u.String()+"\t"+v.String() + "\n")
+				writer.WriteString(u.String() + "\t" + v.String() + "\n")
 			}
 		}
 	}
@@ -256,6 +257,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	start := time.Now()
 
+<<<<<<< HEAD
 	//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
 	log.Printf("graph path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/G."+strconv.Itoa(w.selfId-1))
 	graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa((w.selfId-1)/16) + "/G." + strconv.Itoa(w.selfId-1))
@@ -264,6 +266,40 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	if graphIO == nil {
 		fmt.Println("graphIO is nil")
 	}
+=======
+	suffix := strconv.Itoa(partitionNum) + "_"
+	if tools.ReadFromTxt {
+		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		log.Printf("graph path:%v\n", tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
+		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
+		defer graphIO.Close()
+
+		if graphIO == nil {
+			fmt.Println("graphIO is nil")
+		}
+
+		log.Printf("FI path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
+		log.Printf("FO path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
+		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
+		if err1 != nil {
+			log.Fatal(err1)
+		}
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+		defer fxiReader.Close()
+		defer fxoReader.Close()
+
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
+		defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
+		defer graphIO.Close()
+>>>>>>> acefdd1feb4bdc1f91bbc4791123d7a8f57d98bd
 
 	log.Printf("FI path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/F"+strconv.Itoa(w.selfId-1)+".I")
 	log.Printf("FO path:%v\n", tools.NFSPath+strconv.Itoa((w.selfId-1)/16)+"/F"+strconv.Itoa(w.selfId-1)+".O")

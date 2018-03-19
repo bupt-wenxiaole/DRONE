@@ -167,7 +167,10 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
+<<<<<<< HEAD
 
+=======
+>>>>>>> acefdd1feb4bdc1f91bbc4791123d7a8f57d98bd
 	runStart := time.Now()
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
 	runTime := time.Since(runStart).Seconds()
