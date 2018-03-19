@@ -6,10 +6,31 @@ Package protobuf is a generated protocol buffer package.
 
 It is generated from these files:
 	master_service.proto
+	worker_service.proto
 
 It has these top-level messages:
 	RegisterRequest
 	RegisterResponse
+	ShutDownRequest
+	ShutDownResponse
+	PEvalRequest
+	WorkerCommunicationSize
+	PEvalResponseBody
+	PEvalResponse
+	IncEvalRequest
+	IncEvalResponseBody
+	IncEvalResponse
+	AssembleRequest
+	AssembleResponse
+	SSSPMessageRequest
+	SSSPMessageStruct
+	SSSPMessageResponse
+	SimMessageRequest
+	SimMessageResponse
+	SimMessageStruct
+	PRMessageRequest
+	PRMessageResponse
+	PRMessageStruct
 */
 package protobuf
 
