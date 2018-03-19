@@ -5,7 +5,7 @@ const (
 	//NFSPath       = "/mnt/nfs/zpltys/GRAPE_DATA/liveJournal/"
 	//NFSPath = "/home/acgict/inputgraph/node"
 	//NFSPath = "/home/zpltys/code/GRAPE/16p/node"
-	NFSPath = "/mnt/nfs/xwen/generate_graph/16p/"
+	NFSPath = "/mnt/nfs/zpltys/GRAPE_DATA/liveJournal/"
 
 	LoadFromJson = true
 
