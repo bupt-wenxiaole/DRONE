@@ -47,6 +47,28 @@ func (w *PRWorker) UnLock() {
 	w.mutex.Unlock()
 }
 
+// rpc send has max size limit, so we spilt our transfer into many small block
+func Peer2PeerPRSend(client pb.WorkerClient, message []*pb.PRMessageStruct, wg *sync.WaitGroup)  {
+
+	for len(message) > tools.RPCSendSize {
+		slice := message[0:tools.RPCSendSize]
+		message = message[tools.RPCSendSize:]
+		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: slice})
+		if err != nil {
+			log.Println("send error")
+			log.Fatal(err)
+		}
+	}
+	if len(message) != 0 {
+		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: message})
+		if err != nil {
+			log.Println("send error")
+			log.Fatal(err)
+		}
+	}
+	wg.Done()
+}
+
 func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
 	w.Lock()
@@ -145,7 +167,9 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
+	runStart := time.Now()
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
+	runTime := time.Since(runStart).Seconds()
 
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
@@ -154,6 +178,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	//time.Sleep(time.Second)
 
+	var wg sync.WaitGroup
 	fullSendStart = time.Now()
 	for partitionId, message := range messages {
 		//log.Printf("message send partition id:%v\n", partitionId)
@@ -165,16 +190,14 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 			encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID: msg.ID.IntVal(), PrVal:msg.PRValue})
 			//log.Printf("send id:%v prVal:%v\n", msg.ID.IntVal(), msg.PRValue)
 		}
-		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: encodeMessage})
-		if err != nil {
-			log.Fatal(err)
-		}
+		wg.Add(1)
+		go Peer2PeerPRSend(client, encodeMessage, &wg)
 	}
-
+	wg.Wait()
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
 	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: runTime,
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend}}, nil
 }

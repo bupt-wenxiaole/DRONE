@@ -40,6 +40,8 @@ type Master struct {
 	//each worker's statistic data
 	wg          *sync.WaitGroup
 	JobDoneChan chan bool
+
+	totalIteration int64
 }
 
 func (mr *Master) Lock() {
@@ -94,6 +96,7 @@ func newMaster() (mr *Master) {
 	mr.workersAddress = make([]string, 0)
 	mr.grpcHandlers = make(map[int32]*grpc.ClientConn)
 	mr.statistic = make([]int32, mr.workerNum)
+	mr.totalIteration = 0
 	return mr
 }
 func (mr *Master) ReadConfig() {
@@ -189,6 +192,9 @@ func (mr *Master) PEval() bool {
 					log.Printf("worker %v send to worker %v %v messages\n", id, nodeID, pairNum)
 				}
 
+				mr.Lock()
+				mr.totalIteration += pevalResponse.Body.IterationNum
+				mr.Unlock()
 			}
 		}(i)
 	}
@@ -217,11 +223,13 @@ func (mr *Master) IncEvalALL() bool {
 					mr.Lock()
 					//multiple goroutines access update
 					update = update || reply.Update
+					mr.totalIteration += reply.Body.IterationNum
 					mr.Unlock()
 				} else {
 					mr.Lock()
 					//multiple goroutines access update
 					update = update || reply.Update
+					mr.totalIteration += reply.Body.IterationNum
 					mr.Unlock()
 					log.Printf("worker %v IterationNum %v in the round : %v\n", id, reply.Body.IterationNum, stepCount)
 					log.Printf("worker %v duration time of Inc evaluation: %v in the round : %v\n", id, reply.Body.IterationSeconds, stepCount)
@@ -280,6 +288,8 @@ func RunJob(jobName string) {
 	log.Println("end IncEval")
 	runTime := time.Since(start)
 	fmt.Printf("runTime: %vs\n", runTime.Seconds())
+	fmt.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
+	log.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	mr.Assemble()
 	mr.KillWorkers()
 	mr.StopRPCServer()

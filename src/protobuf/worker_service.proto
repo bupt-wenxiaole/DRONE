@@ -35,7 +35,7 @@ message workerCommunicationSize {
 }
 
 message pEvalResponseBody {
-    int32 iterationNum = 1;
+    int64 iterationNum = 1;
     //duration time of partial SSSP loop
     double iterationSeconds = 2;
     //duration time of combine message
@@ -61,7 +61,7 @@ message incEvalResponseBody {
     int32 aggregatorOriSize = 2;
     int32 aggregatorReducedSize = 3;
 
-    int32 iterationNum = 4;
+    int64 iterationNum = 4;
     //duration time of partial SSSP loop
     double iterationSeconds = 5;
     //duration time of combine message

@@ -32,9 +32,11 @@ type SimWorker struct {
 	preSet  map[graph.ID]algorithm.Set
 	postSet map[graph.ID]algorithm.Set
 
+	//edge_count int64
+
 	message []*algorithm.SimPair
 
-	iterationNum int
+	iterationNum int64
 	stopChannel  chan bool
 }
 
@@ -66,7 +68,6 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 
 // rpc send has max size limit, so we spilt our transfer into many small block
 func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, wg *sync.WaitGroup)  {
-
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
@@ -174,24 +175,36 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 }
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
+	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
+///////////////////////
+	f, err:= os.Create("result_" + strconv.Itoa(w.selfId - 1))
+	if err != nil {
+		log.Panic(err)
+	}
+	writer := bufio.NewWriter(f)
+///////////////////////////////
 
-	result := make([]string, 0)
+	//result := make([]string, 0)
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				result = append(result, u.String()+"\t"+v.String())
+				writer.WriteString(u.String() + "\t" + v.String() + "\n")
 			}
 		}
 	}
-
+	writer.Flush()
+	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
+	*/
+	f.Close()
 	if err != nil {
 		log.Panic(err)
 	}
 
-	return &pb.AssembleResponse{Ok: ok}, nil
+	//return &pb.AssembleResponse{Ok: ok}, nil
+	return &pb.AssembleResponse{Ok: true}, nil
 }
 
 func (w *SimWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
@@ -250,15 +263,25 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	suffix := strconv.Itoa(partitionNum) + "_"
 	if tools.ReadFromTxt {
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
+		log.Printf("graph path:%v\n", tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
+		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId - 1) + ".O")
+		log.Printf("FI path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
+		log.Printf("FO path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
+		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
+		if err1 != nil {
+			log.Fatal(err1)
+		}
+		if err2 != nil {
+			log.Fatal(err2)
+		}
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
