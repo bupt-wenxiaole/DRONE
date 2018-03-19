@@ -123,10 +123,8 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		sum += prVal[id.IntVal()]
 	}
 	//log.Printf("total vertex num:%v\n", totalVertexNum)
-	log.Printf("partition Id:%v\n", partitionId)
 	//log.Printf("still receive:%v\n", still)
 	log.Printf("max error:%v\n", maxerr)
-	log.Printf("sum value: %v\n", sum)
 
 	tempPr := make(map[int64]float64)
 	messagePr := make(map[int64]float64)

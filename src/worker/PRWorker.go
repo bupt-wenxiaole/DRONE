@@ -167,7 +167,10 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
+
+	runStart := time.Now()
 	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
+	runTime := time.Since(runStart).Seconds()
 
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
@@ -195,25 +198,24 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
 	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: runTime,
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend}}, nil
 }
 
 func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
-
-	result := make([]string, 0)
-	for id, pr := range w.prVal {
-		result = append(result, strconv.FormatInt(id, 10) +"\t"+strconv.FormatFloat(pr, 'E', -1, 64))
-	}
-
-	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
+	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Panic(err)
 	}
+	writer := bufio.NewWriter(f)
+	defer writer.Flush()
+	defer f.Close()
 
-	return &pb.AssembleResponse{Ok: ok}, nil
+	for id, pr := range w.prVal {
+		writer.WriteString(strconv.FormatInt(id, 10) +"\t"+strconv.FormatFloat(pr, 'E', -1, 64) + "\n")
+	}
+	return &pb.AssembleResponse{Ok: true}, nil
 }
 
 func (w *PRWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
@@ -269,37 +271,41 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	}
 
 	start := time.Now()
-	suffix := strconv.Itoa(partitionNum) + "_"
-	if tools.ReadFromTxt {
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId-1))
+
+	if (!tools.LoadFromJson) {
+		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		fxiReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId-1) + ".I")
-		fxoReader, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/F" + strconv.Itoa(w.selfId-1) + ".O")
-		defer fxiReader.Close()
-		defer fxoReader.Close()
+		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		defer partitionIO.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
+		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
+		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
+		if err1 != nil {
+			log.Fatal(err1)
+		}
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+		defer fxiReader.Close()
+		defer fxoReader.Close()
 
-		partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer partitionIO.Close()
-		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
 		if err != nil {
 			log.Fatal(err)
 		}
