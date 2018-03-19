@@ -2,21 +2,45 @@
 // source: master_service.proto
 
 /*
-Package protobuf is a generated protocol buffer package.
+	Package protobuf is a generated protocol buffer package.
 
-It is generated from these files:
-	master_service.proto
+	It is generated from these files:
+		master_service.proto
+		worker_service.proto
 
-It has these top-level messages:
-	RegisterRequest
-	RegisterResponse
+	It has these top-level messages:
+		RegisterRequest
+		RegisterResponse
+		ShutDownRequest
+		ShutDownResponse
+		PEvalRequest
+		WorkerCommunicationSize
+		PEvalResponseBody
+		PEvalResponse
+		IncEvalRequest
+		IncEvalResponseBody
+		IncEvalResponse
+		AssembleRequest
+		AssembleResponse
+		SSSPMessageRequest
+		SSSPMessageStruct
+		SSSPMessageResponse
+		SimMessageRequest
+		SimMessageResponse
+		SimMessageStruct
+		PRMessageRequest
+		PRMessageResponse
+		PRMessageStruct
 */
 package protobuf
 
-import proto "github.com/gogo/protobuf/proto"
+import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
+
+import context "golang.org/x/net/context"
+import grpc "google.golang.org/grpc"
 
 import io "io"
 
@@ -29,7 +53,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type RegisterRequest struct {
 	WorkerIndex int32 `protobuf:"varint,1,opt,name=workerIndex,proto3" json:"workerIndex,omitempty"`
@@ -53,6 +77,79 @@ func init() {
 	proto.RegisterType((*RegisterRequest)(nil), "protobuf.RegisterRequest")
 	proto.RegisterType((*RegisterResponse)(nil), "protobuf.RegisterResponse")
 }
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion4
+
+// Client API for Master service
+
+type MasterClient interface {
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+}
+
+type masterClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewMasterClient(cc *grpc.ClientConn) MasterClient {
+	return &masterClient{cc}
+}
+
+func (c *masterClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	out := new(RegisterResponse)
+	err := grpc.Invoke(ctx, "/protobuf.Master/Register", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Master service
+
+type MasterServer interface {
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+}
+
+func RegisterMasterServer(s *grpc.Server, srv MasterServer) {
+	s.RegisterService(&_Master_serviceDesc, srv)
+}
+
+func _Master_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protobuf.Master/Register",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Master_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "protobuf.Master",
+	HandlerType: (*MasterServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Register",
+			Handler:    _Master_Register_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "master_service.proto",
+}
+
 func (m *RegisterRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -391,7 +488,7 @@ var (
 func init() { proto.RegisterFile("master_service.proto", fileDescriptorMasterService) }
 
 var fileDescriptorMasterService = []byte{
-	// 200 bytes of a gzipped FileDescriptorProto
+	// 204 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x12, 0xc9, 0x4d, 0x2c, 0x2e,
 	0x49, 0x2d, 0x8a, 0x2f, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9,
 	0x17, 0xe2, 0x00, 0x53, 0x49, 0xa5, 0x69, 0x52, 0xba, 0xe9, 0x99, 0x25, 0x19, 0xa5, 0x49, 0x7a,
@@ -402,7 +499,7 @@ var fileDescriptorMasterService = []byte{
 	0x34, 0x15, 0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x0a, 0xf1, 0x71, 0x31, 0xe5, 0x67, 0x83, 0x15, 0x73,
 	0x04, 0x31, 0xe5, 0x67, 0x1b, 0xf9, 0x72, 0xb1, 0xf9, 0x82, 0x5d, 0x2a, 0xe4, 0xcc, 0xc5, 0x01,
 	0x53, 0x2d, 0x24, 0xa9, 0x07, 0x73, 0x8e, 0x1e, 0x9a, 0xb5, 0x52, 0x52, 0xd8, 0xa4, 0x20, 0x86,
-	0x2b, 0x31, 0x38, 0x09, 0x9c, 0x78, 0x28, 0xc7, 0x70, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47, 0x72,
-	0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0x26, 0xb1, 0x81, 0x95, 0x1b, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff,
-	0x4d, 0xd4, 0xc9, 0xfa, 0x11, 0x01, 0x00, 0x00,
+	0x2b, 0x31, 0x38, 0x89, 0x9c, 0x78, 0x28, 0xc7, 0x70, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47, 0x72,
+	0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0xce, 0x78, 0x2c, 0xc7, 0x90, 0xc4, 0x06, 0xd6, 0x62, 0x0c, 0x08,
+	0x00, 0x00, 0xff, 0xff, 0x07, 0x25, 0xce, 0x21, 0x15, 0x01, 0x00, 0x00,
 }
