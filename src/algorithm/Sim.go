@@ -54,7 +54,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		patternNodeSet.Add(id)
 	}
 
-	log.Println("zs-log: start PEVal initial")
+	//log.Println("zs-log: start PEVal initial")
 
 	// initial
 	allNodeUnionFO := NewSet()
@@ -76,7 +76,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	remove := make(map[graph.ID]Set)
 	allPatternColor := make(map[int64]bool)
 
-	log.Printf("zs-log: start PEval initial for Pattern Node \n")
+	//log.Printf("zs-log: start PEval initial for Pattern Node \n")
 	for id := range patternNodeSet {
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()
@@ -135,7 +135,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		}
 	}
 
-	log.Println("zs-log: start calculate")
+	//log.Println("zs-log: start calculate")
 
 	//calculate
 	iterationStartTime := time.Now()
@@ -147,15 +147,14 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 				continue
 			}
 
-			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
+			//log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
 				var count int64 = 0
 				for v := range remove[u] {
 
-					//iterationNum++
-
+					iterationNum++
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
 						count++
@@ -259,9 +258,10 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 			for u_pre := range uSources {
 				var count int64 = 0
 				for v := range remove[u] {
+					iterationNum++
+
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
-						//iterationNum++
 						count++
 
 						// if v belongs to FI set, we need to send message to other partition at end of this super step
