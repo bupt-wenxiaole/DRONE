@@ -5,17 +5,15 @@ const (
 	ResultPath    = "/GRAPE/result/"
 	GraphPath     = "/GRAPE/simData/"
 	PartitionPath = "/GRAPE/simData/"
-	//NFSPath       = "/mnt/nfs/xwen/generate_graph/"
-	NFSPath = "/home/acgict/inputgraph/"
-	//NFSPath = "/home/zpltys/code/GRAPE/16p/node"
+	//NFSPath = "/home/acgict/inputgraph/"
+	NFSPath = "/home/zpltys/code/GRAPE/16p/"
 	ReadFromTxt   = true
 	//LocalTempFile = "temp.json"
-	//ConfigPath = "../test_data/config.txt"
-	ConfigPath = "config.txt"
+	ConfigPath = "../test_data/config.txt"
+	//ConfigPath = "config.txt"
 
-	//PatternPath = "../test_data/pattern.txt"
-	PatternPath = "pattern.txt"
-	//PatternPath = "/home/acgict/DRONE_launcher/pattern.txt"
+	PatternPath = "../test_data/pattern.txt"
+	//PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
 
 	RPCSendSize = 100000

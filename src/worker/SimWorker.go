@@ -68,7 +68,6 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 
 // rpc send has max size limit, so we spilt our transfer into many small block
 func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, wg *sync.WaitGroup)  {
-
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
@@ -187,20 +186,14 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	writer := bufio.NewWriter(f)
 ///////////////////////////////
 
-    count := 0
-
 	//result := make([]string, 0)
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				count++
-				if count < 100 {
-					writer.WriteString(u.String() + "\t" + v.String() + "\n")
-				}
+				writer.WriteString(u.String() + "\t" + v.String() + "\n")]
 			}
 		}
 	}
-	writer.WriteString(strconv.Itoa(count))
 	writer.Flush()
 	/*
 	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
