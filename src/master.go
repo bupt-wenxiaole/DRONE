@@ -194,6 +194,7 @@ func (mr *Master) PEval() bool {
 
 				mr.Lock()
 				mr.totalIteration += pevalResponse.Body.IterationNum
+				log.Printf("iteration num:%v\n", mr.totalIteration)
 				mr.Unlock()
 			}
 		}(i)
@@ -230,6 +231,7 @@ func (mr *Master) IncEvalALL() bool {
 					//multiple goroutines access update
 					update = update || reply.Update
 					mr.totalIteration += reply.Body.IterationNum
+					log.Printf("iteration num:%v\n", mr.totalIteration)
 					mr.Unlock()
 					log.Printf("worker %v IterationNum %v in the round : %v\n", id, reply.Body.IterationNum, stepCount)
 					log.Printf("worker %v duration time of Inc evaluation: %v in the round : %v\n", id, reply.Body.IterationSeconds, stepCount)
