@@ -47,7 +47,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 
 
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
-func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set) (bool, map[int][]*SimPair, float64, float64, int32, int32, int32) {
+func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
 	nodeMap := pattern.GetNodes()
 	patternNodeSet := NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
@@ -139,7 +139,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 
 	//calculate
 	iterationStartTime := time.Now()
-	var iterationNum int32 = 0
+	var iterationNum int64 = 0
 	for {
 		iterationFinish := true
 		for u := range patternNodeSet {
@@ -151,12 +151,14 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
+				var count int64 = 0
 				for v := range remove[u] {
 
-					iterationNum++
+					//iterationNum++
 
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
+						count++
 
 						// if v belongs to FI set, we need to send message to other partition at end of this super step
 						fiMap := g.GetFIs()
@@ -177,6 +179,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 						}
 					}
 				}
+				iterationNum += int64(preSet[u_pre].Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
@@ -209,7 +212,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
-func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set, messages []*SimPair) (bool, map[int][]*SimPair, float64, float64, int32, int32, int32, float64, int32, int32) {
+func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set, messages []*SimPair) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32, float64, int32, int32) {
 	nodeMap := pattern.GetNodes()
 	patternNodeSet := NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
@@ -224,13 +227,9 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 		preSim[u] = sim[u].Copy()
 		remove[u] = NewSet()
 	}
-	for i, message := range messages {
+	for _, message := range messages {
 		u := message.PatternNode
 		v := message.DataNode
-
-		if i % 100000 == 0 {
-			fmt.Printf("finish %v inital iteration\n", i)
-		}
 
 		sim[u].Remove(v)
 		for v_pre := range preSet[v] {
@@ -244,7 +243,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 	//calculate
 	messageMap := make(map[int]map[SimPair]bool)
 	iterationStartTime := time.Now()
-	var iterationNum int32 = 0
+	var iterationNum int64 = 0
 
 	fmt.Println("start inc calculate")
 
@@ -258,11 +257,12 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
+				var count int64 = 0
 				for v := range remove[u] {
-					iterationNum++
-
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
+						//iterationNum++
+						count++
 
 						// if v belongs to FI set, we need to send message to other partition at end of this super step
 						fiMap := g.GetFIs()
@@ -284,6 +284,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 						}
 					}
 				}
+				iterationNum += int64(preSet[u_pre].Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()

@@ -32,9 +32,11 @@ type SimWorker struct {
 	preSet  map[graph.ID]algorithm.Set
 	postSet map[graph.ID]algorithm.Set
 
+	//edge_count int64
+
 	message []*algorithm.SimPair
 
-	iterationNum int
+	iterationNum int64
 	stopChannel  chan bool
 }
 
