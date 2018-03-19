@@ -257,14 +257,14 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	start := time.Now()
 
 	if (!tools.LoadFromJson) {
-		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer partitionIO.Close()
 
 		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
@@ -294,6 +294,14 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 			log.Fatal(err)
 		}
 	}
+
+	patternFile, err := os.Open(tools.PatternPath)
+	if err != nil {
+		log.Fatal("pattern path error")
+	}
+	defer patternFile.Close()
+	w.pattern, _ = graph.NewPatternGraph(patternFile)
+
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %v\n", loadTime)
 
