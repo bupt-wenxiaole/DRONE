@@ -272,7 +272,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 
 	start := time.Now()
 
-	if (!tools.LoadFromJson) {
+	if tools.LoadFromJson {
 		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(w.partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
 

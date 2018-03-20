@@ -256,7 +256,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	start := time.Now()
 
-	if (tools.LoadFromJson) {
+	if tools.LoadFromJson {
 		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
 

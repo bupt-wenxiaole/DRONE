@@ -300,7 +300,7 @@ func RunJob(jobName string) {
 }
 
 func main() {
-	jobName := "SSSP"
+	jobName := "sssp"
 	//TODO:split the Json into worker's subJson
 	RunJob(jobName)
 }
