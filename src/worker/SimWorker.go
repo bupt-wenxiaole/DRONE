@@ -175,16 +175,14 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 }
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	//fs := tools.GenerateAlluxioClient(tools.AlluxioHost)
 	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
-///////////////////////
-	f, err:= os.Create("result_" + strconv.Itoa(w.selfId - 1))
+
+	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Panic(err)
 	}
 	writer := bufio.NewWriter(f)
-///////////////////////////////
 
 	//result := make([]string, 0)
 	for u, simSets := range w.sim {
@@ -195,9 +193,6 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 		}
 	}
 	writer.Flush()
-	/*
-	ok, err := tools.WriteToAlluxio(fs, tools.ResultPath+"result_"+strconv.Itoa(w.selfId), result)
-	*/
 	f.Close()
 	if err != nil {
 		log.Panic(err)
@@ -261,21 +256,30 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	start := time.Now()
 
-	suffix := strconv.Itoa(partitionNum) + "_"
-	if tools.ReadFromTxt {
-		//graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "p/G." + strconv.Itoa(w.selfId - 1))
-		log.Printf("graph path:%v\n", tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
-		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId - 1))
+	if tools.LoadFromJson {
+		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		log.Printf("FI path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
-		log.Printf("FO path:%v\n", tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
-		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId - 1) + ".O")
+		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		defer partitionIO.Close()
+
+		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+		defer graphIO.Close()
+
+		if graphIO == nil {
+			fmt.Println("graphIO is nil")
+		}
+		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
 		if err1 != nil {
 			log.Fatal(err1)
 		}
@@ -286,22 +290,6 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 		defer fxoReader.Close()
 
 		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		graphIO, _ := tools.ReadFromAlluxio(tools.GraphPath+"G"+suffix+strconv.Itoa(w.selfId-1)+".json", "G"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("G" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer graphIO.Close()
-
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-
-		partitionIO, _ := tools.ReadFromAlluxio(tools.PartitionPath+"P"+suffix+strconv.Itoa(w.selfId-1)+".json", "P"+suffix+strconv.Itoa(w.selfId-1)+".json")
-		defer tools.DeleteLocalFile("P" + suffix + strconv.Itoa(w.selfId-1) + ".json")
-		defer partitionIO.Close()
-		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -48,17 +48,17 @@ type BoundMsg struct {
 	DstId    graph.ID
 	RouteLen int64
 }
-
-// in the result -- routeTable, routeTable[i] stores a list of BoundMsg,
 // routeTable[node_i][j].RouteLen is the weight of edge: node_i -> routeTable[node_i][j].DstID
 func GenerateRouteTable(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*BoundMsg {
 	routeTable := make(map[graph.ID][]*BoundMsg)
 	for fo, msgs := range FO {
+
+// in the result -- routeTable, routeTable[i] stores a list of BoundMsg,
 		for _, msg := range msgs {
 			srcId := msg.RelatedId()
 			if _, ok := routeTable[srcId]; !ok {
 				routeTable[srcId] = make([]*BoundMsg, 0)
-			}
+				}
 
 			nowMsg := &BoundMsg{
 				DstId:    fo,
