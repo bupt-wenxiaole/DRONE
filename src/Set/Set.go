@@ -69,7 +69,7 @@ func (s Set) HasIntersection(an Set) bool {
 	return false
 }
 
-func (s Set) Clear() bool {
+func (s Set) Clear() {
 	for v := range s {
 		s.Remove(v)
 	}
