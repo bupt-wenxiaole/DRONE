@@ -12,6 +12,7 @@ import (
 	"strings"
 	"strconv"
 	"tools"
+	"Set"
 )
 
 // ID is unique identifier.
@@ -167,9 +168,9 @@ type Graph interface {
 	// get all Fi.O message
 	GetFOs() map[ID][]RouteMsg
 
-	GetPreSet(ID)tools.Set
+	GetPreSet(ID)Set.Set
 
-	GetPostSet(ID)tools.Set
+	GetPostSet(ID)Set.Set
 
 	// String describes the Graph.
 	String() string
@@ -213,8 +214,8 @@ func NewGraph() Graph {
 	return newGraph()
 }
 
-func (g *graph) GetPreSet(id ID) tools.Set {
-	preSet := tools.NewSet()
+func (g *graph) GetPreSet(id ID) Set.Set {
+	preSet := Set.NewSet()
 	sources, _ := g.GetSources(id)
 	for sid := range sources {
 		preSet.Add(sid)
@@ -225,8 +226,8 @@ func (g *graph) GetPreSet(id ID) tools.Set {
 	return preSet
 }
 
-func (g *graph) GetPostSet(id ID) tools.Set {
-	postSet := tools.NewSet()
+func (g *graph) GetPostSet(id ID) Set.Set {
+	postSet := Set.NewSet()
 	targets, _ := g.GetTargets(id)
 	for sid := range targets {
 		postSet.Add(sid)
