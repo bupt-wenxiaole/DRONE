@@ -4,7 +4,6 @@ import (
 	"graph"
 	"time"
 	"log"
-	"fmt"
 	"tools"
 	"Set"
 )
@@ -258,7 +257,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 	iterationStartTime := time.Now()
 	var iterationNum int64 = 0
 
-	fmt.Println("start inc calculate")
+	log.Println("start inc calculate")
 
 	for {
 		iterationFinish := true
