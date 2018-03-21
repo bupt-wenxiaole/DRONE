@@ -57,7 +57,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		patternNodeSet.Add(id)
 	}
 
-	//log.Println("zs-log: start PEVal initial")
+	log.Println("zs-log: start PEVal initial")
 
 	// initial
 	allNodeUnionFO := Set.NewSet()
@@ -80,7 +80,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	remove := make(map[graph.ID]Set.Set)
 	allPatternColor := make(map[int64]bool)
 
-	//log.Printf("zs-log: start PEval initial for Pattern Node \n")
+	log.Printf("zs-log: start PEval initial for Pattern Node \n")
 	for id := range patternNodeSet {
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()
@@ -143,7 +143,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		}
 	}
 
-	//log.Println("zs-log: start calculate")
+	log.Println("zs-log: start calculate")
 
 	//calculate
 	iterationStartTime := time.Now()
@@ -159,18 +159,18 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
-				var count int64 = 0
 				for v := range remove[u] {
 
 					iterationNum++
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
-						count++
+						iterationNum++
 
 						// if v belongs to FI set, we need to send message to other partition at end of this super step
 						fiMap := g.GetFIs()
 						if routeMsgs, ok := fiMap[v]; ok {
 							for _, routeMsg := range routeMsgs {
+								iterationNum++
 								partitionId := routeMsg.RoutePartition()
 								if _, ok = messageMap[partitionId]; !ok {
 									messageMap[partitionId] = make(map[SimPair]bool)
@@ -181,6 +181,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 
 						Set.GetPreSet(g, v, emptySet1)
 						for v_pre := range emptySet1 {
+							iterationNum++
 							Set.GetPostSet(g, v_pre, emptySet2)
 							if !sim[u_pre].HasIntersection(emptySet2) {
 								remove[u_pre].Add(v_pre)
@@ -188,8 +189,6 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 						}
 					}
 				}
-				Set.GetPreSet(g, u_pre, emptySet1)
-				iterationNum += int64(emptySet1.Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
