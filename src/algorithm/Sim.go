@@ -49,6 +49,8 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
 func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
+	emptySet1 := Set.NewSet()
+	emptySet2 := Set.NewSet()
 	nodeMap := pattern.GetNodes()
 	patternNodeSet := Set.NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
@@ -68,7 +70,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	removeInit := Set.NewSet()
 	for u := range allNodeUnionFO {
 		//removeInit.Merge(preSet[u])
-		if Set.GetPostSet(g, u).Size() != 0 {
+		Set.GetPostSet(g, u, emptySet1)
+		if emptySet1.Size() != 0 {
 			removeInit.Add(u)
 		}
 	}
@@ -96,11 +99,14 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 					targets, _ := pattern.GetTargets(id)
 					if len(targets) == 0 {
 						sim[id].Add(v)
-						remove[id].Separate(Set.GetPreSet(g, v))
+						Set.GetPreSet(g, v, emptySet1)
+						remove[id].Separate(emptySet1)
 					} else {
-						if Set.GetPostSet(g, v).Size() != 0 {
+						Set.GetPostSet(g, v, emptySet1)
+						if emptySet1.Size() != 0 {
 							sim[id].Add(v)
-							remove[id].Separate(Set.GetPreSet(g, v))
+							Set.GetPreSet(g, v, emptySet2)
+							remove[id].Separate(emptySet2)
 						}
 					}
 				}
@@ -114,7 +120,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			for id := range patternNodeSet {
 				if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
 					sim[id].Add(v)
-					remove[id].Separate(Set.GetPreSet(g, v))
+					Set.GetPreSet(g, v, emptySet1)
+					remove[id].Separate(emptySet1)
 				}
 			}
 		}
@@ -172,14 +179,17 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 							}
 						}
 
-						for v_pre := range Set.GetPreSet(g, v) {
-							if !sim[u_pre].HasIntersection(Set.GetPostSet(g, v_pre)) {
+						Set.GetPreSet(g, v, emptySet1)
+						for v_pre := range emptySet1 {
+							Set.GetPostSet(g, v_pre, emptySet2)
+							if !sim[u_pre].HasIntersection(emptySet2) {
 								remove[u_pre].Add(v_pre)
 							}
 						}
 					}
 				}
-				iterationNum += int64(Set.GetPreSet(g, u_pre).Size()) * count
+				Set.GetPreSet(g, u_pre, emptySet1)
+				iterationNum += int64(emptySet1.Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
@@ -213,6 +223,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 }
 
 func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, messages []*SimPair) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32, float64, int32, int32) {
+	emptySet1 := Set.NewSet()
+	emptySet2 := Set.NewSet()
+
 	nodeMap := pattern.GetNodes()
 	patternNodeSet := Set.NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
@@ -232,9 +245,10 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 		v := message.DataNode
 
 		sim[u].Remove(v)
-		for v_pre := range Set.GetPreSet(g, v) {
-			if !Set.GetPostSet(g, v_pre).HasIntersection(sim[u]) {
-
+		Set.GetPreSet(g, v, emptySet1)
+		for v_pre := range emptySet1 {
+			Set.GetPostSet(g, v_pre, emptySet2)
+			if !emptySet2.HasIntersection(sim[u]) {
 				remove[u].Add(v_pre)
 			}
 		}
@@ -277,15 +291,17 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 							}
 						}
 
-
-						for v_pre := range Set.GetPreSet(g, v) {
-							if !sim[u_pre].HasIntersection(Set.GetPostSet(g, v_pre)) {
+						Set.GetPreSet(g, v, emptySet1)
+						for v_pre := range emptySet1 {
+							Set.GetPostSet(g, v_pre, emptySet2)
+							if !sim[u_pre].HasIntersection(emptySet2) {
 								remove[u_pre].Add(v_pre)
 							}
 						}
 					}
 				}
-				iterationNum += int64(Set.GetPreSet(g, u_pre).Size()) * count
+				Set.GetPreSet(g, u_pre, emptySet1)
+				iterationNum += int64(emptySet1.Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()

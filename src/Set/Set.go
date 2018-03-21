@@ -69,27 +69,31 @@ func (s Set) HasIntersection(an Set) bool {
 	return false
 }
 
-
-func GetPreSet(g graph.Graph, id graph.ID) Set {
-	preSet := NewSet()
-	sources, _ := g.GetSources(id)
-	for sid := range sources {
-		preSet.Add(sid)
+func (s Set) Clear() bool {
+	for v := range s {
+		s.Remove(v)
 	}
-	for _, msg := range g.GetFOs()[id] {
-		preSet.Add(msg.RelatedId())
-	}
-	return preSet
 }
 
-func GetPostSet(g graph.Graph, id graph.ID) Set {
-	postSet := NewSet()
+
+func GetPreSet(g graph.Graph, id graph.ID, emptySet Set) {
+	emptySet.Clear()
+	sources, _ := g.GetSources(id)
+	for sid := range sources {
+		emptySet.Add(sid)
+	}
+	for _, msg := range g.GetFOs()[id] {
+		emptySet.Add(msg.RelatedId())
+	}
+}
+
+func GetPostSet(g graph.Graph, id graph.ID, emptySet Set) {
+	emptySet.Clear()
 	targets, _ := g.GetTargets(id)
 	for sid := range targets {
-		postSet.Add(sid)
+		emptySet.Add(sid)
 	}
 	for _, msg := range g.GetFIs()[id] {
-		postSet.Add(msg.RelatedId())
+		emptySet.Add(msg.RelatedId())
 	}
-	return postSet
 }
