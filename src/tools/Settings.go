@@ -9,7 +9,7 @@ const (
 	//NFSPath = "/mnt/nfs/xwen/generate_graph/"
 	NFSPath = "/home/xwen/"
 
-	LoadFromJson = true
+	LoadFromJson = false
 
 	//NFSPath = "/home/acgict/inputgraph/"
 
