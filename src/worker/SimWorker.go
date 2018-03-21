@@ -28,7 +28,7 @@ type SimWorker struct {
 
 	g       graph.Graph
 	pattern graph.Graph
-	sim     map[graph.ID]algorithm.Set
+	sim     map[graph.ID]tools.Set
 	//preSet  map[graph.ID]algorithm.Set
 	//postSet map[graph.ID]algorithm.Set
 
@@ -139,7 +139,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.preSet, w.postSet, w.message)
+		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message)
 	w.message = make([]*algorithm.SimPair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
@@ -231,7 +231,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
-	w.sim = make(map[graph.ID]algorithm.Set)
+	w.sim = make(map[graph.ID]tools.Set)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n

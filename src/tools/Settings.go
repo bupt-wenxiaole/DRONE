@@ -18,7 +18,7 @@ const (
 
 	//PatternPath = "../test_data/pattern.txt"
 	PatternPath = "pattern.txt"
-	GraphSimulationTypeModel = 100
+	GraphSimulationTypeModel = 10
 
 	RPCSendSize = 100000
 )
