@@ -186,10 +186,14 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	writer := bufio.NewWriter(f)
 
 	//result := make([]string, 0)
+	size := 0
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				writer.WriteString(u.String() + "\t" + v.String() + "\n")
+				size++
+				if size > 100 {
+					writer.WriteString(u.String() + "\t" + v.String() + "\n")
+				}
 			}
 		}
 	}

@@ -1,7 +1,7 @@
 package tools
 
 const (
-	ResultPath    = "/mnt/nfs/zpltys/GRAPE_DATA/result/"
+	ResultPath    = "/home/xwen/"
 	//NFSPath = "/home/acgict/inputgraph/node"
 	//NFSPath = "/home/zpltys/code/GRAPE/16p/node"
 	//NFSPath = "/mnt/nfs/zpltys/GRAPE_DATA/liveJournal/"
