@@ -68,7 +68,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	removeInit := Set.NewSet()
 	for u := range allNodeUnionFO {
 		//removeInit.Merge(preSet[u])
-		if g.GetPostSet(u).Size() != 0 {
+		if Set.GetPostSet(g, u).Size() != 0 {
 			removeInit.Add(u)
 		}
 	}
@@ -96,11 +96,11 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 					targets, _ := pattern.GetTargets(id)
 					if len(targets) == 0 {
 						sim[id].Add(v)
-						remove[id].Separate(g.GetPreSet(v))
+						remove[id].Separate(Set.GetPreSet(g, v))
 					} else {
-						if g.GetPostSet(v).Size() != 0 {
+						if Set.GetPostSet(g, v).Size() != 0 {
 							sim[id].Add(v)
-							remove[id].Separate(g.GetPreSet(v))
+							remove[id].Separate(Set.GetPreSet(g, v))
 						}
 					}
 				}
@@ -114,7 +114,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			for id := range patternNodeSet {
 				if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
 					sim[id].Add(v)
-					remove[id].Separate(g.GetPreSet(v))
+					remove[id].Separate(Set.GetPreSet(g, v))
 				}
 			}
 		}
@@ -172,14 +172,14 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 							}
 						}
 
-						for v_pre := range g.GetPreSet(v) {
-							if !sim[u_pre].HasIntersection(g.GetPostSet(v_pre)) {
+						for v_pre := range Set.GetPreSet(g, v) {
+							if !sim[u_pre].HasIntersection(Set.GetPostSet(g, v_pre)) {
 								remove[u_pre].Add(v_pre)
 							}
 						}
 					}
 				}
-				iterationNum += int64(g.GetPreSet(u_pre).Size()) * count
+				iterationNum += int64(Set.GetPreSet(g, u_pre).Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
@@ -232,8 +232,8 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 		v := message.DataNode
 
 		sim[u].Remove(v)
-		for v_pre := range g.GetPreSet(v) {
-			if !g.GetPostSet(v_pre).HasIntersection(sim[u]) {
+		for v_pre := range Set.GetPreSet(g, v) {
+			if !Set.GetPostSet(g, v_pre).HasIntersection(sim[u]) {
 
 				remove[u].Add(v_pre)
 			}
@@ -278,14 +278,14 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 						}
 
 
-						for v_pre := range g.GetPreSet(v) {
-							if !sim[u_pre].HasIntersection(g.GetPostSet(v_pre)) {
+						for v_pre := range Set.GetPreSet(g, v) {
+							if !sim[u_pre].HasIntersection(Set.GetPostSet(g, v_pre)) {
 								remove[u_pre].Add(v_pre)
 							}
 						}
 					}
 				}
-				iterationNum += int64(g.GetPreSet(u_pre).Size()) * count
+				iterationNum += int64(Set.GetPreSet(g, u_pre).Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
