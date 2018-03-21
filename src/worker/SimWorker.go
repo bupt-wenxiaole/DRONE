@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 	"tools"
+	"Set"
 )
 
 type SimWorker struct {
@@ -28,7 +29,7 @@ type SimWorker struct {
 
 	g       graph.Graph
 	pattern graph.Graph
-	sim     map[graph.ID]tools.Set
+	sim     map[graph.ID]Set.Set
 	//preSet  map[graph.ID]algorithm.Set
 	//postSet map[graph.ID]algorithm.Set
 
@@ -231,7 +232,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
-	w.sim = make(map[graph.ID]tools.Set)
+	w.sim = make(map[graph.ID]Set.Set)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
