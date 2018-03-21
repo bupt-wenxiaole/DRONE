@@ -29,8 +29,8 @@ type SimWorker struct {
 	g       graph.Graph
 	pattern graph.Graph
 	sim     map[graph.ID]algorithm.Set
-	preSet  map[graph.ID]algorithm.Set
-	postSet map[graph.ID]algorithm.Set
+	//preSet  map[graph.ID]algorithm.Set
+	//postSet map[graph.ID]algorithm.Set
 
 	//edge_count int64
 
@@ -108,7 +108,7 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.preSet, w.postSet)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim)
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum, iterationTime,
@@ -317,20 +317,11 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %v\n", loadTime)
 
-	fmt.Printf("node size:%v\n", len(w.g.GetNodes()))
-	edgeSize := 0
-	for id := range w.g.GetNodes() {
-		targets, _ := w.g.GetTargets(id)
-		edgeSize += len(targets)
-	}
-	fmt.Printf("edge size:%v\n", edgeSize)
-	fmt.Printf("FO size:%v\n", len(w.g.GetFOs()))
-
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
 	// Initial some variables from graph
-	w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
+	//w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
 
 	return w
 }
