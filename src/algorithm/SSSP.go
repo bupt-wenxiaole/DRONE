@@ -5,6 +5,7 @@ import (
 	"graph"
 	"time"
 	//"fmt"
+	"log"
 )
 
 // for more information about this implement of priority queue,
@@ -104,6 +105,7 @@ func SSSP_aggregateMsg(oriMsg []*Pair) []*Pair {
 // the map value is the message need to be send
 // map[i] is a list of message need to be sent to partition i
 func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, routeTable map[graph.ID][]*BoundMsg, startID graph.ID) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
+	log.Printf("start id:%v\n", startID.IntVal())
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
