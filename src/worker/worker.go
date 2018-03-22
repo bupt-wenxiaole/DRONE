@@ -120,7 +120,16 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID(1))
+
+	startId := -1
+	if w.selfId == 1 {
+		for v := range w.g.GetNodes() {
+			startId = int(v.IntVal())
+			break
+		}
+	}
+
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, graph.StringID(startId))
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum, iterationTime,
