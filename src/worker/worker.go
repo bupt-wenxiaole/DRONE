@@ -121,7 +121,7 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	var startId graph.ID = nil
+	var startId graph.ID = graph.StringID(-1)
 	if w.selfId == 1 {
 		for v := range w.g.GetNodes() {
 			startId = v
