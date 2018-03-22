@@ -75,6 +75,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	allPatternColor := make(map[int64]bool)
 
 	log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
+	log.Printf("pattern node size:%v\n", patternNodeSet.Size())
 	for id := range patternNodeSet {
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()
@@ -84,6 +85,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		}
 		allPatternColor[nodeMap[id].Attr()] = true
 	}
+
+	log.Println("step 1")
 
 	for v, msg := range g.GetNodes() {
 		_, ok := allPatternColor[msg.Attr()]
@@ -108,6 +111,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		}
 	}
 
+	log.Println("step 2")
+
 	for v := range g.GetFOs() {
 		_, ok := allPatternColor[v.IntVal()%tools.GraphSimulationTypeModel]
 		if ok {
@@ -120,6 +125,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			}
 		}
 	}
+	log.Println("step 3")
 
 	messageMap := make(map[int]map[SimPair]bool)
 
