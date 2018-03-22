@@ -357,7 +357,8 @@ func RunSimWorker(id, partitionNum int) {
 	registerClient := pb.NewMasterClient(masterHandle)
 	response, err := registerClient.Register(context.Background(), &pb.RegisterRequest{WorkerIndex: int32(w.selfId)})
 	if err != nil || !response.Ok {
-		log.Fatal("error for register")
+		log.Println(err)
+		log.Fatal("error for register!!")
 	}
 
 	// wait for stop
