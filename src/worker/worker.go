@@ -20,16 +20,16 @@ import (
 	"tools"
 )
 
-func Generate(g graph.Graph) (map[graph.ID]int64, map[graph.ID]int64) {
-	distance := make(map[graph.ID]int64)
-	exchangeMsg := make(map[graph.ID]int64)
+func Generate(g graph.Graph) (map[graph.ID]float64, map[graph.ID]float64) {
+	distance := make(map[graph.ID]float64)
+	exchangeMsg := make(map[graph.ID]float64)
 
 	for id := range g.GetNodes() {
-		distance[id] = math.MaxInt64
+		distance[id] = math.MaxFloat64
 	}
 
 	for id := range g.GetFOs() {
-		exchangeMsg[id] = math.MaxInt64
+		exchangeMsg[id] = math.MaxFloat64
 	}
 	return distance, exchangeMsg
 }
@@ -64,8 +64,8 @@ type Worker struct {
 	grpcHandlers []*grpc.ClientConn
 
 	g           graph.Graph
-	distance    map[graph.ID]int64 //
-	exchangeMsg map[graph.ID]int64
+	distance    map[graph.ID]float64 //
+	exchangeMsg map[graph.ID]float64
 	updated     []*algorithm.Pair
 
 	routeTable map[graph.ID][]*algorithm.BoundMsg
@@ -206,7 +206,7 @@ func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.As
 	defer f.Close()
 
 	for id, dist := range w.distance {
-		writer.WriteString(id.String()+"\t"+strconv.FormatInt(dist, 10) + "\n")
+		writer.WriteString(id.String()+"\t"+strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
 	}
 
 	return &pb.AssembleResponse{Ok: true}, nil
