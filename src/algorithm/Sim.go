@@ -47,7 +47,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 */
 
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
-func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
+func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, id int, allNodeUnionFO Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
 	emptySet1 := Set.NewSet()
 	emptySet2 := Set.NewSet()
 	nodeMap := pattern.GetNodes()
@@ -56,16 +56,11 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		patternNodeSet.Add(id)
 	}
 
-	log.Println("zs-log: start PEVal initial")
+	log.Printf("zs-log: start PEVal initial for rank:%v\n", id)
 
 	// initial
-	allNodeUnionFO := Set.NewSet()
-	for v := range g.GetNodes() {
-		allNodeUnionFO.Add(v)
-	}
-	for v := range g.GetFOs() {
-		allNodeUnionFO.Add(v)
-	}
+
+	//log.Printf("start calculate remove set for rank:%v\n", id)
 	removeInit := Set.NewSet()
 	for u := range allNodeUnionFO {
 		//removeInit.Merge(preSet[u])
@@ -79,7 +74,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	remove := make(map[graph.ID]Set.Set)
 	allPatternColor := make(map[int64]bool)
 
-	log.Printf("zs-log: start PEval initial for Pattern Node \n")
+	log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
 	for id := range patternNodeSet {
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()

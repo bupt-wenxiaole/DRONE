@@ -39,6 +39,8 @@ type SimWorker struct {
 
 	iterationNum int64
 	stopChannel  chan bool
+
+	allNodeUnionFO Set.Set
 }
 
 func (w *SimWorker) Lock() {
@@ -109,7 +111,8 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.selfId, w.allNodeUnionFO)
+	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum, iterationTime,
@@ -306,6 +309,15 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	}
 	defer patternFile.Close()
 	w.pattern, _ = graph.NewPatternGraph(patternFile)
+
+	log.Printf("start calculate all nodes%v\n", w.selfId)
+	w.allNodeUnionFO = Set.NewSet()
+	for v := range w.g.GetNodes() {
+		w.allNodeUnionFO.Add(v)
+	}
+	for v := range w.g.GetFOs() {
+		w.allNodeUnionFO.Add(v)
+	}
 
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %v\n", loadTime)
