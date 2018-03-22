@@ -123,6 +123,7 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 
 	var startId graph.ID = graph.StringID(-1)
 	if w.selfId == 1 {
+		log.Println("my rank is 1")
 		for v := range w.g.GetNodes() {
 			startId = v
 			break
