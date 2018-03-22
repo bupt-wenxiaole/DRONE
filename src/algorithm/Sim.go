@@ -50,6 +50,8 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, id int, allNodeUnionFO Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
 	emptySet1 := Set.NewSet()
 	emptySet2 := Set.NewSet()
+	var iterationNum int64 = 0
+
 	nodeMap := pattern.GetNodes()
 	patternNodeSet := Set.NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
@@ -64,10 +66,12 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	removeInit := Set.NewSet()
 	for u := range allNodeUnionFO {
 		//removeInit.Merge(preSet[u])
-		Set.GetPostSet(g, u, emptySet1)
-		if emptySet1.Size() != 0 {
+		//Set.GetPostSet(g, u, emptySet1)
+		targets, _ := g.GetTargets(u)
+		if len(targets) != 0 || len(g.GetFOs()[u]) != 0 {
 			removeInit.Add(u)
 		}
+		iterationNum++
 	}
 
 	preSim := make(map[graph.ID]Set.Set)
@@ -97,12 +101,14 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 					if len(targets) == 0 {
 						sim[id].Add(v)
 						Set.GetPreSet(g, v, emptySet1)
+						iterationNum += int64(emptySet1.Size())
 						remove[id].Separate(emptySet1)
 					} else {
 						Set.GetPostSet(g, v, emptySet1)
 						if emptySet1.Size() != 0 {
 							sim[id].Add(v)
 							Set.GetPreSet(g, v, emptySet2)
+							iterationNum += int64(emptySet2.Size())
 							remove[id].Separate(emptySet2)
 						}
 					}
@@ -120,6 +126,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 				if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
 					sim[id].Add(v)
 					Set.GetPreSet(g, v, emptySet1)
+					iterationNum += int64(len(emptySet1))
 					remove[id].Separate(emptySet1)
 				}
 			}
@@ -147,7 +154,6 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 
 	//calculate
 	iterationStartTime := time.Now()
-	var iterationNum int64 = 0
 	for {
 		iterationFinish := true
 		for u := range patternNodeSet {
@@ -155,7 +161,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 				continue
 			}
 
-			//log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
+			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
