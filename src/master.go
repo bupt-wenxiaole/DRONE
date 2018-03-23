@@ -56,8 +56,6 @@ func (mr *Master) Unlock() {
 // up to report that they are ready to receive tasks.
 // Locks for multiple worker concurrently access worker list
 func (mr *Master) Register(ctx context.Context, args *pb.RegisterRequest) (r *pb.RegisterResponse, err error) {
-	mr.Lock()
-	defer mr.Unlock()
 	log.Printf("Register: worker %d\n", args.WorkerIndex)
 	endpoint := mr.workersAddress[args.WorkerIndex]
 	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
