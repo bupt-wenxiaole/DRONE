@@ -1,4 +1,4 @@
-package algorithm
+package Set
 
 import (
 	"graph"
@@ -67,4 +67,33 @@ func (s Set) HasIntersection(an Set) bool {
 		}
 	}
 	return false
+}
+
+func (s Set) Clear() {
+	for v := range s {
+		s.Remove(v)
+	}
+}
+
+
+func GetPreSet(g graph.Graph, id graph.ID, emptySet Set) {
+	emptySet.Clear()
+	sources, _ := g.GetSources(id)
+	for sid := range sources {
+		emptySet.Add(sid)
+	}
+	for _, msg := range g.GetFOs()[id] {
+		emptySet.Add(msg.RelatedId())
+	}
+}
+
+func GetPostSet(g graph.Graph, id graph.ID, emptySet Set) {
+	emptySet.Clear()
+	targets, _ := g.GetTargets(id)
+	for sid := range targets {
+		emptySet.Add(sid)
+	}
+	for _, msg := range g.GetFIs()[id] {
+		emptySet.Add(msg.RelatedId())
+	}
 }

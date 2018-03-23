@@ -4,8 +4,8 @@ import (
 	"graph"
 	"time"
 	"log"
-	"fmt"
 	"tools"
+	"Set"
 )
 
 type SimPair struct {
@@ -13,7 +13,7 @@ type SimPair struct {
 	DataNode    graph.ID
 }
 
-
+/*
 // generate post and pre set for data graph nodes(include FO nodes)
 func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 	preSet := make(map[graph.ID]Set)
@@ -44,48 +44,53 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set, map[graph.ID]Set) {
 
 	return preSet, postSet
 }
-
+*/
 
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
-func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
+func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, id int, allNodeUnionFO Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
+	emptySet1 := Set.NewSet()
+	emptySet2 := Set.NewSet()
+	var iterationNum int64 = 0
+
 	nodeMap := pattern.GetNodes()
-	patternNodeSet := NewSet() // a set for all pattern nodes
+	patternNodeSet := Set.NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
 		patternNodeSet.Add(id)
 	}
 
-	//log.Println("zs-log: start PEVal initial")
+	log.Printf("zs-log: start PEVal initial for rank:%v\n", id)
 
 	// initial
-	allNodeUnionFO := NewSet()
-	for v := range g.GetNodes() {
-		allNodeUnionFO.Add(v)
-	}
-	for v := range g.GetFOs() {
-		allNodeUnionFO.Add(v)
-	}
-	removeInit := NewSet()
+
+	//log.Printf("start calculate remove set for rank:%v\n", id)
+	removeInit := Set.NewSet()
 	for u := range allNodeUnionFO {
 		//removeInit.Merge(preSet[u])
-		if postSet[u].Size() != 0 {
+		//Set.GetPostSet(g, u, emptySet1)
+		targets, _ := g.GetTargets(u)
+		if len(targets) != 0 || len(g.GetFOs()[u]) != 0 {
 			removeInit.Add(u)
 		}
+		iterationNum++
 	}
 
-	preSim := make(map[graph.ID]Set)
-	remove := make(map[graph.ID]Set)
+	preSim := make(map[graph.ID]Set.Set)
+	remove := make(map[graph.ID]Set.Set)
 	allPatternColor := make(map[int64]bool)
 
-	//log.Printf("zs-log: start PEval initial for Pattern Node \n")
+	log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
+	log.Printf("pattern node size:%v\n", patternNodeSet.Size())
 	for id := range patternNodeSet {
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()
-		sim[id] = NewSet()
+		sim[id] = Set.NewSet()
 		for v := range g.GetFOs() {
 			sim[id].Add(v)
 		}
 		allPatternColor[nodeMap[id].Attr()] = true
 	}
+
+	log.Println("step 1")
 
 	for v, msg := range g.GetNodes() {
 		_, ok := allPatternColor[msg.Attr()]
@@ -95,11 +100,16 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 					targets, _ := pattern.GetTargets(id)
 					if len(targets) == 0 {
 						sim[id].Add(v)
-						remove[id].Separate(preSet[v])
+						Set.GetPreSet(g, v, emptySet1)
+						iterationNum += int64(emptySet1.Size())
+						remove[id].Separate(emptySet1)
 					} else {
-						if postSet[v].Size() != 0 {
+						Set.GetPostSet(g, v, emptySet1)
+						if emptySet1.Size() != 0 {
 							sim[id].Add(v)
-							remove[id].Separate(preSet[v])
+							Set.GetPreSet(g, v, emptySet2)
+							iterationNum += int64(emptySet2.Size())
+							remove[id].Separate(emptySet2)
 						}
 					}
 				}
@@ -107,17 +117,22 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		}
 	}
 
+	log.Println("step 2")
+
 	for v := range g.GetFOs() {
 		_, ok := allPatternColor[v.IntVal()%tools.GraphSimulationTypeModel]
 		if ok {
 			for id := range patternNodeSet {
 				if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
 					sim[id].Add(v)
-					remove[id].Separate(preSet[v])
+					Set.GetPreSet(g, v, emptySet1)
+					iterationNum += int64(len(emptySet1))
+					remove[id].Separate(emptySet1)
 				}
 			}
 		}
 	}
+	log.Println("step 3")
 
 	messageMap := make(map[int]map[SimPair]bool)
 
@@ -135,11 +150,10 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 		}
 	}
 
-	//log.Println("zs-log: start calculate")
+	log.Println("zs-log: start calculate")
 
 	//calculate
 	iterationStartTime := time.Now()
-	var iterationNum int64 = 0
 	for {
 		iterationFinish := true
 		for u := range patternNodeSet {
@@ -147,22 +161,22 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 				continue
 			}
 
-			//log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
+			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
-				var count int64 = 0
 				for v := range remove[u] {
 
 					iterationNum++
 					if sim[u_pre].Has(v) {
 						sim[u_pre].Remove(v)
-						count++
+						iterationNum++
 
 						// if v belongs to FI set, we need to send message to other partition at end of this super step
 						fiMap := g.GetFIs()
 						if routeMsgs, ok := fiMap[v]; ok {
 							for _, routeMsg := range routeMsgs {
+								iterationNum++
 								partitionId := routeMsg.RoutePartition()
 								if _, ok = messageMap[partitionId]; !ok {
 									messageMap[partitionId] = make(map[SimPair]bool)
@@ -171,18 +185,20 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 							}
 						}
 
-						for v_pre := range preSet[v] {
-							if !sim[u_pre].HasIntersection(postSet[v_pre]) {
+						Set.GetPreSet(g, v, emptySet1)
+						for v_pre := range emptySet1 {
+							iterationNum++
+							Set.GetPostSet(g, v_pre, emptySet2)
+							if !sim[u_pre].HasIntersection(emptySet2) {
 								remove[u_pre].Add(v_pre)
 							}
 						}
 					}
 				}
-				iterationNum += int64(preSet[u_pre].Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
-			remove[u] = NewSet()
+			remove[u] = Set.NewSet()
 		}
 		if iterationFinish {
 			break
@@ -211,29 +227,33 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, pr
 	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
-func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, preSet map[graph.ID]Set, postSet map[graph.ID]Set, messages []*SimPair) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32, float64, int32, int32) {
+func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, messages []*SimPair) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32, float64, int32, int32) {
+	emptySet1 := Set.NewSet()
+	emptySet2 := Set.NewSet()
+
 	nodeMap := pattern.GetNodes()
-	patternNodeSet := NewSet() // a set for all pattern nodes
+	patternNodeSet := Set.NewSet() // a set for all pattern nodes
 	for id := range nodeMap {
 		patternNodeSet.Add(id)
 	}
 
 	// initial
 	log.Println("start inc initial")
-	preSim := make(map[graph.ID]Set)
-	remove := make(map[graph.ID]Set)
+	preSim := make(map[graph.ID]Set.Set)
+	remove := make(map[graph.ID]Set.Set)
 	for u := range patternNodeSet {
 		preSim[u] = sim[u].Copy()
-		remove[u] = NewSet()
+		remove[u] = Set.NewSet()
 	}
 	for _, message := range messages {
 		u := message.PatternNode
 		v := message.DataNode
 
 		sim[u].Remove(v)
-		for v_pre := range preSet[v] {
-			if !postSet[v_pre].HasIntersection(sim[u]) {
-
+		Set.GetPreSet(g, v, emptySet1)
+		for v_pre := range emptySet1 {
+			Set.GetPostSet(g, v_pre, emptySet2)
+			if !emptySet2.HasIntersection(sim[u]) {
 				remove[u].Add(v_pre)
 			}
 		}
@@ -244,7 +264,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 	iterationStartTime := time.Now()
 	var iterationNum int64 = 0
 
-	fmt.Println("start inc calculate")
+	log.Println("start inc calculate")
 
 	for {
 		iterationFinish := true
@@ -276,19 +296,21 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set, 
 							}
 						}
 
-
-						for v_pre := range preSet[v] {
-							if !sim[u_pre].HasIntersection(postSet[v_pre]) {
+						Set.GetPreSet(g, v, emptySet1)
+						for v_pre := range emptySet1 {
+							Set.GetPostSet(g, v_pre, emptySet2)
+							if !sim[u_pre].HasIntersection(emptySet2) {
 								remove[u_pre].Add(v_pre)
 							}
 						}
 					}
 				}
-				iterationNum += int64(preSet[u_pre].Size()) * count
+				Set.GetPreSet(g, u_pre, emptySet1)
+				iterationNum += int64(emptySet1.Size()) * count
 			}
 
 			preSim[u] = sim[u].Copy()
-			remove[u] = NewSet()
+			remove[u] = Set.NewSet()
 		}
 		if iterationFinish {
 			break

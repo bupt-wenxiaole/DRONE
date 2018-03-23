@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 	"tools"
+	"Set"
 )
 
 type SimWorker struct {
@@ -28,9 +29,9 @@ type SimWorker struct {
 
 	g       graph.Graph
 	pattern graph.Graph
-	sim     map[graph.ID]algorithm.Set
-	preSet  map[graph.ID]algorithm.Set
-	postSet map[graph.ID]algorithm.Set
+	sim     map[graph.ID]Set.Set
+	//preSet  map[graph.ID]algorithm.Set
+	//postSet map[graph.ID]algorithm.Set
 
 	//edge_count int64
 
@@ -38,6 +39,8 @@ type SimWorker struct {
 
 	iterationNum int64
 	stopChannel  chan bool
+
+	allNodeUnionFO Set.Set
 }
 
 func (w *SimWorker) Lock() {
@@ -108,7 +111,8 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.preSet, w.postSet)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.selfId, w.allNodeUnionFO)
+	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum, iterationTime,
@@ -139,7 +143,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.preSet, w.postSet, w.message)
+		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message)
 	w.message = make([]*algorithm.SimPair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
@@ -185,10 +189,14 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	writer := bufio.NewWriter(f)
 
 	//result := make([]string, 0)
+	size := 0
 	for u, simSets := range w.sim {
 		for v := range simSets {
 			if _, ok := innerNodes[v]; ok {
-				writer.WriteString(u.String() + "\t" + v.String() + "\n")
+				size++
+				if size < 100 {
+					writer.WriteString(u.String() + "\t" + v.String() + "\n")
+				}
 			}
 		}
 	}
@@ -231,7 +239,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
-	w.sim = make(map[graph.ID]algorithm.Set)
+	w.sim = make(map[graph.ID]Set.Set)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
@@ -256,7 +264,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	start := time.Now()
 
-	if (tools.LoadFromJson) {
+	if tools.LoadFromJson {
 		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
 
@@ -302,23 +310,23 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	defer patternFile.Close()
 	w.pattern, _ = graph.NewPatternGraph(patternFile)
 
+	log.Printf("start calculate all nodes%v\n", w.selfId)
+	w.allNodeUnionFO = Set.NewSet()
+	for v := range w.g.GetNodes() {
+		w.allNodeUnionFO.Add(v)
+	}
+	for v := range w.g.GetFOs() {
+		w.allNodeUnionFO.Add(v)
+	}
+
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %v\n", loadTime)
-
-	fmt.Printf("node size:%v\n", len(w.g.GetNodes()))
-	edgeSize := 0
-	for id := range w.g.GetNodes() {
-		targets, _ := w.g.GetTargets(id)
-		edgeSize += len(targets)
-	}
-	fmt.Printf("edge size:%v\n", edgeSize)
-	fmt.Printf("FO size:%v\n", len(w.g.GetFOs()))
 
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
 	// Initial some variables from graph
-	w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
+	//w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
 
 	return w
 }
@@ -349,7 +357,8 @@ func RunSimWorker(id, partitionNum int) {
 	registerClient := pb.NewMasterClient(masterHandle)
 	response, err := registerClient.Register(context.Background(), &pb.RegisterRequest{WorkerIndex: int32(w.selfId)})
 	if err != nil || !response.Ok {
-		log.Fatal("error for register")
+		log.Println(err)
+		log.Fatal("error for register!!")
 	}
 
 	// wait for stop

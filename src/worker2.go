@@ -5,13 +5,14 @@ import (
 	"os"
 	"strconv"
 	"worker"
+	"log"
 )
 
 func main() {
-	fmt.Println("start")
-	fmt.Printf("%v-----\n", os.Args[0])
-	fmt.Printf("%v-----\n", os.Args[1])
-	fmt.Printf("%v-----\n", os.Args[2])
+	log.Println("start")
+	log.Printf("%v-----\n", os.Args[0])
+	log.Printf("%v-----\n", os.Args[1])
+	log.Printf("%v-----\n", os.Args[2])
 	workerID, err := strconv.Atoi(os.Args[1])
 	PartitionNum, err := strconv.Atoi(os.Args[2])
 	if err != nil {
