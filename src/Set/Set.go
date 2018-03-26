@@ -2,7 +2,6 @@ package Set
 
 import (
 	"graph"
-	"fmt"
 )
 
 type Set map[graph.ID]bool
