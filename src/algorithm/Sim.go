@@ -68,13 +68,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	count := 0
 	for u := range allNodeUnionFO {
 		count++
-		if count % 1000 == 0 {
-			log.Printf("have initinal %v\n", count)
-		}
-		//removeInit.Merge(preSet[u])
-		//Set.GetPostSet(g, u, emptySet1)
-		targets, _ := g.GetTargets(u)
-		if len(targets) != 0 || len(g.GetFOs()[u]) != 0 {
+		//targets, _ := g.GetTargets(u)
+		if len(postSet[u]) != 0 {
 			removeInit.Add(u)
 		}
 		iterationNum++
