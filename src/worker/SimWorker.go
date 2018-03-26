@@ -111,7 +111,7 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.selfId, w.allNodeUnionFO)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.selfId, w.allNodeUnionFO, w.preSet, w.postSet)
 	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -143,7 +143,7 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message)
+		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message, w.preSet, w.postSet)
 	w.message = make([]*algorithm.SimPair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
