@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 	"tools"
+	"strconv"
 )
 
 type Master struct {
@@ -148,17 +149,28 @@ func (mr *Master) KillWorkers() {
 	}
 }
 func (mr *Master) StartMasterServer() {
-	ln, err := net.Listen("tcp", mr.address)
-	if err != nil {
-		panic(err)
-	}
+	links := (mr.workerNum + tools.MaxLinkPerPort - 1) / tools.MaxLinkPerPort
 	grpcServer := grpc.NewServer()
 	pb.RegisterMasterServer(grpcServer, mr)
-	go func() {
-		if err := grpcServer.Serve(ln); err != nil {
+	address := strings.Split(mr.address, ":")
+	ip := address[0]
+	port, err := strconv.Atoi(address[1])
+	if err != nil {
+		log.Println("decode master address error")
+		log.Fatal(err)
+	}
+
+	for i := 0; i < links; i++ {
+		ln, err := net.Listen("tcp", ip + strconv.Itoa(port + i))
+		if err != nil {
 			panic(err)
 		}
-	}()
+		go func() {
+			if err := grpcServer.Serve(ln); err != nil {
+				panic(err)
+			}
+		}()
+	}
 
 }
 func (mr *Master) PEval() bool {
@@ -298,7 +310,7 @@ func RunJob(jobName string) {
 }
 
 func main() {
-	jobName := "sssp"
+	jobName := "graph simulation"
 	//TODO:split the Json into worker's subJson
 	RunJob(jobName)
 }

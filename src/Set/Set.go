@@ -8,9 +8,6 @@ import (
 type Set map[graph.ID]bool
 
 func (s Set) Add(id graph.ID) {
-	if s == nil {
-		fmt.Println("zs-log: fuck")
-	}
 	s[id] = true
 }
 

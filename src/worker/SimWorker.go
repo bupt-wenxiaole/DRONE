@@ -30,8 +30,8 @@ type SimWorker struct {
 	g       graph.Graph
 	pattern graph.Graph
 	sim     map[graph.ID]Set.Set
-	//preSet  map[graph.ID]algorithm.Set
-	//postSet map[graph.ID]algorithm.Set
+	preSet  map[graph.ID]Set.Set
+	postSet map[graph.ID]Set.Set
 
 	//edge_count int64
 
@@ -326,7 +326,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 		log.Println("can't load graph")
 	}
 	// Initial some variables from graph
-	//w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
+	w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
 
 	return w
 }
@@ -350,6 +350,11 @@ func RunSimWorker(id, partitionNum int) {
 		}
 	}()
 
+	bias := (w.selfId - 1) / tools.MaxLinkPerPort
+	masterAddress := strings.Split(w.peers[0], ":")
+	port, _ := strconv.Atoi(masterAddress[1])
+	w.peers[0] = masterAddress[0] + strconv.Itoa(port + bias)
+	log.Printf("worker id:%v, master address:%v\n", w.selfId, w.peers[0])
 	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)

@@ -21,4 +21,6 @@ const (
 	GraphSimulationTypeModel = 100
 
 	RPCSendSize = 100000
+
+	MaxLinkPerPort = 2
 )
