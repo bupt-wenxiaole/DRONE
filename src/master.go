@@ -161,7 +161,7 @@ func (mr *Master) StartMasterServer() {
 	}
 
 	for i := 0; i < links; i++ {
-		ln, err := net.Listen("tcp", ip + strconv.Itoa(port + i))
+		ln, err := net.Listen("tcp", ip + ":" + strconv.Itoa(port + i))
 		if err != nil {
 			panic(err)
 		}
