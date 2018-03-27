@@ -3,11 +3,11 @@ package tools
 const (
 	ResultPath    = "/home/xwen/"
 	//NFSPath = "/home/acgict/inputgraph/2048cores/"
-	NFSPath = "/mnt/nfs/zpltys/GRAPE_DATA/liveJournal/"
+	//NFSPath = "/mnt/nfs/zpltys/GRAPE_DATA/liveJournal/"
 	//NFSPath = "/mnt/nfs/zpltys/GRAPE_DATA/USARoad/"
-	//NFSPath = "/home/xwen/"
+	NFSPath = "/home/xwen/"
 
-	LoadFromJson = true
+	LoadFromJson = false
 
 	//ConfigPath = "../test_data/config.txt"
 	ConfigPath = "config.txt"
@@ -18,5 +18,5 @@ const (
 
 	RPCSendSize = 100000
 
-	ConnPoolSize = 5
+	ConnPoolSize = 64
 )
