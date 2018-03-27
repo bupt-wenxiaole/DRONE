@@ -235,7 +235,7 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	}
 
 	log.Printf("worker %v IterationNum : %v\n", args.WorkerID, args.IterationNum)
-	log.Printf("worker %v duration time of partial evaluation: %v\n", args.IterationSeconds)
+	log.Printf("worker %v duration time of partial evaluation: %v\n",args.WorkerID, args.IterationSeconds)
 	log.Printf("worker %v duration time of combine message : %v\n", args.WorkerID, args.CombineSeconds)
 	log.Printf("worker %v number of updated boarders node pair : %v\n", args.WorkerID, args.UpdatePairNum)
 	log.Printf("worker %v number of destinations which message send to: %v\n", args.WorkerID, args.DstPartitionNum)
@@ -334,9 +334,11 @@ func RunJob(jobName string) {
 	log.Println("end PEval")
 
 	log.Println("start IncEval")
+	step := 0
 	for {
+		step++
 		mr.ClearSuperStepMessgae()
-		mr.PEval()
+		mr.IncEval(step)
 		finish :=<- mr.finishDone
 		if !finish {
 			break
