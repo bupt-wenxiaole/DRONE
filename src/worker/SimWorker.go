@@ -25,7 +25,6 @@ type SimWorker struct {
 
 	peers        []string
 	selfId       int // the id of this worker itself in workers
-	grpcHandlers []*grpc.ClientConn
 
 	g       graph.Graph
 	pattern graph.Graph
@@ -55,14 +54,7 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 	log.Println("receive shutDown request")
 	w.Lock()
 	defer w.Lock()
-	log.Println("shutdown ing")
 
-	for i, handle := range w.grpcHandlers {
-		if i == 0 || i == w.selfId {
-			continue
-		}
-		handle.Close()
-	}
 	w.stopChannel <- true
 	log.Println("shutdown ok")
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
@@ -90,24 +82,7 @@ func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, wg
 	wg.Done()
 }
 
-func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
-	// init grpc handler and store it
-	// cause until now, we can ensure all workers have in work,
-	// so we do this here
-
-	w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
-	for id, peer := range w.peers {
-		if id == w.selfId || id == 0 {
-			continue
-		}
-		conn, err := grpc.Dial(peer, grpc.WithInsecure())
-		if err != nil {
-			panic(err)
-		}
-		w.grpcHandlers[id] = conn
-	}
-
-	// Load graph data
+func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
@@ -115,67 +90,167 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
-		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum, iterationTime,
-			combineTime, updatePairNum, dstPartitionNum, 0, SlicePeerSendNull}}, nil
+
+		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+		if err != nil {
+			log.Fatal(err)
+		}
+		Client := pb.NewMasterClient(masterHandle)
+		defer masterHandle.Close()
+
+		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+		Client.SuperStepFinish(context.Background(), finishRequest)
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
-		for partitionId, message := range messages {
-			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
-			encodeMessage := make([]*pb.SimMessageStruct, 0)
-			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
-				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
+		messageLen := len(messages)
+		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+		//messageSlice := make([])
+
+		messageCount := 0
+		for i := 1; i <= batch; i++ {
+			messageCount = 0
+			for partitionId, message := range messages {
+				delete(messages, partitionId)
+
+				go func(partitionId int, message []*algorithm.SimPair) {
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					if err != nil {
+						log.Fatal(err)
+					}
+					defer workerHandle.Close()
+
+					client := pb.NewWorkerClient(workerHandle)
+					encodeMessage := make([]*pb.SimMessageStruct, 0)
+					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
+					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+					for _, msg := range message {
+						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
+					}
+					wg.Add(1)
+					Peer2PeerSimSend(client, encodeMessage, &wg)
+				}(partitionId, message)
+
+				messageCount++
+				if messageCount == tools.ConnPoolSize {
+					break
+				}
 			}
-			wg.Add(1)
-			go Peer2PeerSimSend(client, encodeMessage, &wg)
+			wg.Wait()
 		}
-		wg.Wait()
-		fullSendDuration = time.Since(fullSendStart).Seconds()
 	}
-	return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{IterationNum: iterationNum, IterationSeconds: iterationTime,
-		CombineSeconds: combineTime, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration, PairNum: SlicePeerSend}}, nil
+	fullSendDuration = time.Since(fullSendStart).Seconds()
+
+	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	Client := pb.NewMasterClient(masterHandle)
+	defer masterHandle.Close()
+
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
-func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
-	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
+func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
+	go w.peVal(args, w.selfId)
+	return &pb.PEvalResponse{Ok:true}, nil
+}
+
+func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-		aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message, w.preSet, w.postSet)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message, w.preSet, w.postSet)
 	w.message = make([]*algorithm.SimPair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
-		return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: aggregatorOriSize,
+
+		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+		if err != nil {
+			log.Fatal(err)
+		}
+		Client := pb.NewMasterClient(masterHandle)
+		defer masterHandle.Close()
+
+		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
 			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
-			PairNum: SlicePeerSendNull}}, nil
+			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+		Client.SuperStepFinish(context.Background(), finishRequest)
+
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
-		for partitionId, message := range messages {
-			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
-			encodeMessage := make([]*pb.SimMessageStruct, 0)
-			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
+
+		messageLen := len(messages)
+		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+
+		messageCount := 0
+		for i := 1; i <= batch; i++ {
+			messageCount = 0
+			for partitionId, message := range messages {
+				delete(messages, partitionId)
+
+				go func(partitionId int, message []*algorithm.SimPair) {
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					if err != nil {
+						log.Fatal(err)
+					}
+					defer workerHandle.Close()
+
+					client := pb.NewWorkerClient(workerHandle)
+					encodeMessage := make([]*pb.SimMessageStruct, 0)
+					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
+					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+					for _, msg := range message {
+						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
+					}
+					wg.Add(1)
+					Peer2PeerSimSend(client, encodeMessage, &wg)
+				}(partitionId, message)
+
+				messageCount++
+				if messageCount == tools.ConnPoolSize {
+					break
+				}
 			}
-			wg.Add(1)
-			go Peer2PeerSimSend(client, encodeMessage, &wg)
+			wg.Wait()
 		}
-		wg.Wait()
+
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: aggregatorOriSize,
+	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	Client := pb.NewMasterClient(masterHandle)
+	defer masterHandle.Close()
+
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
-		PairNum: SlicePeerSend}}, nil
+		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+	Client.SuperStepFinish(context.Background(), finishRequest)
+}
+
+func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+	log.Printf("start IncEval, updated message size:%v\n", len(w.message))
+	go w.incEval(args, w.selfId)
+	return &pb.IncEvalResponse{Update:true}, nil
 }
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
@@ -354,12 +429,15 @@ func RunSimWorker(id, partitionNum int) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	registerClient := pb.NewMasterClient(masterHandle)
+
 	response, err := registerClient.Register(context.Background(), &pb.RegisterRequest{WorkerIndex: int32(w.selfId)})
 	if err != nil || !response.Ok {
 		log.Println(err)
 		log.Fatal("error for register!!")
 	}
+	masterHandle.Close()
 
 	// wait for stop
 	<-w.stopChannel
