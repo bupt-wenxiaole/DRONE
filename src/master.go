@@ -137,8 +137,7 @@ func (mr *Master) wait() {
 	<-mr.JobDoneChan
 }
 func (mr *Master) KillWorkers() {
-	mr.Lock()
-	defer mr.Unlock()
+	log.Println("start master kill")
 
 	batch := (mr.workerNum + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 
@@ -161,12 +160,7 @@ func (mr *Master) KillWorkers() {
 				client := pb.NewWorkerClient(handler)
 				shutDownReq := &pb.ShutDownRequest{}
 				client.ShutDown(context.Background(), shutDownReq)
-				//if err != nil {
-				//	log.Fatal("fail to kill worker %d", i)
-				//} else {
-				//discuss : goland can't recognize the reply
-				//		mr.statistic = append(mr.statistic, reply.IterationNum)
-				//}
+
 			}(j)
 		}
 		mr.wg.Wait()
