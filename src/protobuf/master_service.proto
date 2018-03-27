@@ -40,6 +40,9 @@ message FinishRequest {
   double allPeerSend = 9;
   //size of worker to worker communication pairs
   repeated workerCommunicationSize pairNum = 10;
+
+  int32 workerID = 11;
+  bool MessageToSend = 12;
 }
 
 message workerCommunicationSize {
