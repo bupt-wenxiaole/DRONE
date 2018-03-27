@@ -103,7 +103,7 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 	// init grpc handler and store it
 	// cause until now, we can ensure all workers have in work,
 	// so we do this here
-
+/*
 	w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
 	for id, peer := range w.peers {
 		if id == w.selfId || id == 0 {
@@ -154,12 +154,12 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 		wg.Wait()
 		fullSendDuration = time.Since(fullSendStart).Seconds()
 	}
-	return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{IterationNum: iterationNum, IterationSeconds: iterationTime,
-		CombineSeconds: combineTime, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration, PairNum: SlicePeerSend}}, nil
+*/
+	return &pb.PEvalResponse{}, nil
 }
 
 func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
-	w.iterationNum++
+/*	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 		aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.routeTable, w.updated)
 	w.updated = make([]*algorithm.Pair, 0)
@@ -170,10 +170,7 @@ func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncE
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
-		return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: aggregatorOriSize,
-			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
-			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
-			PairNum: SlicePeerSendNull}}, nil
+		return &pb.IncEvalResponse{}, nil
 	} else {
 		var wg sync.WaitGroup
 		for partitionId, message := range messages {
@@ -190,11 +187,8 @@ func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncE
 		wg.Wait()
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
-
-	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: aggregatorOriSize,
-		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
-		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
-		PairNum: SlicePeerSend}}, nil
+*/
+	return &pb.IncEvalResponse{}, nil
 }
 
 func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {

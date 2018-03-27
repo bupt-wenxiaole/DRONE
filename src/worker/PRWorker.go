@@ -128,29 +128,7 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 			log.Fatal(err)
 		}
 	}
-	/*
-			fullSendStart = time.Now()
-			for partitionId, message := range messages {
-				client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
-				encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-				for _, msg := range message {
-					encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
-					//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
-				}
-				log.Printf("send partition id:%v\n", partitionId)
-				_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: encodeMessage})
-				if err != nil {
-					log.Println("send error")
-					log.Fatal(err)
-				}
-			}
-			fullSendDuration = time.Since(fullSendStart).Seconds()
-		}
-	*/
-	return &pb.PEvalResponse{Ok: true, Body: &pb.PEvalResponseBody{IterationNum: 0, IterationSeconds: 0,
-		CombineSeconds: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: 0, PairNum: nil}}, nil
+	return &pb.PEvalResponse{Ok: true}, nil
 }
 
 func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
@@ -158,7 +136,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	w.updated = w.receiveBuffer
 	w.receiveBuffer = make(map[int64]float64, 0)
 	w.UnLock()
-
+/*
 	w.iterationNum++
 	if w.iterationNum == 1 {
 		w.totalVertexNum += int64(w.updated[-1])
@@ -174,7 +152,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	w.updated = make(map[int64]float64, 0)
 	var fullSendStart time.Time
-	var fullSendDuration float64
+	//var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
 	//time.Sleep(time.Second)
@@ -195,12 +173,9 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 		go Peer2PeerPRSend(client, encodeMessage, &wg)
 	}
 	wg.Wait()
-	fullSendDuration = time.Since(fullSendStart).Seconds()
-
-	return &pb.IncEvalResponse{Update: isMessageToSend, Body: &pb.IncEvalResponseBody{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: runTime,
-		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: fullSendDuration,
-		PairNum: SlicePeerSend}}, nil
+	//fullSendDuration = time.Since(fullSendStart).Seconds()
+*/
+	return &pb.IncEvalResponse{}, nil
 }
 
 func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
