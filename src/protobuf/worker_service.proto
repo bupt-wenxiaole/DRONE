@@ -29,11 +29,6 @@ message shutDownResponse {
 message pEvalRequest {
 }
 
-message workerCommunicationSize {
-    int32 workerID = 1; //destination partition ID
-    int32 communicationSize = 2; //size of message to send
-}
-
 message pEvalResponse {
 	bool ok = 1;
 }

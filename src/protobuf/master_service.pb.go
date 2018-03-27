@@ -11,14 +11,14 @@
 	It has these top-level messages:
 		RegisterRequest
 		RegisterResponse
+		FinishRequest
+		WorkerCommunicationSize
+		FinishResponse
 		ShutDownRequest
 		ShutDownResponse
 		PEvalRequest
-		WorkerCommunicationSize
-		PEvalResponseBody
 		PEvalResponse
 		IncEvalRequest
-		IncEvalResponseBody
 		IncEvalResponse
 		AssembleRequest
 		AssembleResponse
@@ -41,6 +41,8 @@ import _ "github.com/gogo/protobuf/gogoproto"
 
 import context "golang.org/x/net/context"
 import grpc "google.golang.org/grpc"
+
+import binary "encoding/binary"
 
 import io "io"
 
@@ -73,9 +75,58 @@ func (m *RegisterResponse) String() string            { return proto.CompactText
 func (*RegisterResponse) ProtoMessage()               {}
 func (*RegisterResponse) Descriptor() ([]byte, []int) { return fileDescriptorMasterService, []int{1} }
 
+type FinishRequest struct {
+	// duration time of aggregator
+	AggregatorSeconds     float64 `protobuf:"fixed64,1,opt,name=aggregatorSeconds,proto3" json:"aggregatorSeconds,omitempty"`
+	AggregatorOriSize     int32   `protobuf:"varint,2,opt,name=aggregatorOriSize,proto3" json:"aggregatorOriSize,omitempty"`
+	AggregatorReducedSize int32   `protobuf:"varint,3,opt,name=aggregatorReducedSize,proto3" json:"aggregatorReducedSize,omitempty"`
+	IterationNum          int64   `protobuf:"varint,4,opt,name=iterationNum,proto3" json:"iterationNum,omitempty"`
+	// duration time of partial SSSP loop
+	IterationSeconds float64 `protobuf:"fixed64,5,opt,name=iterationSeconds,proto3" json:"iterationSeconds,omitempty"`
+	// duration time of combine message
+	CombineSeconds float64 `protobuf:"fixed64,6,opt,name=combineSeconds,proto3" json:"combineSeconds,omitempty"`
+	// number of updated boarders node pair
+	UpdatePairNum int32 `protobuf:"varint,7,opt,name=updatePairNum,proto3" json:"updatePairNum,omitempty"`
+	// number of destinations which message send to
+	DstPartitionNum int32 `protobuf:"varint,8,opt,name=dstPartitionNum,proto3" json:"dstPartitionNum,omitempty"`
+	// duration of a worker send to message to all other workers
+	AllPeerSend float64 `protobuf:"fixed64,9,opt,name=allPeerSend,proto3" json:"allPeerSend,omitempty"`
+	// size of worker to worker communication pairs
+	PairNum []*WorkerCommunicationSize `protobuf:"bytes,10,rep,name=pairNum" json:"pairNum,omitempty"`
+}
+
+func (m *FinishRequest) Reset()                    { *m = FinishRequest{} }
+func (m *FinishRequest) String() string            { return proto.CompactTextString(m) }
+func (*FinishRequest) ProtoMessage()               {}
+func (*FinishRequest) Descriptor() ([]byte, []int) { return fileDescriptorMasterService, []int{2} }
+
+type WorkerCommunicationSize struct {
+	WorkerID          int32 `protobuf:"varint,1,opt,name=workerID,proto3" json:"workerID,omitempty"`
+	CommunicationSize int32 `protobuf:"varint,2,opt,name=communicationSize,proto3" json:"communicationSize,omitempty"`
+}
+
+func (m *WorkerCommunicationSize) Reset()         { *m = WorkerCommunicationSize{} }
+func (m *WorkerCommunicationSize) String() string { return proto.CompactTextString(m) }
+func (*WorkerCommunicationSize) ProtoMessage()    {}
+func (*WorkerCommunicationSize) Descriptor() ([]byte, []int) {
+	return fileDescriptorMasterService, []int{3}
+}
+
+type FinishResponse struct {
+	Ok bool `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+}
+
+func (m *FinishResponse) Reset()                    { *m = FinishResponse{} }
+func (m *FinishResponse) String() string            { return proto.CompactTextString(m) }
+func (*FinishResponse) ProtoMessage()               {}
+func (*FinishResponse) Descriptor() ([]byte, []int) { return fileDescriptorMasterService, []int{4} }
+
 func init() {
 	proto.RegisterType((*RegisterRequest)(nil), "protobuf.RegisterRequest")
 	proto.RegisterType((*RegisterResponse)(nil), "protobuf.RegisterResponse")
+	proto.RegisterType((*FinishRequest)(nil), "protobuf.FinishRequest")
+	proto.RegisterType((*WorkerCommunicationSize)(nil), "protobuf.workerCommunicationSize")
+	proto.RegisterType((*FinishResponse)(nil), "protobuf.FinishResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -90,6 +141,7 @@ const _ = grpc.SupportPackageIsVersion4
 
 type MasterClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	SuperStepFinish(ctx context.Context, in *FinishRequest, opts ...grpc.CallOption) (*FinishResponse, error)
 }
 
 type masterClient struct {
@@ -109,10 +161,20 @@ func (c *masterClient) Register(ctx context.Context, in *RegisterRequest, opts .
 	return out, nil
 }
 
+func (c *masterClient) SuperStepFinish(ctx context.Context, in *FinishRequest, opts ...grpc.CallOption) (*FinishResponse, error) {
+	out := new(FinishResponse)
+	err := grpc.Invoke(ctx, "/protobuf.Master/SuperStepFinish", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Master service
 
 type MasterServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	SuperStepFinish(context.Context, *FinishRequest) (*FinishResponse, error)
 }
 
 func RegisterMasterServer(s *grpc.Server, srv MasterServer) {
@@ -137,6 +199,24 @@ func _Master_Register_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Master_SuperStepFinish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServer).SuperStepFinish(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protobuf.Master/SuperStepFinish",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServer).SuperStepFinish(ctx, req.(*FinishRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Master_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "protobuf.Master",
 	HandlerType: (*MasterServer)(nil),
@@ -144,6 +224,10 @@ var _Master_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _Master_Register_Handler,
+		},
+		{
+			MethodName: "SuperStepFinish",
+			Handler:    _Master_SuperStepFinish_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -201,6 +285,141 @@ func (m *RegisterResponse) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *FinishRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FinishRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.AggregatorSeconds != 0 {
+		dAtA[i] = 0x9
+		i++
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.AggregatorSeconds))))
+		i += 8
+	}
+	if m.AggregatorOriSize != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.AggregatorOriSize))
+	}
+	if m.AggregatorReducedSize != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.AggregatorReducedSize))
+	}
+	if m.IterationNum != 0 {
+		dAtA[i] = 0x20
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.IterationNum))
+	}
+	if m.IterationSeconds != 0 {
+		dAtA[i] = 0x29
+		i++
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.IterationSeconds))))
+		i += 8
+	}
+	if m.CombineSeconds != 0 {
+		dAtA[i] = 0x31
+		i++
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.CombineSeconds))))
+		i += 8
+	}
+	if m.UpdatePairNum != 0 {
+		dAtA[i] = 0x38
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.UpdatePairNum))
+	}
+	if m.DstPartitionNum != 0 {
+		dAtA[i] = 0x40
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.DstPartitionNum))
+	}
+	if m.AllPeerSend != 0 {
+		dAtA[i] = 0x49
+		i++
+		binary.LittleEndian.PutUint64(dAtA[i:], uint64(math.Float64bits(float64(m.AllPeerSend))))
+		i += 8
+	}
+	if len(m.PairNum) > 0 {
+		for _, msg := range m.PairNum {
+			dAtA[i] = 0x52
+			i++
+			i = encodeVarintMasterService(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	return i, nil
+}
+
+func (m *WorkerCommunicationSize) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *WorkerCommunicationSize) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.WorkerID != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.WorkerID))
+	}
+	if m.CommunicationSize != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintMasterService(dAtA, i, uint64(m.CommunicationSize))
+	}
+	return i, nil
+}
+
+func (m *FinishResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *FinishResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Ok {
+		dAtA[i] = 0x8
+		i++
+		if m.Ok {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	return i, nil
+}
+
 func encodeVarintMasterService(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -220,6 +439,66 @@ func (m *RegisterRequest) Size() (n int) {
 }
 
 func (m *RegisterResponse) Size() (n int) {
+	var l int
+	_ = l
+	if m.Ok {
+		n += 2
+	}
+	return n
+}
+
+func (m *FinishRequest) Size() (n int) {
+	var l int
+	_ = l
+	if m.AggregatorSeconds != 0 {
+		n += 9
+	}
+	if m.AggregatorOriSize != 0 {
+		n += 1 + sovMasterService(uint64(m.AggregatorOriSize))
+	}
+	if m.AggregatorReducedSize != 0 {
+		n += 1 + sovMasterService(uint64(m.AggregatorReducedSize))
+	}
+	if m.IterationNum != 0 {
+		n += 1 + sovMasterService(uint64(m.IterationNum))
+	}
+	if m.IterationSeconds != 0 {
+		n += 9
+	}
+	if m.CombineSeconds != 0 {
+		n += 9
+	}
+	if m.UpdatePairNum != 0 {
+		n += 1 + sovMasterService(uint64(m.UpdatePairNum))
+	}
+	if m.DstPartitionNum != 0 {
+		n += 1 + sovMasterService(uint64(m.DstPartitionNum))
+	}
+	if m.AllPeerSend != 0 {
+		n += 9
+	}
+	if len(m.PairNum) > 0 {
+		for _, e := range m.PairNum {
+			l = e.Size()
+			n += 1 + l + sovMasterService(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *WorkerCommunicationSize) Size() (n int) {
+	var l int
+	_ = l
+	if m.WorkerID != 0 {
+		n += 1 + sovMasterService(uint64(m.WorkerID))
+	}
+	if m.CommunicationSize != 0 {
+		n += 1 + sovMasterService(uint64(m.CommunicationSize))
+	}
+	return n
+}
+
+func (m *FinishResponse) Size() (n int) {
 	var l int
 	_ = l
 	if m.Ok {
@@ -380,6 +659,384 @@ func (m *RegisterResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *FinishRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMasterService
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FinishRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FinishRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 1 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AggregatorSeconds", wireType)
+			}
+			var v uint64
+			if (iNdEx + 8) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			iNdEx += 8
+			m.AggregatorSeconds = float64(math.Float64frombits(v))
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AggregatorOriSize", wireType)
+			}
+			m.AggregatorOriSize = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AggregatorOriSize |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AggregatorReducedSize", wireType)
+			}
+			m.AggregatorReducedSize = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.AggregatorReducedSize |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IterationNum", wireType)
+			}
+			m.IterationNum = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.IterationNum |= (int64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 5:
+			if wireType != 1 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IterationSeconds", wireType)
+			}
+			var v uint64
+			if (iNdEx + 8) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			iNdEx += 8
+			m.IterationSeconds = float64(math.Float64frombits(v))
+		case 6:
+			if wireType != 1 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CombineSeconds", wireType)
+			}
+			var v uint64
+			if (iNdEx + 8) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			iNdEx += 8
+			m.CombineSeconds = float64(math.Float64frombits(v))
+		case 7:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UpdatePairNum", wireType)
+			}
+			m.UpdatePairNum = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.UpdatePairNum |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 8:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field DstPartitionNum", wireType)
+			}
+			m.DstPartitionNum = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.DstPartitionNum |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 9:
+			if wireType != 1 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AllPeerSend", wireType)
+			}
+			var v uint64
+			if (iNdEx + 8) > l {
+				return io.ErrUnexpectedEOF
+			}
+			v = uint64(binary.LittleEndian.Uint64(dAtA[iNdEx:]))
+			iNdEx += 8
+			m.AllPeerSend = float64(math.Float64frombits(v))
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PairNum", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMasterService
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.PairNum = append(m.PairNum, &WorkerCommunicationSize{})
+			if err := m.PairNum[len(m.PairNum)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMasterService(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMasterService
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *WorkerCommunicationSize) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMasterService
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: workerCommunicationSize: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: workerCommunicationSize: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WorkerID", wireType)
+			}
+			m.WorkerID = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.WorkerID |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CommunicationSize", wireType)
+			}
+			m.CommunicationSize = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CommunicationSize |= (int32(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMasterService(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMasterService
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *FinishResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMasterService
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: FinishResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: FinishResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Ok", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMasterService
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Ok = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMasterService(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthMasterService
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func skipMasterService(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
@@ -488,18 +1145,34 @@ var (
 func init() { proto.RegisterFile("master_service.proto", fileDescriptorMasterService) }
 
 var fileDescriptorMasterService = []byte{
-	// 204 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x12, 0xc9, 0x4d, 0x2c, 0x2e,
-	0x49, 0x2d, 0x8a, 0x2f, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9,
-	0x17, 0xe2, 0x00, 0x53, 0x49, 0xa5, 0x69, 0x52, 0xba, 0xe9, 0x99, 0x25, 0x19, 0xa5, 0x49, 0x7a,
-	0xc9, 0xf9, 0xb9, 0xfa, 0xe9, 0xf9, 0xe9, 0xf9, 0xfa, 0x30, 0x19, 0x30, 0x0f, 0xcc, 0x01, 0xb3,
-	0x20, 0x1a, 0x95, 0x8c, 0xb9, 0xf8, 0x83, 0x52, 0xd3, 0x33, 0x41, 0x46, 0x06, 0xa5, 0x16, 0x96,
-	0xa6, 0x16, 0x97, 0x08, 0x29, 0x70, 0x71, 0x97, 0xe7, 0x17, 0x65, 0xa7, 0x16, 0x79, 0xe6, 0xa5,
-	0xa4, 0x56, 0x48, 0x30, 0x2a, 0x30, 0x6a, 0xb0, 0x06, 0x21, 0x0b, 0x29, 0x29, 0x71, 0x09, 0x20,
-	0x34, 0x15, 0x17, 0xe4, 0xe7, 0x15, 0xa7, 0x0a, 0xf1, 0x71, 0x31, 0xe5, 0x67, 0x83, 0x15, 0x73,
-	0x04, 0x31, 0xe5, 0x67, 0x1b, 0xf9, 0x72, 0xb1, 0xf9, 0x82, 0x5d, 0x2a, 0xe4, 0xcc, 0xc5, 0x01,
-	0x53, 0x2d, 0x24, 0xa9, 0x07, 0x73, 0x8e, 0x1e, 0x9a, 0xb5, 0x52, 0x52, 0xd8, 0xa4, 0x20, 0x86,
-	0x2b, 0x31, 0x38, 0x89, 0x9c, 0x78, 0x28, 0xc7, 0x70, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47, 0x72,
-	0x8c, 0x0f, 0x1e, 0xc9, 0x31, 0xce, 0x78, 0x2c, 0xc7, 0x90, 0xc4, 0x06, 0xd6, 0x62, 0x0c, 0x08,
-	0x00, 0x00, 0xff, 0xff, 0x07, 0x25, 0xce, 0x21, 0x15, 0x01, 0x00, 0x00,
+	// 462 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x52, 0xcd, 0x6e, 0xd3, 0x40,
+	0x10, 0x8e, 0x13, 0x9a, 0x9a, 0x29, 0x4d, 0xca, 0xaa, 0xa8, 0xc6, 0x07, 0xcb, 0x58, 0x08, 0x45,
+	0x08, 0x52, 0xa9, 0xe5, 0xc6, 0x8d, 0xa2, 0x4a, 0x1c, 0x80, 0xc8, 0x7e, 0x00, 0xe4, 0xd8, 0x83,
+	0xbb, 0x4a, 0xed, 0x35, 0xfb, 0x03, 0xa8, 0xef, 0x81, 0xc4, 0x23, 0xe5, 0xc8, 0x23, 0x40, 0x78,
+	0x11, 0x94, 0x71, 0xb6, 0x69, 0xe2, 0x70, 0xb2, 0xe7, 0xfb, 0x99, 0x99, 0xd5, 0x7c, 0x70, 0x5c,
+	0xa6, 0x4a, 0xa3, 0xfc, 0xa4, 0x50, 0x7e, 0xe5, 0x19, 0x8e, 0x6b, 0x29, 0xb4, 0x60, 0x2e, 0x7d,
+	0xa6, 0xe6, 0xb3, 0xff, 0xb2, 0xe0, 0xfa, 0xca, 0x4c, 0xc7, 0x99, 0x28, 0x4f, 0x0b, 0x51, 0x88,
+	0x53, 0xcb, 0x50, 0x45, 0x05, 0xfd, 0x35, 0xc6, 0xe8, 0x1c, 0x86, 0x31, 0x16, 0x7c, 0xd9, 0x32,
+	0xc6, 0x2f, 0x06, 0x95, 0x66, 0x21, 0x1c, 0x7c, 0x13, 0x72, 0x86, 0xf2, 0x5d, 0x95, 0xe3, 0x77,
+	0xcf, 0x09, 0x9d, 0xd1, 0x5e, 0x7c, 0x17, 0x8a, 0x22, 0x38, 0x5a, 0x9b, 0x54, 0x2d, 0x2a, 0x85,
+	0x6c, 0x00, 0x5d, 0x31, 0x23, 0xb1, 0x1b, 0x77, 0xc5, 0x2c, 0x9a, 0xf7, 0xe0, 0xf0, 0x92, 0x57,
+	0x5c, 0x5d, 0xd9, 0xbe, 0x2f, 0xe0, 0x61, 0x5a, 0x14, 0x12, 0x8b, 0x54, 0x0b, 0x99, 0x60, 0x26,
+	0xaa, 0x5c, 0x91, 0xc1, 0x89, 0xdb, 0xc4, 0xa6, 0xfa, 0xa3, 0xe4, 0x09, 0xbf, 0x41, 0xaf, 0x4b,
+	0xbb, 0xb4, 0x09, 0xf6, 0x0a, 0x1e, 0xad, 0xc1, 0x18, 0x73, 0x93, 0x61, 0x4e, 0x8e, 0x1e, 0x39,
+	0x76, 0x93, 0x2c, 0x82, 0x07, 0x5c, 0xa3, 0x4c, 0x35, 0x17, 0xd5, 0x07, 0x53, 0x7a, 0xf7, 0x42,
+	0x67, 0xd4, 0x8b, 0x37, 0x30, 0xf6, 0x1c, 0x8e, 0x6e, 0x6b, 0xbb, 0xf4, 0x1e, 0x2d, 0xdd, 0xc2,
+	0xd9, 0x33, 0x18, 0x64, 0xa2, 0x9c, 0xf2, 0x0a, 0xad, 0xb2, 0x4f, 0xca, 0x2d, 0x94, 0x3d, 0x85,
+	0x43, 0x53, 0xe7, 0xa9, 0xc6, 0x49, 0xca, 0xe5, 0x72, 0xf0, 0x3e, 0x6d, 0xb9, 0x09, 0xb2, 0x11,
+	0x0c, 0x73, 0xa5, 0x27, 0xa9, 0xd4, 0xdc, 0x2e, 0xe8, 0x92, 0x6e, 0x1b, 0x5e, 0x5e, 0x2c, 0xbd,
+	0xbe, 0x9e, 0x20, 0xca, 0x04, 0xab, 0xdc, 0xbb, 0x4f, 0x43, 0xef, 0x42, 0xec, 0x35, 0xec, 0xd7,
+	0xab, 0x59, 0x10, 0xf6, 0x46, 0x07, 0x67, 0x4f, 0xc6, 0x36, 0x17, 0xe3, 0xe6, 0xb2, 0x17, 0xa2,
+	0x2c, 0x4d, 0xc5, 0xb3, 0xe6, 0x41, 0xfc, 0x06, 0x63, 0xeb, 0x88, 0x32, 0x38, 0xf9, 0x8f, 0x86,
+	0xf9, 0xe0, 0xae, 0x82, 0xf1, 0x76, 0x15, 0x94, 0xdb, 0x7a, 0x79, 0xc1, 0x6c, 0xdb, 0x60, 0x2f,
+	0xd8, 0x22, 0xa2, 0x10, 0x06, 0x36, 0x2e, 0xbb, 0x13, 0x75, 0xf6, 0xc3, 0x81, 0xfe, 0x7b, 0x0a,
+	0x3f, 0xbb, 0x00, 0xd7, 0x06, 0x90, 0x3d, 0x5e, 0xbf, 0x64, 0x2b, 0xc9, 0xbe, 0xbf, 0x8b, 0x6a,
+	0xba, 0x47, 0x1d, 0x76, 0x09, 0xc3, 0xc4, 0xd4, 0x28, 0x13, 0x8d, 0x75, 0x33, 0x9a, 0x9d, 0xac,
+	0x0d, 0x1b, 0xd9, 0xf5, 0xbd, 0x36, 0x61, 0xfb, 0xbc, 0x39, 0x9e, 0xff, 0x09, 0x3a, 0xf3, 0x45,
+	0xe0, 0xfc, 0x5a, 0x04, 0xce, 0xef, 0x45, 0xe0, 0xfc, 0xfc, 0x1b, 0x74, 0xa6, 0x7d, 0x32, 0x9c,
+	0xff, 0x0b, 0x00, 0x00, 0xff, 0xff, 0x28, 0xfe, 0xd7, 0x69, 0xb0, 0x03, 0x00, 0x00,
 }
