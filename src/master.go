@@ -244,10 +244,8 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 		log.Printf("worker %v send to worker %v %v messages\n", args.WorkerID, nodeID, pairNum)
 	}
 
-	mr.Lock()
 	mr.totalIteration += args.IterationNum
 	log.Printf("iteration num:%v\n", mr.totalIteration)
-	mr.Unlock()
 
 	return &pb.FinishResponse{Ok:true}, nil
 }

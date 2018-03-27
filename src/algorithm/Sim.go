@@ -58,7 +58,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		patternNodeSet.Add(id)
 	}
 
-	log.Printf("zs-log: start PEVal initial for rank:%v\n", id)
+	//log.Printf("zs-log: start PEVal initial for rank:%v\n", id)
 
 	// initial
 
@@ -79,8 +79,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	remove := make(map[graph.ID]Set.Set)
 	allPatternColor := make(map[int64]bool)
 
-	log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
-	log.Printf("pattern node size:%v\n", patternNodeSet.Size())
+	//log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
+	//log.Printf("pattern node size:%v\n", patternNodeSet.Size())
 	for id := range patternNodeSet {
 		preSim[id] = allNodeUnionFO.Copy()
 		remove[id] = removeInit.Copy()
@@ -91,7 +91,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		allPatternColor[nodeMap[id].Attr()] = true
 	}
 
-	log.Println("step 1")
+	//log.Println("step 1")
 
 	for v, msg := range g.GetNodes() {
 		_, ok := allPatternColor[msg.Attr()]
@@ -118,7 +118,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		}
 	}
 
-	log.Println("step 2")
+	//log.Println("step 2")
 
 	for v := range g.GetFOs() {
 		_, ok := allPatternColor[v.IntVal()%tools.GraphSimulationTypeModel]
@@ -133,7 +133,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			}
 		}
 	}
-	log.Println("step 3")
+	//log.Println("step 3")
 
 	messageMap := make(map[int]map[SimPair]bool)
 
@@ -162,7 +162,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 				continue
 			}
 
-			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
+			//log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
 			uSources, _ := pattern.GetSources(u)
 			for u_pre := range uSources {
