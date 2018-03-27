@@ -9,8 +9,8 @@ const (
 
 	LoadFromJson = true
 
-	ConfigPath = "../test_data/config.txt"
-	//ConfigPath = "config.txt"
+	//ConfigPath = "../test_data/config.txt"
+	ConfigPath = "config.txt"
 
 	//PatternPath = "../test_data/pattern.txt"
 	PatternPath = "pattern.txt"
