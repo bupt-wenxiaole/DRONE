@@ -18,6 +18,7 @@ import (
 	"time"
 	"tools"
 	"Set"
+	"sort"
 )
 
 type SimWorker struct {
@@ -111,11 +112,25 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 		//messageSlice := make([])
 
-		messageCount := 0
+		indexBuffer := make([]int, messageLen)
+		for partitionId := range messages {
+			indexBuffer = append(indexBuffer, partitionId)
+		}
+		sort.Ints(indexBuffer)
+		start := 0
+		for i := 1; i < len(indexBuffer); i++ {
+			if indexBuffer[i] > id {
+				start = i
+				break
+			}
+		}
+		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
+
 		for i := 1; i <= batch; i++ {
-			messageCount = 0
-			for partitionId, message := range messages {
-				delete(messages, partitionId)
+			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
+				partitionId := indexBuffer[j]
+				message := messages[partitionId]
+				//delete(messages, partitionId)
 
 				go func(partitionId int, message []*algorithm.SimPair) {
 					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
@@ -135,10 +150,6 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 					Peer2PeerSimSend(client, encodeMessage, &wg)
 				}(partitionId, message)
 
-				messageCount++
-				if messageCount == tools.ConnPoolSize {
-					break
-				}
 			}
 			wg.Wait()
 		}
@@ -197,11 +208,24 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 		messageLen := len(messages)
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 
-		messageCount := 0
+		indexBuffer := make([]int, messageLen)
+		for partitionId := range messages {
+			indexBuffer = append(indexBuffer, partitionId)
+		}
+		sort.Ints(indexBuffer)
+		start := 0
+		for i := 1; i < len(indexBuffer); i++ {
+			if indexBuffer[i] > id {
+				start = i
+				break
+			}
+		}
+		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
+
 		for i := 1; i <= batch; i++ {
-			messageCount = 0
-			for partitionId, message := range messages {
-				delete(messages, partitionId)
+			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
+				partitionId := indexBuffer[j]
+				message := messages[partitionId]
 
 				go func(partitionId int, message []*algorithm.SimPair) {
 					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
@@ -221,14 +245,9 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 					Peer2PeerSimSend(client, encodeMessage, &wg)
 				}(partitionId, message)
 
-				messageCount++
-				if messageCount == tools.ConnPoolSize {
-					break
-				}
 			}
 			wg.Wait()
 		}
-
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
