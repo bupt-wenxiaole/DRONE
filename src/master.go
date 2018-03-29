@@ -235,7 +235,7 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	log.Printf("worker %v number of destinations which message send to: %v\n", args.WorkerID, args.DstPartitionNum)
 	log.Printf("worker %v duration of a worker send to message to all other workers : %v\n", args.WorkerID, args.AllPeerSend)
 	for nodeID, pairNum := range args.PairNum {
-		log.Printf("worker %v send to worker %v %v messages\n", args.WorkerID, nodeID, pairNum)
+		log.Printf("worker %v send to worker %v %v messages\n", args.WorkerID, pairNum.WorkerID, pairNum.CommunicationSize)
 	}
 
 	mr.totalIteration += args.IterationNum
@@ -342,7 +342,7 @@ func RunJob(jobName string) {
 
 	runTime := time.Since(start)
 
-	fmt.Printf("runTime: %vs\n", runTime.Seconds())
+	log.Printf("runTime: %vs\n", runTime.Seconds())
 	fmt.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	log.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	mr.Assemble()
