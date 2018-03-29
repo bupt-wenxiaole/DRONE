@@ -63,20 +63,20 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 
 
 // rpc send has max size limit, so we spilt our transfer into many small block
-func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct)  {
+func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, partitionId int)  {
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
 		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: slice})
 		if err != nil {
-			log.Println("send error")
+			log.Printf("send to %v error", partitionId)
 			log.Fatal(err)
 		}
 	}
 	if len(message) != 0 {
 		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: message})
 		if err != nil {
-			log.Println("send error")
+			log.Printf("send to %v error", partitionId)
 			log.Fatal(err)
 		}
 	}
@@ -133,7 +133,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 				wg.Add(1)
 				go func(partitionId int, message []*algorithm.SimPair) {
 					defer wg.Done()
-					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithBlock())
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -146,7 +146,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 					}
-					Peer2PeerSimSend(client, encodeMessage)
+					Peer2PeerSimSend(client, encodeMessage, partitionId + 1)
 				}(partitionId, message)
 
 			}
@@ -241,7 +241,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 					}
-					Peer2PeerSimSend(client, encodeMessage)
+					Peer2PeerSimSend(client, encodeMessage, partitionId + 1)
 				}(partitionId, message)
 
 			}
