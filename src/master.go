@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"io"

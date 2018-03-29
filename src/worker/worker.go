@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 	"tools"
+	"sort"
 )
 
 func Generate(g graph.Graph) (map[graph.ID]float64, map[graph.ID]float64) {
@@ -35,25 +36,24 @@ func Generate(g graph.Graph) (map[graph.ID]float64, map[graph.ID]float64) {
 }
 
 // rpc send has max size limit, so we spilt our transfer into many small block
-func Peer2PeerSSSPSend(client pb.WorkerClient, message []*pb.SSSPMessageStruct, wg *sync.WaitGroup)  {
+func Peer2PeerSSSPSend(client pb.WorkerClient, message []*pb.SSSPMessageStruct, id int)  {
 
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
 		_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: slice})
 		if err != nil {
-			log.Println("send error")
+			log.Printf("send to %v error\n", id)
 			log.Fatal(err)
 		}
 	}
 	if len(message) != 0 {
 		_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: message})
 		if err != nil {
-			log.Println("send error")
+			log.Printf("send to %v error\n", id)
 			log.Fatal(err)
 		}
 	}
-	wg.Done()
 }
 
 type Worker struct {
@@ -99,28 +99,10 @@ func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.Sh
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
-func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
-	// init grpc handler and store it
-	// cause until now, we can ensure all workers have in work,
-	// so we do this here
-/*
-	w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
-	for id, peer := range w.peers {
-		if id == w.selfId || id == 0 {
-			continue
-		}
-		conn, err := grpc.Dial(peer, grpc.WithInsecure())
-		if err != nil {
-			panic(err)
-		}
-		w.grpcHandlers[id] = conn
-	}
-
-	// Load graph data
+func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-
 	var startId graph.ID = graph.StringID(-1)
 	if w.selfId == 1 {
 		log.Println("my rank is 1")
@@ -129,65 +111,187 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 			break
 		}
 	}
-
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, startId)
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
-		return &pb.PEvalResponse{Ok: isMessageToSend, Body: &pb.PEvalResponseBody{iterationNum, iterationTime,
-			combineTime, updatePairNum, dstPartitionNum, 0, SlicePeerSendNull}}, nil
+
+		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+		if err != nil {
+			log.Fatal(err)
+		}
+		Client := pb.NewMasterClient(masterHandle)
+		defer masterHandle.Close()
+
+		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+		Client.SuperStepFinish(context.Background(), finishRequest)
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
-		for partitionId, message := range messages {
-			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
-			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
-				//log.Printf("nodeId:%v dis:%v \n", msg.NodeId.String(), msg.Distance)
-			}
-			//log.Printf("send partition id:%v\n", partitionId)
-			wg.Add(1)
-			go Peer2PeerSSSPSend(client, encodeMessage, &wg)
+		messageLen := len(messages)
+		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+		//messageSlice := make([])
+
+		indexBuffer := make([]int, messageLen)
+		for partitionId := range messages {
+			indexBuffer = append(indexBuffer, partitionId)
 		}
-		wg.Wait()
-		fullSendDuration = time.Since(fullSendStart).Seconds()
+		sort.Ints(indexBuffer)
+		start := 0
+		for i := 1; i < len(indexBuffer); i++ {
+			if indexBuffer[i] > id {
+				start = i
+				break
+			}
+		}
+		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
+
+		for i := 1; i <= batch; i++ {
+			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
+				partitionId := indexBuffer[j]
+				message := messages[partitionId]
+				//delete(messages, partitionId)
+				wg.Add(1)
+				go func(partitionId int, message []*algorithm.Pair) {
+					defer wg.Done()
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					if err != nil {
+						log.Fatal(err)
+					}
+					defer workerHandle.Close()
+
+					client := pb.NewWorkerClient(workerHandle)
+					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
+					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
+					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+					for _, msg := range message {
+						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance:msg.Distance})
+					}
+					Peer2PeerSSSPSend(client, encodeMessage, partitionId + 1)
+				}(partitionId, message)
+
+			}
+			wg.Wait()
+		}
 	}
-*/
+	fullSendDuration = time.Since(fullSendStart).Seconds()
+
+	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	Client := pb.NewMasterClient(masterHandle)
+	defer masterHandle.Close()
+
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+	Client.SuperStepFinish(context.Background(), finishRequest)
+}
+
+func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
+	go w.peval(args, w.selfId)
 	return &pb.PEvalResponse{}, nil
 }
 
-func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
-/*	w.iterationNum++
+func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
+	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-		aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.routeTable, w.updated)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.routeTable, w.updated)
+
 	w.updated = make([]*algorithm.Pair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	fullSendStart = time.Now()
-
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
-		return &pb.IncEvalResponse{}, nil
-	} else {
-		var wg sync.WaitGroup
-		for partitionId, message := range messages {
-			client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
-			encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-			for _, msg := range message {
-				encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
-			}
-			wg.Add(1)
-			go Peer2PeerSSSPSend(client, encodeMessage, &wg)
+
+		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+		if err != nil {
+			log.Fatal(err)
 		}
-		wg.Wait()
+		Client := pb.NewMasterClient(masterHandle)
+		defer masterHandle.Close()
+
+		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
+			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
+			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+		Client.SuperStepFinish(context.Background(), finishRequest)
+
+	} else {
+		fullSendStart = time.Now()
+		var wg sync.WaitGroup
+
+		messageLen := len(messages)
+		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+
+		indexBuffer := make([]int, messageLen)
+		for partitionId := range messages {
+			indexBuffer = append(indexBuffer, partitionId)
+		}
+		sort.Ints(indexBuffer)
+		start := 0
+		for i := 1; i < len(indexBuffer); i++ {
+			if indexBuffer[i] > id {
+				start = i
+				break
+			}
+		}
+		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
+
+		for i := 1; i <= batch; i++ {
+			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
+				wg.Add(1)
+				partitionId := indexBuffer[j]
+				message := messages[partitionId]
+				go func(partitionId int, message []*algorithm.Pair) {
+					defer wg.Done()
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					if err != nil {
+						log.Fatal(err)
+					}
+					defer workerHandle.Close()
+
+					client := pb.NewWorkerClient(workerHandle)
+					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
+					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
+					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+					for _, msg := range message {
+						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
+					}
+					Peer2PeerSSSPSend(client, encodeMessage, partitionId + 1)
+				}(partitionId, message)
+
+			}
+			wg.Wait()
+		}
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
-*/
+
+	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	if err != nil {
+		log.Fatal(err)
+	}
+	Client := pb.NewMasterClient(masterHandle)
+	defer masterHandle.Close()
+
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
+		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
+		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
+
+	Client.SuperStepFinish(context.Background(), finishRequest)
+}
+
+func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+	go w.incEval(args, w.selfId)
 	return &pb.IncEvalResponse{}, nil
 }
 
