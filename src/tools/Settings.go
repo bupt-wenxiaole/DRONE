@@ -18,5 +18,6 @@ const (
 
 	RPCSendSize = 100000
 
-	ConnPoolSize = 8
+	ConnPoolSize = 2
+	MasterConnPoolSize = 64
 )

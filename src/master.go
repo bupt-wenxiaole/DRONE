@@ -139,10 +139,10 @@ func (mr *Master) wait() {
 func (mr *Master) KillWorkers() {
 	log.Println("start master kill")
 
-	batch := (mr.workerNum + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+	batch := (mr.workerNum + tools.MasterConnPoolSize - 1) / tools.MasterConnPoolSize
 
 	for i := 1; i <= batch; i++ {
-		for j := (i - 1) * tools.ConnPoolSize + 1; j <= mr.workerNum && j <= i * tools.ConnPoolSize; j++ {
+		for j := (i - 1) * tools.MasterConnPoolSize + 1; j <= mr.workerNum && j <= i * tools.MasterConnPoolSize; j++ {
 			mr.wg.Add(1)
 			log.Printf("Master: shutdown worker %d\n", i)
 
@@ -182,10 +182,10 @@ func (mr *Master) StartMasterServer() {
 }
 
 func (mr *Master) PEval() bool {
-	batch := (mr.workerNum + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+	batch := (mr.workerNum + tools.MasterConnPoolSize - 1) / tools.MasterConnPoolSize
 
 	for i := 1; i <= batch; i++ {
-		for j := (i-1)*tools.ConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.ConnPoolSize; j++ {
+		for j := (i-1)*tools.MasterConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.MasterConnPoolSize; j++ {
 			log.Printf("Master: start %d PEval", j)
 			mr.wg.Add(1)
 			go func(id int) {
@@ -247,9 +247,9 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 
 // this function is the set of all incremental superstep done
 func (mr *Master) IncEval(step int) bool {
-	batch := (mr.workerNum + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+	batch := (mr.workerNum + tools.MasterConnPoolSize - 1) / tools.MasterConnPoolSize
 	for i := 1; i <= batch; i++ {
-		for j := (i-1)*tools.ConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.ConnPoolSize; j++ {
+		for j := (i-1)*tools.MasterConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.MasterConnPoolSize; j++ {
 			log.Printf("Master: start the %vth Incval of worker %v", step, j)
 			mr.wg.Add(1)
 			go func(id int) {
@@ -279,9 +279,9 @@ func (mr *Master) IncEval(step int) bool {
 }
 
 func (mr *Master) Assemble() bool {
-	batch := (mr.workerNum + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+	batch := (mr.workerNum + tools.MasterConnPoolSize - 1) / tools.MasterConnPoolSize
 	for i := 1; i <= batch; i++ {
-		for j := (i-1)*tools.ConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.ConnPoolSize; j++ {
+		for j := (i-1)*tools.MasterConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.MasterConnPoolSize; j++ {
 			log.Printf("Master: start worker %v Assemble", j)
 			mr.wg.Add(1)
 			go func(id int) {
