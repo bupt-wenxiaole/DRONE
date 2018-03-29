@@ -214,6 +214,9 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	reducedMsg := make(map[int][]*SimPair)
 	for partitionId, message := range messageMap {
 		updatePairNum += int32(len(message))
+		if len(message) == 0 {
+			continue
+		}
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for msg := range message {
 			if msg.PatternNode.IntVal() == msg.DataNode.IntVal() % tools.GraphSimulationTypeModel {
@@ -326,7 +329,9 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 	reducedMsg := make(map[int][]*SimPair)
 	for partitionId, message := range messageMap {
 		updatePairNum += int32(len(message))
-
+		if len(message) == 0 {
+			continue
+		}
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for msg := range message {
 			reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode:msg.PatternNode, DataNode:msg.DataNode})

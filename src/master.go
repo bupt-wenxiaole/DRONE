@@ -234,7 +234,7 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	log.Printf("worker %v number of updated boarders node pair : %v\n", args.WorkerID, args.UpdatePairNum)
 	log.Printf("worker %v number of destinations which message send to: %v\n", args.WorkerID, args.DstPartitionNum)
 	log.Printf("worker %v duration of a worker send to message to all other workers : %v\n", args.WorkerID, args.AllPeerSend)
-	for nodeID, pairNum := range args.PairNum {
+	for _, pairNum := range args.PairNum {
 		log.Printf("worker %v send to worker %v %v messages\n", args.WorkerID, pairNum.WorkerID, pairNum.CommunicationSize)
 	}
 
