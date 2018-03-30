@@ -304,9 +304,11 @@ func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncE
 }
 
 func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	f, err := os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId-1))
-	if err != nil {
-		log.Panic(err)
+	var f *os.File
+	if tools.WorkerOnSC {
+		f, _ = os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId-1))
+	} else {
+		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
 	}
 	writer := bufio.NewWriter(f)
 	defer writer.Flush()
