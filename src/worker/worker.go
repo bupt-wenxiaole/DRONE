@@ -243,9 +243,10 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 		indexBuffer := make([]int, 0)
 		for partitionId := range messages {
 			indexBuffer = append(indexBuffer, partitionId)
-			log.Printf("zs-log: self id:%v, partitionId%v\n", id, partitionId)
+			//log.Printf("zs-log: self id:%v, partitionId:%v\n", id, partitionId)
 		}
 		sort.Ints(indexBuffer)
+		log.Printf("zs-log: self id:%v, partitionId:%v\n", id, indexBuffer[0])
 		start := 0
 		for i := 1; i < len(indexBuffer); i++ {
 			if indexBuffer[i] > id {
@@ -255,7 +256,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 		}
 		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
 	/*	for _, i := range indexBuffer {
-			log.Printf("zs-log: self id:%v, partitionId%v\n", id, i)
+			log.Printf("zs-log: self id:%v, partitionId:%v\n", id, i)
 		}
 */
 		for i := 1; i <= batch; i++ {
