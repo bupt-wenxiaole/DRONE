@@ -243,6 +243,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 		indexBuffer := make([]int, messageLen)
 		for partitionId := range messages {
 			indexBuffer = append(indexBuffer, partitionId)
+			log.Printf("zs-log: self id:%v, partitionId%v\n", id, partitionId)
 		}
 		sort.Ints(indexBuffer)
 		start := 0
@@ -261,7 +262,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 				message := messages[partitionId]
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
-					log.Printf("id:%v\n", partitionId + 1)
+				//	log.Printf("id:%v\n", partitionId + 1)
 					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
