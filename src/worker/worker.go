@@ -240,7 +240,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 		messageLen := len(messages)
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 
-		indexBuffer := make([]int, messageLen)
+		indexBuffer := make([]int, 0)
 		for partitionId := range messages {
 			indexBuffer = append(indexBuffer, partitionId)
 		//	log.Printf("zs-log: self id:%v, partitionId%v\n", id, partitionId)
