@@ -323,7 +323,7 @@ func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.As
 }
 
 func (w *Worker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
-	log.Println("send receive")
+//	log.Println("send receive")
 	decodeMessage := make([]*algorithm.Pair, 0)
 
 	for _, msg := range args.Pair {
