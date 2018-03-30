@@ -61,7 +61,7 @@ type Worker struct {
 
 	peers        []string
 	selfId       int // the id of this worker itself in workers
-	grpcHandlers []*grpc.ClientConn
+	grpcHandlers map[int]*grpc.ClientConn
 	workerNum int
 
 	g           graph.Graph
@@ -116,12 +116,15 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 
+		/*
 		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 		if err != nil {
 			log.Fatal(err)
 		}
-		Client := pb.NewMasterClient(masterHandle)
 		defer masterHandle.Close()
+		*/
+		masterHandle := w.grpcHandlers[0]
+		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
@@ -179,11 +182,13 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 		}
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
-
+/*
 	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
+*/
+	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
 	defer masterHandle.Close()
 
@@ -212,12 +217,14 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
 
-		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+		/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 		if err != nil {
 			log.Fatal(err)
 		}
-		Client := pb.NewMasterClient(masterHandle)
 		defer masterHandle.Close()
+		*/
+		masterHandle := w.grpcHandlers[0]
+		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
@@ -342,6 +349,7 @@ func newWorker(id, partitionNum int) *Worker {
 	w.updated = make([]*algorithm.Pair, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
+	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
@@ -438,6 +446,8 @@ func RunWorker(id, partitionNum int) {
 	}()
 
 	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	w.grpcHandlers[0] = masterHandle
+	defer masterHandle.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
