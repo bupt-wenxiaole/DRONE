@@ -3,6 +3,7 @@ package tools
 const (
 	ResultPath = "/home/acgict/result/"
 	NFSPath = "/home/acgict/inputgraph/"
+	WorkerOnSC = false
 
 	LoadFromJson = false
 
@@ -14,6 +15,6 @@ const (
 	RPCSendSize = 100000
 
 
-	ConnPoolSize = 24
+	ConnPoolSize = 8
 	MasterConnPoolSize = 256
 )

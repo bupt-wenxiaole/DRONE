@@ -390,19 +390,23 @@ func newWorker(id, partitionNum int) *Worker {
 			log.Fatal(err)
 		}
 	} else {
-		graphIO, _ := os.Open(tools.NFSPath +  strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
+		var graphIO, fxiReader, fxoReader *os.File
+		if tools.WorkerOnSC {
+			graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
+		} else {
+			graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+		}
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
-		fxiReader, err1 := os.Open(tools.NFSPath +  strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath +  strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
-		if err1 != nil {
-			log.Fatal(err1)
-		}
-		if err2 != nil {
-			log.Fatal(err2)
+		if tools.WorkerOnSC {
+			fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
+			fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
+		} else {
+			fxiReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
+			fxoReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
 		}
 		defer fxiReader.Close()
 		defer fxoReader.Close()
