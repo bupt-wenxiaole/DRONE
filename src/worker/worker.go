@@ -255,9 +255,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 			}
 		}
 		for _, i := range indexBuffer {
-			if id == 127 {
 				log.Printf("zs-log: self id:%v, partitionId:%v\n", id, i)
-			}
 		}
 		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
 		//for _, i := range indexBuffer {
