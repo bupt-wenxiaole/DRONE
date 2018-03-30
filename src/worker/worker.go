@@ -62,6 +62,7 @@ type Worker struct {
 	peers        []string
 	selfId       int // the id of this worker itself in workers
 	grpcHandlers []*grpc.ClientConn
+	workerNum int
 
 	g           graph.Graph
 	distance    map[graph.ID]float64 //
@@ -296,7 +297,7 @@ func (w *Worker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncE
 }
 
 func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
+	f, err := os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId-1))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -305,7 +306,7 @@ func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.As
 	defer f.Close()
 
 	for id, dist := range w.distance {
-		writer.WriteString(id.String()+"\t"+strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
+		writer.WriteString(id.String() + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
 	}
 
 	return &pb.AssembleResponse{Ok: true}, nil
@@ -363,8 +364,8 @@ func newWorker(id, partitionNum int) *Worker {
 		w.peers = append(w.peers, conf[1])
 	}
 
+	w.workerNum = partitionNum
 	start := time.Now()
-
 	if tools.LoadFromJson {
 		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
 		defer graphIO.Close()
@@ -381,14 +382,14 @@ func newWorker(id, partitionNum int) *Worker {
 			log.Fatal(err)
 		}
 	} else {
-		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+		graphIO, _ := os.Open(tools.NFSPath +  strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
-		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
+		fxiReader, err1 := os.Open(tools.NFSPath +  strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath +  strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
 		if err1 != nil {
 			log.Fatal(err1)
 		}

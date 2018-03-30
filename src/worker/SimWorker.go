@@ -26,6 +26,7 @@ type SimWorker struct {
 
 	peers        []string
 	selfId       int // the id of this worker itself in workers
+	workerNum int
 
 	g       graph.Graph
 	pattern graph.Graph
@@ -275,7 +276,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
 
-	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
+	f, err:= os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -356,6 +357,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	}
 
 	start := time.Now()
+	w.workerNum = partitionNum
 
 	if tools.LoadFromJson {
 		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
@@ -373,14 +375,14 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 			log.Fatal(err)
 		}
 	} else {
-		graphIO, _ := os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
-		fxiReader, err1 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
+		fxiReader, err1 := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
+		fxoReader, err2 := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
 		if err1 != nil {
 			log.Fatal(err1)
 		}

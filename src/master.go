@@ -45,6 +45,8 @@ type Master struct {
 	allSuperStepFinish bool
 
 	totalIteration int64
+
+	workerConn map[int]*grpc.ClientConn
 }
 
 func (mr *Master) Lock() {
@@ -63,12 +65,13 @@ func (mr *Master) Register(ctx context.Context, args *pb.RegisterRequest) (r *pb
 	defer mr.Unlock()
 
 	log.Printf("Register: worker %d\n", args.WorkerIndex)
-	//endpoint := mr.workersAddress[args.WorkerIndex]
-	//conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
-	/*if err != nil {
+	endpoint := mr.workersAddress[args.WorkerIndex]
+	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
+	if err != nil {
 		panic(err)
 	}
-	*/
+	mr.workerConn[int(args.WorkerIndex)] = conn
+
 	if _, ok := mr.isWorkerRegistered[args.WorkerIndex]; ok {
 		//TODO: if the master terminate, how about worker's register?
 		log.Fatal("%d worker register more than one times", args.WorkerIndex)
@@ -102,6 +105,8 @@ func newMaster() (mr *Master) {
 
 	mr.finishDone = make(chan bool)
 	mr.finishMap = make(map[int32]bool)
+
+	mr.workerConn = make(map[int]*grpc.ClientConn)
 	return mr
 }
 func (mr *Master) ReadConfig() {
@@ -148,14 +153,14 @@ func (mr *Master) KillWorkers() {
 			go func(id int) {
 				defer mr.wg.Done()
 
-				endpoint := mr.workersAddress[id]
+				/*endpoint := mr.workersAddress[id]
 				conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 				if err != nil {
 					panic(err)
 				}
 				defer conn.Close()
-
-				handler := conn
+*/
+				handler := mr.workerConn[id]
 				client := pb.NewWorkerClient(handler)
 				shutDownReq := &pb.ShutDownRequest{}
 				client.ShutDown(context.Background(), shutDownReq)
@@ -190,14 +195,14 @@ func (mr *Master) PEval() bool {
 			go func(id int) {
 				defer mr.wg.Done()
 
-				endpoint := mr.workersAddress[id]
+			/*	endpoint := mr.workersAddress[id]
 				conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 				if err != nil {
 					panic(err)
 				}
 				defer conn.Close()
-
-				handler := conn
+*/
+				handler := mr.workerConn[id]
 				client := pb.NewWorkerClient(handler)
 				//pevalRequest := &pb.PEvalRequest{}
 				if pevalResponse, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
@@ -253,14 +258,15 @@ func (mr *Master) IncEval(step int) bool {
 			mr.wg.Add(1)
 			go func(id int) {
 				defer mr.wg.Done()
-
+/*
 				endpoint := mr.workersAddress[id]
 				conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 				if err != nil {
 					panic(err)
 				}
 				defer conn.Close()
-				handler := conn
+*/
+				handler := mr.workerConn[id]
 
 				client := pb.NewWorkerClient(handler)
 				incEvalRequest := &pb.IncEvalRequest{}
@@ -285,14 +291,14 @@ func (mr *Master) Assemble() bool {
 			mr.wg.Add(1)
 			go func(id int) {
 				defer mr.wg.Done()
-				endpoint := mr.workersAddress[id]
+				/*endpoint := mr.workersAddress[id]
 				conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 				if err != nil {
 					panic(err)
 				}
 				defer conn.Close()
-
-				handler := conn
+*/
+				handler := mr.workerConn[id]
 
 				client := pb.NewWorkerClient(handler)
 				assembleRequest := &pb.AssembleRequest{}
