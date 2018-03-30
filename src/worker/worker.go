@@ -261,6 +261,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 				message := messages[partitionId]
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
+					log.Printf("id:%v\n", partitionId + 1)
 					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
