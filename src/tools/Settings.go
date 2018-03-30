@@ -1,8 +1,8 @@
 package tools
 
 const (
-	ResultPath = "/home/acgict/result/"
-	NFSPath = "/home/acgict/inputgraph/"
+	ResultPath = "/home/xwen/"
+	NFSPath = "/home/xwen/"
 	WorkerOnSC = false
 
 	LoadFromJson = false
