@@ -113,6 +113,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 		}
 	}
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, startId)
+
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 
@@ -254,9 +255,6 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 				break
 			}
 		}
-		for _, i := range indexBuffer {
-				log.Printf("zs-log: self id:%v, partitionId:%v\n", id, i)
-		}
 		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
 		//for _, i := range indexBuffer {
 		//	log.Printf("zs-log: self id:%v, partitionId:%v\n", id, i)
@@ -266,6 +264,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
 				wg.Add(1)
 				partitionId := indexBuffer[j]
+				fmt.Printf("mmp:%v\n", partitionId)
 				message := messages[partitionId]
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
