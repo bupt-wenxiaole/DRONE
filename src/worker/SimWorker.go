@@ -288,10 +288,13 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
 
-	f, err:= os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId - 1))
-	if err != nil {
-		log.Panic(err)
+	var f *os.File
+	if tools.WorkerOnSC {
+		f, _ = os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId-1))
+	} else {
+		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
 	}
+	defer f.Close()
 	writer := bufio.NewWriter(f)
 
 	//result := make([]string, 0)
@@ -307,10 +310,6 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 		}
 	}
 	writer.Flush()
-	f.Close()
-	if err != nil {
-		log.Panic(err)
-	}
 
 	//return &pb.AssembleResponse{Ok: ok}, nil
 	return &pb.AssembleResponse{Ok: true}, nil
