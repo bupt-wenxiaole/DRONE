@@ -140,7 +140,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 		//messageSlice := make([])
 
-		indexBuffer := make([]int, messageLen)
+		indexBuffer := make([]int, 0)
 		for partitionId := range messages {
 			indexBuffer = append(indexBuffer, partitionId)
 		}
@@ -191,7 +191,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 */
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
-	defer masterHandle.Close()
+	//defer masterHandle.Close()
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
@@ -291,12 +291,15 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+/*	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
 	Client := pb.NewMasterClient(masterHandle)
 	defer masterHandle.Close()
+*/
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,

@@ -29,6 +29,7 @@ type SimWorker struct {
 	workerNum int
 
 	g       graph.Graph
+	grpcHandlers map[int]*grpc.ClientConn
 	pattern graph.Graph
 	sim     map[graph.ID]Set.Set
 	preSet  map[graph.ID]Set.Set
@@ -91,13 +92,15 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
-
+/*
 		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 		if err != nil {
 			log.Fatal(err)
 		}
-		Client := pb.NewMasterClient(masterHandle)
 		defer masterHandle.Close()
+*/
+		masterHandle := w.grpcHandlers[0]
+		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
@@ -112,7 +115,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 		//messageSlice := make([])
 
-		indexBuffer := make([]int, messageLen)
+		indexBuffer := make([]int, 0)
 		for partitionId := range messages {
 			indexBuffer = append(indexBuffer, partitionId)
 		}
@@ -156,12 +159,15 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
 	Client := pb.NewMasterClient(masterHandle)
 	defer masterHandle.Close()
+	*/
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
@@ -187,12 +193,15 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
 
-		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+		/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 		if err != nil {
 			log.Fatal(err)
 		}
 		Client := pb.NewMasterClient(masterHandle)
 		defer masterHandle.Close()
+        */
+		masterHandle := w.grpcHandlers[0]
+		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
@@ -208,7 +217,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 		messageLen := len(messages)
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
 
-		indexBuffer := make([]int, messageLen)
+		indexBuffer := make([]int, 0)
 		for partitionId := range messages {
 			indexBuffer = append(indexBuffer, partitionId)
 		}
@@ -251,12 +260,15 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 	if err != nil {
 		log.Fatal(err)
 	}
 	Client := pb.NewMasterClient(masterHandle)
 	defer masterHandle.Close()
+	*/
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
@@ -334,6 +346,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.stopChannel = make(chan bool)
 	w.message = make([]*algorithm.SimPair, 0)
 	w.sim = make(map[graph.ID]Set.Set)
+	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
@@ -375,19 +388,23 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 			log.Fatal(err)
 		}
 	} else {
-		graphIO, _ := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
+		var graphIO, fxiReader, fxoReader *os.File
+		if tools.WorkerOnSC {
+			graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
+		} else {
+			graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+		}
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
-		fxiReader, err1 := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
-		fxoReader, err2 := os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
-		if err1 != nil {
-			log.Fatal(err1)
-		}
-		if err2 != nil {
-			log.Fatal(err2)
+		if tools.WorkerOnSC {
+			fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
+			fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
+		} else {
+			fxiReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
+			fxoReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
 		}
 		defer fxiReader.Close()
 		defer fxoReader.Close()
@@ -446,6 +463,8 @@ func RunSimWorker(id, partitionNum int) {
 	}()
 
 	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	w.grpcHandlers[0] = masterHandle
+	defer masterHandle.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -457,7 +476,6 @@ func RunSimWorker(id, partitionNum int) {
 		log.Println(err)
 		log.Fatal("error for register!!")
 	}
-	masterHandle.Close()
 
 	// wait for stop
 	<-w.stopChannel
