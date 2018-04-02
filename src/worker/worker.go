@@ -172,6 +172,10 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 				message := messages[partitionId]
 				//delete(messages, partitionId)
 				wg.Add(1)
+
+				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
+				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
 					/*workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
@@ -182,8 +186,6 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 */
 					client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
-					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance:msg.Distance})
 					}
@@ -278,6 +280,9 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 				partitionId := indexBuffer[j]
 				fmt.Printf("mmp:%v\n", partitionId)
 				message := messages[partitionId]
+				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1),CommunicationSize: int32(len(message))}
+				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
 				//	log.Printf("id:%v\n", partitionId + 1)
@@ -289,8 +294,6 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 
 					client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1),CommunicationSize: int32(len(message))}
-					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
 					}

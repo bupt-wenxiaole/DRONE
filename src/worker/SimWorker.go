@@ -135,6 +135,9 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 				message := messages[partitionId]
 				//delete(messages, partitionId)
 				wg.Add(1)
+				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
+				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+
 				go func(partitionId int, message []*algorithm.SimPair) {
 					defer wg.Done()
 					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
@@ -145,8 +148,6 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 
 					client := pb.NewWorkerClient(workerHandle)
 					encodeMessage := make([]*pb.SimMessageStruct, 0)
-					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 					}
@@ -234,6 +235,8 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 				wg.Add(1)
 				partitionId := indexBuffer[j]
 				message := messages[partitionId]
+				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
+				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 				go func(partitionId int, message []*algorithm.SimPair) {
 					defer wg.Done()
 					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
@@ -244,8 +247,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 					client := pb.NewWorkerClient(workerHandle)
 					encodeMessage := make([]*pb.SimMessageStruct, 0)
-					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
 					}
