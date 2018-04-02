@@ -87,7 +87,7 @@ func Peer2PeerSimSend(client pb.WorkerClient, message []*pb.SimMessageStruct, pa
 func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
-	var SlicePeerSend []*pb.WorkerCommunicationSize
+	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.selfId, w.allNodeUnionFO, w.preSet, w.postSet)
 	w.allNodeUnionFO = nil
 	if !isMessageToSend {
@@ -189,10 +189,8 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.message = make([]*algorithm.SimPair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
-	var SlicePeerSend []*pb.WorkerCommunicationSize
+	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	if !isMessageToSend {
-		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
-
 		/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
 		if err != nil {
 			log.Fatal(err)
@@ -206,7 +204,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
 			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
 			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
-			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
+			PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
 

@@ -103,7 +103,7 @@ func (w *Worker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.Sh
 func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	var fullSendStart time.Time
 	var fullSendDuration float64
-	var SlicePeerSend []*pb.WorkerCommunicationSize
+	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	var startId graph.ID = graph.StringID(-1)
 
 	for id, peer := range w.peers {
@@ -226,7 +226,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 	w.updated = make([]*algorithm.Pair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
-	var SlicePeerSend []*pb.WorkerCommunicationSize
+	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
 
