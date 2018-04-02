@@ -105,6 +105,18 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 	var startId graph.ID = graph.StringID(-1)
+
+	for id, peer := range w.peers {
+		if id == w.selfId || id == 0 {
+			continue
+		}
+		conn, err := grpc.Dial(peer, grpc.WithInsecure())
+		if err != nil {
+			panic(err)
+		}
+		w.grpcHandlers[id] = conn
+	}
+
 	if w.selfId == 1 {
 		log.Println("my rank is 1")
 		for v := range w.g.GetNodes() {
@@ -162,15 +174,15 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 				wg.Add(1)
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
-					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					/*workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
 					}
 					defer workerHandle.Close()
-
-					client := pb.NewWorkerClient(workerHandle)
+*/
+					client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
+					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
 					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance:msg.Distance})
@@ -269,15 +281,15 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
 				//	log.Printf("id:%v\n", partitionId + 1)
-					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					/*workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
 					}
-					defer workerHandle.Close()
+					defer workerHandle.Close()*/
 
-					client := pb.NewWorkerClient(workerHandle)
+					client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
 					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
-					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
+					eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1),CommunicationSize: int32(len(message))}
 					SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
