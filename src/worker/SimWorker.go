@@ -58,6 +58,12 @@ func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb
 	w.Lock()
 	defer w.Lock()
 
+	for i, handle := range w.grpcHandlers {
+		if i == 0 || i == w.selfId {
+			continue
+		}
+		handle.Close()
+	}
 	w.stopChannel <- true
 	log.Println("shutdown ok")
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
@@ -92,13 +98,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
-/*
-		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer masterHandle.Close()
-*/
+
 		masterHandle := w.grpcHandlers[0]
 		Client := pb.NewMasterClient(masterHandle)
 
@@ -113,7 +113,6 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 		var wg sync.WaitGroup
 		messageLen := len(messages)
 		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
-		//messageSlice := make([])
 
 		indexBuffer := make([]int, 0)
 		for partitionId := range messages {

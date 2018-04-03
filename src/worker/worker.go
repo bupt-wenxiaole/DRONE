@@ -106,7 +106,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	var startId graph.ID = graph.StringID(-1)
 
-	for id, peer := range w.peers {
+/*	for id, peer := range w.peers {
 		if id == w.selfId || id == 0 {
 			continue
 		}
@@ -116,7 +116,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 		}
 		w.grpcHandlers[id] = conn
 	}
-
+*/
 	if w.selfId == 1 {
 		log.Println("my rank is 1")
 		for v := range w.g.GetNodes() {
@@ -178,13 +178,13 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
-					/*workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
 					}
 					defer workerHandle.Close()
-*/
-					client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
+
+					client := pb.NewWorkerClient(workerHandle)
 					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance:msg.Distance})
@@ -286,13 +286,13 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 				go func(partitionId int, message []*algorithm.Pair) {
 					defer wg.Done()
 				//	log.Printf("id:%v\n", partitionId + 1)
-					/*workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 					if err != nil {
 						log.Fatal(err)
 					}
-					defer workerHandle.Close()*/
+					defer workerHandle.Close()
 
-					client := pb.NewWorkerClient(w.grpcHandlers[partitionId + 1])
+					client := pb.NewWorkerClient(workerHandle)
 					encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 					for _, msg := range message {
 						encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance: msg.Distance})
@@ -306,13 +306,6 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-/*	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
-	Client := pb.NewMasterClient(masterHandle)
-	defer masterHandle.Close()
-*/
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
 
