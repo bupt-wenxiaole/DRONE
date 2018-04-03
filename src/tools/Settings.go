@@ -12,7 +12,7 @@ const (
 	PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
 
-	RPCSendSize = 100000
+	RPCSendSize = 10000
 
 
 	ConnPoolSize = 4

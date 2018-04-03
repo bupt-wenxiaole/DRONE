@@ -65,53 +65,6 @@ func (n *node) Attr() int64 {
 	return n.attr
 }
 
-// Edge connects between two Nodes.
-type Edge interface {
-	Source() Node
-	Target() Node
-	Weight() float64
-	String() string
-}
-
-// edge is an Edge from Source to Target.
-type edge struct {
-	src Node
-	tgt Node
-	wgt float64
-}
-
-func NewEdge(src, tgt Node, wgt float64) Edge {
-	return &edge{
-		src: src,
-		tgt: tgt,
-		wgt: wgt,
-	}
-}
-
-func (e *edge) Source() Node {
-	return e.src
-}
-
-func (e *edge) Target() Node {
-	return e.tgt
-}
-
-func (e *edge) Weight() float64 {
-	return e.wgt
-}
-
-func (e *edge) String() string {
-	return fmt.Sprintf("%s -- %d -→ %s\n", e.src, e.wgt, e.tgt)
-}
-
-/*
-type EdgeSlice []Edge
-
-func (e EdgeSlice) Len() int           { return len(e) }
-func (e EdgeSlice) Less(i, j int) bool { return e[i].Weight() < e[j].Weight() }
-func (e EdgeSlice) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
-*/
-
 // Graph describes the methods of graph operations.
 // It assumes that the identifier of a Node is unique.
 // And weight values is float64.
