@@ -135,7 +135,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	}
 	//log.Println("step 3")
 
-	messageMap := make(map[int]map[SimPair]bool)
+/*	messageMap := make(map[int]map[SimPair]bool)
 
 	for v, msgs := range g.GetFIs() {
 		for u := range sim {
@@ -150,7 +150,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			}
 		}
 	}
-
+*/
 	log.Println("zs-log: start calculate")
 
 	//calculate
@@ -174,7 +174,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 						iterationNum++
 
 						// if v belongs to FI set, we need to send message to other partition at end of this super step
-						fiMap := g.GetFIs()
+				/*		fiMap := g.GetFIs()
 						if routeMsgs, ok := fiMap[v]; ok {
 							for _, routeMsg := range routeMsgs {
 								iterationNum++
@@ -184,8 +184,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 								}
 								messageMap[partitionId][SimPair{PatternNode: u_pre, DataNode: v}] = true
 							}
-						}
-
+						}*/
 						//Set.GetPreSet(g, v, emptySet1)
 						for v_pre := range preSet[v] {
 							iterationNum++
@@ -212,7 +211,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	var dstPartitionNum int32 = 0
 
 	reducedMsg := make(map[int][]*SimPair)
-	for partitionId, message := range messageMap {
+	/*for partitionId, message := range messageMap {
 		updatePairNum += int32(len(message))
 		reducedMsg[partitionId] = make([]*SimPair, 0)
 		for msg := range message {
@@ -220,12 +219,23 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 				reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: msg.PatternNode, DataNode: msg.DataNode})
 			}
 		}
-	}
-	for partitionId, msg := range reducedMsg {
-		if len(msg) == 0 {
-			delete(reducedMsg, partitionId)
+	}*/
+	for v, msgs := range g.GetFIs() {
+		for u := range sim {
+			if !sim[u].Has(v) && u.IntVal() == v.IntVal() % tools.GraphSimulationTypeModel {
+				for _, msg := range msgs {
+					updatePairNum++
+					partitionId := msg.RoutePartition()
+					if _, ok := reducedMsg[partitionId]; !ok {
+						reducedMsg[partitionId] = make([]*SimPair, 0)
+					}
+					reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: u, DataNode: v})
+				}
+			}
 		}
 	}
+
+
 	combineTime := time.Since(combineStart).Seconds()
 
 	dstPartitionNum = int32(len(reducedMsg))

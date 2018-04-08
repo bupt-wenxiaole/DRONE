@@ -71,7 +71,7 @@ func (s Set) Clear() {
 	}
 }
 
-
+/*
 func GetPreSet(g graph.Graph, id graph.ID, emptySet Set) {
 	emptySet.Clear()
 	sources, _ := g.GetSources(id)
@@ -93,3 +93,4 @@ func GetPostSet(g graph.Graph, id graph.ID, emptySet Set) {
 		emptySet.Add(msg.RelatedId())
 	}
 }
+*/
