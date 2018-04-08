@@ -91,6 +91,8 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg, error) {
 	ansMap := make(map[ID][]RouteMsg)
 	bufrd := bufio.NewReader(rd)
+
+	filterMap := make(map[int64]map[int64]bool)
 	for {
 		line, err := bufrd.ReadString('\n')
 		if err != nil || io.EOF == err {
@@ -109,6 +111,15 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 
 		srcId := StringID(parseSrc)
 		dstId := StringID(parseDst)
+
+		if _, ok := filterMap[srcId.IntVal()]; !ok {
+			filterMap[srcId.IntVal()] = make(map[int64]bool)
+		}
+		if _, ok := filterMap[srcId.IntVal()][dstId.IntVal()]; !ok {
+			filterMap[srcId.IntVal()][dstId.IntVal()] = true
+		} else {
+			continue
+		}
 
 		if srcInner {
 			nd := g.GetNode(srcId)
@@ -147,6 +158,7 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 		route := &routeMsg{relatedId: srcId, routePartition: partition}
 		ansMap[dstId] = append(ansMap[dstId], route)
 	}
+	filterMap = nil
 
 	return ansMap, nil
 }
