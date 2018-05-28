@@ -570,7 +570,7 @@ func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID str
 			fmt.Println("zs-log: " + paras[3])
 			log.Fatal("parse weight error")
 		}
-		weight := 0.0
+		//weight := 0.0
 
 		nd1 := g.GetNode(srcId)
 		if nd1 == nil {
