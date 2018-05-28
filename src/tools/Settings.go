@@ -2,7 +2,7 @@ package tools
 
 const (
 	//ResultPath = "/home/acgict/result/"
-	ResultPath = "/home/xwen/"
+	ResultPath = "/mnt/nfs/xwen/generate_graph/"
 	NFSPath = "/home/xwen/graph/"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = true
