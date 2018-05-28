@@ -292,7 +292,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 
 	var f *os.File
 	if tools.WorkerOnSC {
-		f, _ = os.Create(tools.ResultPath + strconv.Itoa(w.workerNum) + "/result_" + strconv.Itoa(w.selfId-1))
+		f, _ = os.Create(tools.ResultPath + "simresult_" + strconv.Itoa(w.selfId-1))
 	} else {
 		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
 	}
