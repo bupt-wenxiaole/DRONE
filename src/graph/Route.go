@@ -19,7 +19,7 @@ type RouteMsg interface {
 
 type routeMsg struct {
 	relatedId      ID
-//	relatedWgt     float64
+	relatedWgt     float64
 	routePartition int
 }
 
@@ -28,8 +28,8 @@ func (r *routeMsg) RelatedId() ID {
 }
 
 func (r *routeMsg) RelatedWgt() float64 {
-	//return r.relatedWgt
-	return 0
+	return r.relatedWgt
+	//return 0
 }
 
 func (r *routeMsg) RoutePartition() int {
@@ -49,13 +49,13 @@ func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
 
 		for dstID, msg := range dstMsg {
 			split := strings.Split(msg, " ")
-			//wgt, _ := strconv.ParseFloat(split[0], 64)
+			wgt, _ := strconv.ParseFloat(split[0], 64)
 			nextHop, _ := strconv.Atoi(split[1])
 
 			dstIDInt, _ := strconv.Atoi(dstID)
 
-			//route := &routeMsg{relatedId: StringID(dstIDInt), relatedWgt: wgt, routePartition: nextHop}
-			route := &routeMsg{relatedId: StringID(dstIDInt), routePartition: nextHop}
+			route := &routeMsg{relatedId: StringID(dstIDInt), relatedWgt: wgt, routePartition: nextHop}
+			//route := &routeMsg{relatedId: StringID(dstIDInt), routePartition: nextHop}
 			msgList = append(msgList, route)
 		}
 
@@ -141,7 +141,7 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 			}
 		}
 
-		//weight, err := strconv.ParseFloat(paras[3], 64)
+		weight, err := strconv.ParseFloat(paras[3], 64)
 		if err != nil {
 			log.Fatal("parse weight error")
 		}
@@ -154,8 +154,8 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 		if _, ok := ansMap[dstId]; !ok {
 			ansMap[dstId] = make([]RouteMsg, 0)
 		}
-		//route := &routeMsg{relatedId: srcId, relatedWgt: weight, routePartition: partition}
-		route := &routeMsg{relatedId: srcId, routePartition: partition}
+		route := &routeMsg{relatedId: srcId, relatedWgt: weight, routePartition: partition}
+		//route := &routeMsg{relatedId: srcId, routePartition: partition}
 		ansMap[dstId] = append(ansMap[dstId], route)
 	}
 	filterMap = nil

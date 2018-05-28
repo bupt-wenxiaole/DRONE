@@ -440,6 +440,7 @@ func newWorker(id, partitionNum int) *Worker {
 
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %v", loadTime)
+	log.Printf("graph size:%v\n", len(w.g.GetNodes()))
 
 	if w.g == nil {
 		log.Println("can't load graph")
