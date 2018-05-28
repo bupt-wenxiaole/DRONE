@@ -330,12 +330,12 @@ func (w *Worker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.As
 		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
 	}
 	writer := bufio.NewWriter(f)
-	defer writer.Flush()
 	defer f.Close()
 
 	for id, dist := range w.distance {
 		writer.WriteString(id.String() + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
 	}
+	writer.Flush()
 
 	return &pb.AssembleResponse{Ok: true}, nil
 }

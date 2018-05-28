@@ -286,9 +286,6 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
 	log.Println("assemble!")
 	innerNodes := w.g.GetNodes()
-	if tools.WorkerOnSC {
-		return &pb.AssembleResponse{Ok: true}, nil
-	}
 
 	var f *os.File
 	if tools.WorkerOnSC {
