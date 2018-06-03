@@ -5,9 +5,9 @@ const (
 	ResultPath = "/mnt/nfs/xwen/generate_graph/"
 	NFSPath = "/mnt/nfs/xwen/generate_graph/"
 	//NFSPath = "/home/acgict/inputgraph/"
-	WorkerOnSC = true
+	WorkerOnSC = false
 
-	LoadFromJson = true
+	LoadFromJson = false
 
 	ConfigPath = "config.txt"
 
