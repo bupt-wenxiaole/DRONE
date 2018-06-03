@@ -148,7 +148,7 @@ func (mr *Master) KillWorkers() {
 	for i := 1; i <= batch; i++ {
 		for j := (i - 1) * tools.MasterConnPoolSize + 1; j <= mr.workerNum && j <= i * tools.MasterConnPoolSize; j++ {
 			mr.wg.Add(1)
-			log.Printf("Master: shutdown worker %d\n", i)
+			log.Printf("Master: shutdown worker %d\n", j)
 
 			go func(id int) {
 				defer mr.wg.Done()

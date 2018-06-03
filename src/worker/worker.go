@@ -278,7 +278,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
 				wg.Add(1)
 				partitionId := indexBuffer[j]
-				fmt.Printf("mmp:%v\n", partitionId)
+				//fmt.Printf("mmp:%v\n", partitionId)
 				message := messages[partitionId]
 				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1),CommunicationSize: int32(len(message))}
 				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
