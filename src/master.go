@@ -354,7 +354,7 @@ func RunJob(jobName string) {
 	mr.KillWorkers()
 	mr.StopRPCServer()
 	//mr.wait()
-	log.Printf("Job %s finishes", jobName)
+	log.Printf("Job finishes")
 }
 
 func main() {

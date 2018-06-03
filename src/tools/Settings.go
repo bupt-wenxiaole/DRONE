@@ -3,11 +3,11 @@ package tools
 const (
 	//ResultPath = "/home/acgict/result/"
 	ResultPath = "/mnt/nfs/xwen/generate_graph/"
-	NFSPath = "/home/xwen/graph/"
+	NFSPath = "/mnt/nfs/xwen/generate_graph/"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = true
 
-	LoadFromJson = false
+	LoadFromJson = true
 
 	ConfigPath = "config.txt"
 
