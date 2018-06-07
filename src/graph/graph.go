@@ -44,8 +44,6 @@ type node struct {
 	attr int64
 }
 
-//var nodeCnt uint64
-
 func NewNode(id int64, attr int64) Node {
 	return &node{
 		id:   id,
@@ -138,7 +136,7 @@ type graph struct {
 	// nodeToTargets maps a Node identifer to targets(children) with edge weights.
 	nodeToTargets map[ID]map[ID]float64
 
-	// store Fi.I, Fi.O of graph i
+	// Fi.O of graph i
 	graphFI map[ID][]RouteMsg
 	graphFO map[ID][]RouteMsg
 }
@@ -390,68 +388,15 @@ func (g *graph) String() string {
 	return buf.String()
 }
 
+
 func (g *graph) GetFIs() map[ID][]RouteMsg {
 	return g.graphFI
 }
 
+
 func (g *graph) GetFOs() map[ID][]RouteMsg {
 	return g.graphFO
 }
-
-// NewGraphFromJSON returns a new Graph from a JSON file.
-// Here's the sample JSON data:
-//
-//	{
-//	    "graph_00": {
-//	        "S": {
-//	            "A": 100,
-//	            "B": 14,
-//	            "C": 200
-//	        },
-//	        "A": {
-//	            "S": 15,
-//	            "B": 5,
-//	            "D": 20,
-//	            "T": 44
-//	        },
-//	        "B": {
-//	            "S": 14,
-//	            "A": 5,
-//	            "D": 30,
-//	            "E": 18
-//	        },
-//	        "C": {
-//	            "S": 9,
-//	            "E": 24
-//	        },
-//	        "D": {
-//	            "A": 20,
-//	            "B": 30,
-//	            "E": 2,
-//	            "F": 11,
-//	            "T": 16
-//	        },
-//	        "E": {
-//	            "B": 18,
-//	            "C": 24,
-//	            "D": 2,
-//	            "F": 6,
-//	            "T": 19
-//	        },
-//	        "F": {
-//	            "D": 11,
-//	            "E": 6,
-//	            "T": 6
-//	        },
-//	        "T": {
-//	            "A": 44,
-//	            "D": 16,
-//	            "F": 6,
-//	            "E": 19
-//	        }
-//	    },
-//	}
-//
 
 // pattern graph should be constructed as the format
 // NodeId type numberOfSuffixNodes id1 id2 id3 ...
@@ -595,6 +540,7 @@ func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID str
 	if err1 != nil {
 		return nil, err1
 	}
+
 	graphFO, err2 := LoadRouteMsgFromTxt(fxord, true, g)
 	if err2 != nil {
 		return nil, err2

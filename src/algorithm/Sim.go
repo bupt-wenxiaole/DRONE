@@ -105,7 +105,6 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 						iterationNum += int64(preSet[v].Size())
 						remove[id].Separate(preSet[v])
 					} else {
-						//Set.GetPostSet(g, v, emptySet1)
 						if postSet[v].Size() != 0 {
 							sim[id].Add(v)
 							//Set.GetPreSet(g, v, emptySet2)
