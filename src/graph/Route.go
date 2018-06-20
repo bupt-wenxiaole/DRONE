@@ -12,21 +12,21 @@ import (
 )
 
 type RouteMsg interface {
-	RelatedId() ID
+	//RelatedId() ID
 	RelatedWgt() float64
 	RoutePartition() int
 }
 
 type routeMsg struct {
-	relatedId      ID
+	//relatedId      ID
 	relatedWgt     float64
 	routePartition int
 }
-
+/*
 func (r *routeMsg) RelatedId() ID {
 	return r.relatedId
 }
-
+*/
 func (r *routeMsg) RelatedWgt() float64 {
 	return r.relatedWgt
 	//return 0
@@ -36,8 +36,8 @@ func (r *routeMsg) RoutePartition() int {
 	return r.routePartition
 }
 
-func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
-	ansMap := make(map[ID][]RouteMsg)
+func resolveJsonMap(jsonMap map[string]map[string]string, dstInner bool) map[ID]map[ID]RouteMsg {
+	ansMap := make(map[ID]map[ID]RouteMsg)
 	if jsonMap == nil {
 		return ansMap
 	}
@@ -45,27 +45,57 @@ func resolveJsonMap(jsonMap map[string]map[string]string) map[ID][]RouteMsg {
 
 	for srcID, dstMsg := range jsonMap {
 
-		msgList := make([]RouteMsg, 0)
+		//msgList := make([]RouteMsg, 0)
+		intId, _ := strconv.Atoi(srcID)
+		stringId := StringID(intId)
 
-		for dstID, msg := range dstMsg {
-			split := strings.Split(msg, " ")
-			wgt, _ := strconv.ParseFloat(split[0], 64)
-			nextHop, _ := strconv.Atoi(split[1])
+		if dstInner {
+			for dstID, msg := range dstMsg {
+				dstIDInt, _ := strconv.Atoi(dstID)
+				dst := StringID(dstIDInt)
+				if _, ok := ansMap[dst]; !ok {
+					ansMap[dst] = make(map[ID]RouteMsg)
+				}
 
-			dstIDInt, _ := strconv.Atoi(dstID)
+				split := strings.Split(msg, " ")
+				wgt, _ := strconv.ParseFloat(split[0], 64)
+				nextHop, _ := strconv.Atoi(split[1])
 
-			route := &routeMsg{relatedId: StringID(dstIDInt), relatedWgt: wgt, routePartition: nextHop}
-			//route := &routeMsg{relatedId: StringID(dstIDInt), routePartition: nextHop}
-			msgList = append(msgList, route)
+				route := &routeMsg{relatedWgt: wgt, routePartition: nextHop}
+				ansMap[dst][stringId] = route
+			}
+		} else {
+			ansMap[stringId] = make(map[ID]RouteMsg)
+			for dstID, msg := range dstMsg {
+				dstIDInt, _ := strconv.Atoi(dstID)
+				dst := StringID(dstIDInt)
+
+				split := strings.Split(msg, " ")
+				wgt, _ := strconv.ParseFloat(split[0], 64)
+				nextHop, _ := strconv.Atoi(split[1])
+
+				route := &routeMsg{relatedWgt: wgt, routePartition: nextHop}
+				ansMap[stringId][dst] = route
+			}
 		}
+	}
+	return ansMap
+}
+func resolveTagMap(jsonMap map[string]map[string]string) map[ID]bool {
+	ansMap := make(map[ID]bool)
+	if jsonMap == nil {
+		return ansMap
+	}
 
-		srcIdInt, _ := strconv.Atoi(srcID)
-		ansMap[StringID(srcIdInt)] = msgList
+	for id := range jsonMap {
+		intId, _ := strconv.Atoi(id)
+		stringId := StringID(intId)
+		ansMap[stringId] = true
 	}
 	return ansMap
 }
 
-func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[ID][]RouteMsg, error) {
+func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID]bool, map[ID]map[ID]RouteMsg, error) {
 	dec := json.NewDecoder(rd)
 	//          GraphXF.I/O    srcID      dstID   attr
 	js := make(map[string]map[string]map[string]string)
@@ -78,21 +108,18 @@ func LoadRouteMsgFromJson(rd io.Reader, graphId string) (map[ID][]RouteMsg, map[
 		}
 	}
 
-	FIMap := js["Graph"+graphId+"F.I"]
-	graphFI := resolveJsonMap(FIMap)
-
 	FOMap := js["Graph"+graphId+"F.O"]
-	graphFO := resolveJsonMap(FOMap)
+	outerTag := resolveTagMap(FOMap)
+	route := resolveJsonMap(FOMap, true)
 
-	return graphFI, graphFO, nil
+	return outerTag, route, nil
 }
 
 // srcInner 为true 意味着src点属于graph内部点，反之意味着dst点是内点
-func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg, error) {
-	ansMap := make(map[ID][]RouteMsg)
+func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID]map[ID]RouteMsg, error) {
+	ansMap := make(map[ID]map[ID]RouteMsg)
 	bufrd := bufio.NewReader(rd)
 
-	filterMap := make(map[int64]map[int64]bool)
 	for {
 		line, err := bufrd.ReadString('\n')
 		if err != nil || io.EOF == err {
@@ -112,32 +139,16 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 		srcId := StringID(parseSrc)
 		dstId := StringID(parseDst)
 
-		if _, ok := filterMap[srcId.IntVal()]; !ok {
-			filterMap[srcId.IntVal()] = make(map[int64]bool)
+		if !srcInner {
+			srcId = StringID(parseDst)
+			dstId = StringID(parseSrc)
 		}
-		if _, ok := filterMap[srcId.IntVal()][dstId.IntVal()]; !ok {
-			filterMap[srcId.IntVal()][dstId.IntVal()] = true
-		} else {
-			continue
-		}
-
-		if srcInner {
-			nd := g.GetNode(srcId)
-			if nd == nil {
-				intId := srcId.IntVal()
-				nd = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
-				if ok := g.AddNode(nd); !ok {
-					log.Fatal("add node error")
-				}
-			}
-		} else {
-			nd := g.GetNode(dstId)
-			if nd == nil {
-				intId := dstId.IntVal()
-				nd = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
-				if ok := g.AddNode(nd); !ok {
-					log.Fatal("add node error")
-				}
+		nd := g.GetNode(srcId)
+		if nd == nil {
+			intId := srcId.IntVal()
+			nd = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
+			if ok := g.AddNode(nd); !ok {
+				log.Fatal("add node error")
 			}
 		}
 
@@ -153,14 +164,33 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID][]RouteMsg
 			log.Fatal("parse partition error")
 		}
 
-		if _, ok := ansMap[dstId]; !ok {
-			ansMap[dstId] = make([]RouteMsg, 0)
+		if _, ok := ansMap[srcId]; !ok {
+			ansMap[srcId] = make(map[ID]RouteMsg)
 		}
-		route := &routeMsg{relatedId: srcId, relatedWgt: weight, routePartition: partition}
-		//route := &routeMsg{relatedId: srcId, routePartition: partition}
-		ansMap[dstId] = append(ansMap[dstId], route)
+		route := &routeMsg{relatedWgt: weight, routePartition: partition}
+		ansMap[srcId][dstId] = route
 	}
-	filterMap = nil
+	return ansMap, nil
+}
 
+func LoadTagFromTxt(rd io.Reader)(map[ID]bool, error) {
+	ansMap := make(map[ID]bool)
+	bufrd := bufio.NewReader(rd)
+
+	for {
+		line, err := bufrd.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
+		parseDst, err := strconv.ParseInt(paras[1], 10, 64)
+		if err != nil {
+			log.Fatal("parse dst node id error")
+		}
+		dstId := StringID(parseDst)
+
+		ansMap[dstId] = true
+	}
 	return ansMap, nil
 }

@@ -86,11 +86,6 @@ type Graph interface {
 	// if the node already existed in the graph.
 	AddNode(nd Node) bool
 
-	// DeleteNode deletes a node from a graph.
-	// It returns true if it got deleted.
-	// And false if it didn't get deleted.
-	DeleteNode(id ID) bool
-
 	// AddEdge adds an edge from nd1 to nd2 with the weight.
 	// It returns error if a node does not exist.
 	AddEdge(id1, id2 ID, weight float64) error
@@ -113,13 +108,17 @@ type Graph interface {
 	GetTargets(id ID) (map[ID]Node, error)
 
 	// get all Fi.I message
-	GetFIs() map[ID][]RouteMsg
+	GetTag() map[ID]bool
 
 	// get all Fi.O message
-	GetFOs() map[ID][]RouteMsg
+	GetRoute() map[ID]map[ID]RouteMsg
 
 	// String describes the Graph.
 	String() string
+
+	ReSetRoute(rd io.Reader, graphID string)
+
+	ClearInner()
 }
 
 // graph is an internal default graph type that
@@ -137,8 +136,8 @@ type graph struct {
 	nodeToTargets map[ID]map[ID]float64
 
 	// Fi.O of graph i
-	graphFI map[ID][]RouteMsg
-	graphFO map[ID][]RouteMsg
+	tag map[ID]bool
+	route map[ID]map[ID]RouteMsg
 }
 
 // newGraph returns a new graph.
@@ -147,17 +146,46 @@ func newGraph() *graph {
 		idToNodes:     make(map[ID]Node),
 		nodeToSources: make(map[ID]map[ID]float64),
 		nodeToTargets: make(map[ID]map[ID]float64),
-		graphFI:       make(map[ID][]RouteMsg),
-		graphFO:       make(map[ID][]RouteMsg),
+		tag:           make(map[ID]bool),
+		route:         make(map[ID]map[ID]RouteMsg),
 		//
 		// without this
 		// panic: assignment to entry in nil map
 	}
 }
 
-// NewGraph returns a new graph.
-func NewGraph() Graph {
-	return newGraph()
+func (g *graph) ClearInner() {
+	for v := range g.nodeToSources {
+		delete(g.nodeToSources, v)
+	}
+	g.nodeToSources = nil
+
+	for v := range g.nodeToTargets {
+		delete(g.nodeToTargets, v)
+	}
+	g.nodeToTargets = nil
+}
+
+func (g *graph) ReSetRoute(rd io.Reader, graphId string)  {
+	for key := range g.route {
+		delete(g.route, key)
+	}
+	g.route = nil
+	if tools.LoadFromJson {
+		dec := json.NewDecoder(rd)
+		//          GraphXF.I/O    srcID      dstID   attr
+		js := make(map[string]map[string]map[string]string)
+		for {
+			if err := dec.Decode(&js); err == io.EOF {
+				break
+			}
+		}
+		routeMap := js["Graph"+ graphId +"F.I"]
+		g.route = resolveJsonMap(routeMap, false)
+	} else {
+		route, _ := LoadRouteMsgFromTxt(rd, false, g)
+		g.route = route
+	}
 }
 
 func (g *graph) Init() {
@@ -171,8 +199,8 @@ func (g *graph) Init() {
 	g.idToNodes = make(map[ID]Node)
 	g.nodeToSources = make(map[ID]map[ID]float64)
 	g.nodeToTargets = make(map[ID]map[ID]float64)
-	g.graphFI = make(map[ID][]RouteMsg)
-	g.graphFO = make(map[ID][]RouteMsg)
+	g.tag = make(map[ID]bool)
+	g.route = make(map[ID]map[ID]RouteMsg)
 }
 
 func (g *graph) GetNodeCount() int {
@@ -211,30 +239,6 @@ func (g *graph) AddNode(nd Node) bool {
 
 	id := nd.ID()
 	g.idToNodes[id] = nd
-	return true
-}
-
-//TODO this function's implement needs profit
-func (g *graph) DeleteNode(id ID) bool {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if !g.unsafeExistID(id) {
-		return false
-	}
-
-	delete(g.idToNodes, id)
-
-	delete(g.nodeToTargets, id)
-	for _, smap := range g.nodeToTargets {
-		delete(smap, id)
-	}
-
-	delete(g.nodeToSources, id)
-	for _, smap := range g.nodeToSources {
-		delete(smap, id)
-	}
-
 	return true
 }
 
@@ -389,13 +393,13 @@ func (g *graph) String() string {
 }
 
 
-func (g *graph) GetFIs() map[ID][]RouteMsg {
-	return g.graphFI
+func (g *graph) GetTag() map[ID]bool {
+	return g.tag
 }
 
 
-func (g *graph) GetFOs() map[ID][]RouteMsg {
-	return g.graphFO
+func (g *graph) GetRoute() map[ID]map[ID]RouteMsg {
+	return g.route
 }
 
 // pattern graph should be constructed as the format
@@ -478,17 +482,17 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 		}
 	}
 
-	graphFI, graphFO, err := LoadRouteMsgFromJson(partitonReader, graphID)
+	tag, route, err := LoadRouteMsgFromJson(partitonReader, graphID)
 	if err != nil {
 		return nil, err
 	}
-	g.graphFI = graphFI
-	g.graphFO = graphFO
+	g.tag = tag
+	g.route = route
 
 	return g, nil
 }
 
-func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID string) (Graph, error) {
+func NewGraphFromTXT(rd io.Reader, fxord io.Reader) (Graph, error) {
 	g := newGraph()
 	reader := bufio.NewReader(rd)
 	for {
@@ -536,18 +540,18 @@ func NewGraphFromTXT(rd io.Reader, fxird io.Reader, fxord io.Reader, graphID str
 	}
 
 
-	graphFI, err1 := LoadRouteMsgFromTxt(fxird, false, g)
+	tag, err1 := LoadTagFromTxt(fxord)
 	if err1 != nil {
 		return nil, err1
 	}
 
-	graphFO, err2 := LoadRouteMsgFromTxt(fxord, true, g)
+	route, err2 := LoadRouteMsgFromTxt(fxord, true, g)
 	if err2 != nil {
 		return nil, err2
 	}
-	g.graphFI = graphFI
-	g.graphFO = graphFO
+
+	g.tag = tag
+	g.route = route
 
 	return g, nil
-
 }

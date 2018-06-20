@@ -94,7 +94,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.selfId, w.allNodeUnionFO, w.preSet, w.postSet)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.allNodeUnionFO, w.preSet, w.postSet)
 	w.allNodeUnionFO = nil
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -400,18 +400,16 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 			fmt.Println("graphIO is nil")
 		}
 		if tools.WorkerOnSC {
-			fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
 			fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
 			//fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".I")
 			//fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".O")
 		} else {
-			fxiReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
 			fxoReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
 		}
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxoReader)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -429,9 +427,28 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	for v := range w.g.GetNodes() {
 		w.allNodeUnionFO.Add(v)
 	}
-	for v := range w.g.GetFOs() {
-		w.allNodeUnionFO.Add(v)
+	for _, msg := range w.g.GetRoute() {
+		for v := range msg {
+			w.allNodeUnionFO.Add(v)
+		}
 	}
+
+	// Initial some variables from graph
+	w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
+	w.g.ClearInner()
+
+	var io *os.File
+	defer io.Close()
+	if tools.LoadFromJson {
+		io, _ = os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+	} else {
+		if tools.WorkerOnSC {
+			io, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
+		} else {
+			io, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
+		}
+	}
+	w.g.ReSetRoute(io, strconv.Itoa(w.selfId-1))
 
 	loadTime := time.Since(start)
 	log.Printf("loadGraph Time: %v\n", loadTime)
@@ -440,8 +457,6 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
-	// Initial some variables from graph
-	w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
 
 	return w
 }

@@ -29,7 +29,7 @@ func Generate(g graph.Graph) (map[graph.ID]float64, map[graph.ID]float64) {
 		distance[id] = math.MaxFloat64
 	}
 
-	for id := range g.GetFOs() {
+	for id := range g.GetTag() {
 		exchangeMsg[id] = math.MaxFloat64
 	}
 	return distance, exchangeMsg
@@ -68,8 +68,6 @@ type Worker struct {
 	distance    map[graph.ID]float64 //
 	exchangeMsg map[graph.ID]float64
 	updated     []*algorithm.Pair
-
-	routeTable map[graph.ID][]*algorithm.BoundMsg
 
 	iterationNum int
 	stopChannel  chan bool
@@ -124,7 +122,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 			break
 		}
 	}
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, w.routeTable, startId)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, w.exchangeMsg, startId)
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -223,7 +221,7 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.routeTable, w.updated)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.updated)
 
 	w.updated = make([]*algorithm.Pair, 0)
 	var fullSendStart time.Time
@@ -432,7 +430,7 @@ func newWorker(id, partitionNum int) *Worker {
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxiReader, fxoReader, strconv.Itoa(w.selfId-1))
+		w.g, err = graph.NewGraphFromTXT(graphIO, fxoReader)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -445,8 +443,6 @@ func newWorker(id, partitionNum int) *Worker {
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
-	// Initial some variables from graph
-	w.routeTable = algorithm.GenerateRouteTable(w.g.GetFOs())
 	w.distance, w.exchangeMsg = Generate(w.g)
 
 	return w

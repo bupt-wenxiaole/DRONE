@@ -18,6 +18,11 @@ type Pair struct {
 	Distance float64
 }
 
+type updateMsg struct {
+	Partition int
+	Id graph.ID
+}
+
 type PriorityQueue []*Pair
 
 func (pq PriorityQueue) Len() int { return len(pq) }
@@ -41,34 +46,6 @@ func (pq *PriorityQueue) Pop() interface{} {
 	p := old[n-1]
 	*pq = old[0 : n-1]
 	return p
-}
-
-// store the weight of edge connected to DstID
-// in this struct, routeLen is only the length of one edge
-type BoundMsg struct {
-	DstId    graph.ID
-	RouteLen float64
-}
-// routeTable[node_i][j].RouteLen is the weight of edge: node_i -> routeTable[node_i][j].DstID
-func GenerateRouteTable(FO map[graph.ID][]graph.RouteMsg) map[graph.ID][]*BoundMsg {
-	routeTable := make(map[graph.ID][]*BoundMsg)
-	for fo, msgs := range FO {
-
-// in the result -- routeTable, routeTable[i] stores a list of BoundMsg,
-		for _, msg := range msgs {
-			srcId := msg.RelatedId()
-			if _, ok := routeTable[srcId]; !ok {
-				routeTable[srcId] = make([]*BoundMsg, 0)
-				}
-
-			nowMsg := &BoundMsg{
-				DstId:    fo,
-				RouteLen: float64(msg.RelatedWgt()),
-			}
-			routeTable[srcId] = append(routeTable[srcId], nowMsg)
-		}
-	}
-	return routeTable
 }
 
 func combine(a, b float64) float64 {
@@ -104,16 +81,16 @@ func SSSP_aggregateMsg(oriMsg []*Pair) []*Pair {
 // returned bool value indicates which there has some message need to be send
 // the map value is the message need to be send
 // map[i] is a list of message need to be sent to partition i
-func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, routeTable map[graph.ID][]*BoundMsg, startID graph.ID) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
+func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, startID graph.ID) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
 	log.Printf("start id:%v\n", startID.IntVal())
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0
 	}
-	FO := g.GetFOs()
-	updatedID := make([]graph.ID, 0)
 	pq := make(PriorityQueue, 0)
+	route := g.GetRoute()
+	updated := make(map[updateMsg]bool)
 
 	startPair := &Pair{
 		NodeId:   startID,
@@ -134,13 +111,13 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 		}
 		distance[srcID] = nowDis
 		//every iteration, query the update on Fi.O
-		if msgs, ok := routeTable[srcID]; ok {
-			for _, msg := range msgs {
-				if exchangeMsg[msg.DstId] <= nowDis+msg.RouteLen {
+		if msgs, ok := route[srcID]; ok {
+			for dstId, msg := range msgs {
+				if exchangeMsg[dstId] <= nowDis+msg.RelatedWgt() {
 					continue
 				}
-				exchangeMsg[msg.DstId] = nowDis + msg.RouteLen
-				updatedID = append(updatedID, msg.DstId)
+				exchangeMsg[dstId] = nowDis + msg.RelatedWgt()
+				updated[updateMsg{Id:dstId,Partition:msg.RoutePartition()}] = true
 			}
 		}
 
@@ -155,15 +132,10 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 	iterationTime := time.Since(itertationStartTime).Seconds()
 	combineStartTime := time.Now()
 	//end SSSP iteration
-	filterMap := make(map[graph.ID]bool)
 	messageMap := make(map[int][]*Pair)
-	for _, id := range updatedID {
-		if _, ok := filterMap[id]; ok {
-			continue
-		}
-		filterMap[id] = true
-		//TODO: from the GPAPE paper, Json file implementation is a little weird, F.O's partition is only related with first level key
-		partition := FO[id][0].RoutePartition()
+	for msg := range updated {
+		id := msg.Id
+		partition := msg.Partition
 		dis := exchangeMsg[id]
 		if _, ok := messageMap[partition]; !ok {
 			messageMap[partition] = make([]*Pair, 0)
@@ -173,22 +145,21 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 
 	combineTime := time.Since(combineStartTime).Seconds()
 
-	updatePairNum := int32(len(filterMap))
+	updatePairNum := int32(len(updated))
 	dstPartitionNum := int32(len(messageMap))
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, routeTable map[graph.ID][]*BoundMsg, updated []*Pair) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, updated []*Pair) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
 	if len(updated) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
 
-	FO := g.GetFOs()
-
-	updatedID := make([]graph.ID, 0)
+	route := g.GetRoute()
 	pq := make(PriorityQueue, 0)
+	updateMsg := make(map[updateMsg]bool)
 
 	aggregatorOriSize := int32(len(updated))
 	aggregateStart := time.Now()
@@ -219,13 +190,13 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 		}
 
 		distance[srcID] = nowDis
-		if msgs, ok := routeTable[srcID]; ok {
-			for _, msg := range msgs {
-				if exchangeMsg[msg.DstId] <= nowDis+msg.RouteLen {
+		if msgs, ok := route[srcID]; ok {
+			for dstId, msg := range msgs {
+				if exchangeMsg[dstId] <= nowDis+msg.RelatedWgt() {
 					continue
 				}
-				exchangeMsg[msg.DstId] = nowDis + msg.RouteLen
-				updatedID = append(updatedID, msg.DstId)
+				exchangeMsg[dstId] = nowDis + msg.RelatedWgt()
+				updateMsg[updateMsg{Id:dstId,Partition:msg.RoutePartition()}] = true
 			}
 		}
 
@@ -240,25 +211,20 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 	iterationTime := time.Since(iterationStartTime).Seconds()
 	combineStartTime := time.Now()
 
-	filterMap := make(map[graph.ID]bool)
 	messageMap := make(map[int][]*Pair)
-	for _, id := range updatedID {
-		if _, ok := filterMap[id]; ok {
-			continue
-		}
-		filterMap[id] = true
+	for msg := range updateMsg {
 
-		partition := FO[id][0].RoutePartition()
-		dis := exchangeMsg[id]
+		partition := msg.Partition
+		dis := exchangeMsg[msg.Id]
 		if _, ok := messageMap[partition]; !ok {
 			messageMap[partition] = make([]*Pair, 0)
 		}
-		messageMap[partition] = append(messageMap[partition], &Pair{NodeId: id, Distance: dis})
+		messageMap[partition] = append(messageMap[partition], &Pair{NodeId: msg.Id, Distance: dis})
 	}
 
 	combineTime := time.Since(combineStartTime).Seconds()
 
-	updatePairNum := int32(len(filterMap))
+	updatePairNum := int32(len(updateMsg))
 	dstPartitionNum := int32(len(messageMap))
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }
