@@ -8,7 +8,7 @@ const (
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 
-	LoadFromJson = true
+	LoadFromJson = false
 
 	ConfigPath = "config.txt"
 
