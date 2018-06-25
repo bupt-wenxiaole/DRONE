@@ -159,7 +159,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 
 	route := g.GetRoute()
 	pq := make(PriorityQueue, 0)
-	updateMsg := make(map[updateMsg]bool)
+	updatedMsg := make(map[updateMsg]bool)
 
 	aggregatorOriSize := int32(len(updated))
 	aggregateStart := time.Now()
@@ -196,7 +196,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 					continue
 				}
 				exchangeMsg[dstId] = nowDis + msg.RelatedWgt()
-				updateMsg[updateMsg{Id:dstId,Partition:msg.RoutePartition()}] = true
+				updatedMsg[updateMsg{Id:dstId,Partition:msg.RoutePartition()}] = true
 			}
 		}
 
@@ -212,7 +212,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 	combineStartTime := time.Now()
 
 	messageMap := make(map[int][]*Pair)
-	for msg := range updateMsg {
+	for msg := range updatedMsg {
 
 		partition := msg.Partition
 		dis := exchangeMsg[msg.Id]
@@ -224,7 +224,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 
 	combineTime := time.Since(combineStartTime).Seconds()
 
-	updatePairNum := int32(len(updateMsg))
+	updatePairNum := int32(len(updatedMsg))
 	dstPartitionNum := int32(len(messageMap))
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }
