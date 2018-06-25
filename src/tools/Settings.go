@@ -1,11 +1,11 @@
 package tools
 
 const (
-	ResultPath = "/home/acgict/result/"
-	//ResultPath = "/mnt/nfs/xwen/generate_graph/"
-	//NFSPath = "/home/xwen/graph/"
-	NFSPath = "/home/acgict/inputgraph/"
-	WorkerOnSC = true
+	//ResultPath = "/home/acgict/result/"
+	ResultPath = "/mnt/nfs/xwen/generate_graph/"
+	NFSPath = "/home/xwen/graph/16/"
+	//NFSPath = "/home/acgict/inputgraph/"
+	WorkerOnSC = false
 
 	LoadFromJson = false
 
