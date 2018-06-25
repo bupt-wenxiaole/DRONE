@@ -299,7 +299,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
-	w.outerMsg = algorithm.GenerateOuterMsg(w.g.GetFOs())
+	//w.outerMsg = algorithm.GenerateOuterMsg(w.g.GetFOs())
 	return w
 }
 

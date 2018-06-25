@@ -75,6 +75,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 	return int64(nodeNum), prVal
 }
 
+/*
 func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
 	outerMsg := make(map[int64][]int64)
 	for fo, msgs := range FO {
@@ -90,7 +91,7 @@ func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
 	}
 	return outerMsg
 }
-
+*/
 func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage, map[int64]float64, map[int64]float64) {
 	maxerr := 0.0
 
@@ -165,13 +166,13 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	}
 
 	//log.Printf("still send:%v\n", still)
-
+/*
 	for fo, routeMsg := range g.GetFOs() {
 		partition := routeMsg[0].RoutePartition()
 		//log.Printf("send id:%v, val:%v partition:%v\n", fo.IntVal(), tempPr[fo.IntVal()], partition)
 		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:messagePr[fo.IntVal()],ID:fo})
 	}
-
+*/
 	//log.Printf("receive sum:%v\n", receiveSum)
 	//log.Printf("send sum:%v\n", sendSum)
 	return updated, reduceMsg, prVal, tempPr
