@@ -4,7 +4,7 @@ const (
 	//ResultPath = "/home/acgict/result/"
 	ResultPath = "/mnt/nfs/xwen/generate_graph/"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/generate_graph"
+	NFSPath = "/mnt/nfs/xwen/generate_graph/"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 
