@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"sync"
-	"encoding/json"
 	"log"
 	"bufio"
 	"strings"
@@ -14,20 +13,13 @@ import (
 	"tools"
 )
 
-// ID is unique identifier.
-type ID interface {
-	// String returns the string ID.
-	String() string
-	IntVal() int64
-}
+type ID int64
 
-type StringID int64
-
-func (s StringID) String() string {
+func (s ID) String() string {
 	return strconv.FormatInt(int64(s), 10)
 }
 
-func (s StringID) IntVal() int64 {
+func (s ID) IntVal() int64 {
 	return int64(s)
 }
 
@@ -52,7 +44,7 @@ func NewNode(id int64, attr int64) Node {
 }
 
 func (n *node) ID() ID {
-	return StringID(n.id)
+	return ID(n.id)
 }
 
 func (n *node) String() string {
@@ -90,13 +82,17 @@ type Graph interface {
 	// It returns error if a node does not exist.
 	AddEdge(id1, id2 ID, weight float64) error
 
-	// ReplaceEdge replaces an edge from id1 to id2 with the weight.
-	ReplaceEdge(id1, id2 ID, weight float64) error
+    IsMaster(id ID) bool
 
-	// DeleteEdge deletes an edge from id1 to id2.
-	DeleteEdge(id1, id2 ID) error
+	AddMirror(id ID, masterWR int)
 
-	// GetWeight returns the weight from id1 to id2.
+	GetMirrors() map[ID]int
+
+	AddMaster(id ID, routeMsg []int)
+
+	GetMasters() map[ID][]int
+
+// GetWeight returns the weight from id1 to id2.
 	GetWeight(id1, id2 ID) (float64, error)
 
 	// GetSources returns the map of parent Nodes.
@@ -107,18 +103,8 @@ type Graph interface {
 	// (Nodes that go out of the argument vertex.)
 	GetTargets(id ID) (map[ID]Node, error)
 
-	// get all Fi.I message
-	GetTag() map[ID]bool
-
-	// get all Fi.O message
-	GetRoute() map[ID]map[ID]RouteMsg
-
 	// String describes the Graph.
 	String() string
-
-	ReSetRoute(rd io.Reader, graphID string)
-
-	ClearInner()
 }
 
 // graph is an internal default graph type that
@@ -129,15 +115,17 @@ type graph struct {
 	// idToNodes stores all nodes.
 	idToNodes map[ID]Node
 
+	// master vertices
+	masterWorkers map[ID][]int
+
+	// mirror vertices
+	mirrorWorker map[ID]int
+
 	// nodeToSources maps a Node identifer to sources(parents) with edge weights.
 	nodeToSources map[ID]map[ID]float64
 
 	// nodeToTargets maps a Node identifer to targets(children) with edge weights.
 	nodeToTargets map[ID]map[ID]float64
-
-	// Fi.O of graph i
-	tag map[ID]bool
-	route map[ID]map[ID]RouteMsg
 }
 
 // newGraph returns a new graph.
@@ -146,61 +134,18 @@ func newGraph() *graph {
 		idToNodes:     make(map[ID]Node),
 		nodeToSources: make(map[ID]map[ID]float64),
 		nodeToTargets: make(map[ID]map[ID]float64),
-		tag:           make(map[ID]bool),
-		route:         make(map[ID]map[ID]RouteMsg),
-		//
-		// without this
-		// panic: assignment to entry in nil map
+		masterWorkers: make(map[ID][]int),
+		mirrorWorker:  make(map[ID]int),
 	}
 }
 
-func (g *graph) ClearInner() {
-	for v := range g.nodeToSources {
-		delete(g.nodeToSources, v)
-	}
-	g.nodeToSources = nil
-
-	for v := range g.nodeToTargets {
-		delete(g.nodeToTargets, v)
-	}
-	g.nodeToTargets = nil
-}
-
-func (g *graph) ReSetRoute(rd io.Reader, graphId string)  {
-	for key := range g.route {
-		delete(g.route, key)
-	}
-	g.route = nil
-	if tools.LoadFromJson {
-		dec := json.NewDecoder(rd)
-		//          GraphXF.I/O    srcID      dstID   attr
-		js := make(map[string]map[string]map[string]string)
-		for {
-			if err := dec.Decode(&js); err == io.EOF {
-				break
-			}
-		}
-		routeMap := js["Graph"+ graphId +"F.I"]
-		g.route = resolveJsonMap(routeMap, false)
-	} else {
-		route, _ := LoadRouteMsgFromTxt(rd, false, g)
-		g.route = route
-	}
-}
 
 func (g *graph) Init() {
-	// (X) g = newGraph()
-	// this only updates the pointer
-	//
-	//
-	// (X) *g = *newGraph()
-	// assignment copies lock value
-
 	g.idToNodes = make(map[ID]Node)
 	g.nodeToSources = make(map[ID]map[ID]float64)
 	g.nodeToTargets = make(map[ID]map[ID]float64)
-	g.tag = make(map[ID]bool)
-	g.route = make(map[ID]map[ID]RouteMsg)
+	g.masterWorkers = make(map[ID][]int)
+	g.mirrorWorker = make(map[ID]int)
 }
 
 func (g *graph) GetNodeCount() int {
@@ -242,6 +187,20 @@ func (g *graph) AddNode(nd Node) bool {
 	return true
 }
 
+func (g *graph) AddMaster(id ID, routeMsg []int) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.masterWorkers[id] = routeMsg
+}
+
+func (g *graph) AddMirror(id ID, masterWR int) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.mirrorWorker[id] = masterWR
+}
+
 func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -272,68 +231,9 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 	return nil
 }
 
-func (g *graph) ReplaceEdge(id1, id2 ID, weight float64) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if !g.unsafeExistID(id1) {
-		return fmt.Errorf("%s does not exist in the graph.", id1)
-	}
-	if !g.unsafeExistID(id2) {
-		return fmt.Errorf("%s does not exist in the graph.", id2)
-	}
-
-	if _, ok := g.nodeToTargets[id1]; ok {
-		g.nodeToTargets[id1][id2] = weight
-	} else {
-		tmap := make(map[ID]float64)
-		tmap[id2] = weight
-		g.nodeToTargets[id1] = tmap
-	}
-	if _, ok := g.nodeToSources[id2]; ok {
-		g.nodeToSources[id2][id1] = weight
-	} else {
-		tmap := make(map[ID]float64)
-		tmap[id1] = weight
-		g.nodeToSources[id2] = tmap
-	}
-	return nil
-}
-
-func (g *graph) DeleteEdge(id1, id2 ID) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if !g.unsafeExistID(id1) {
-		return fmt.Errorf("%s does not exist in the graph.", id1)
-	}
-	if !g.unsafeExistID(id2) {
-		return fmt.Errorf("%s does not exist in the graph.", id2)
-	}
-
-	if _, ok := g.nodeToTargets[id1]; ok {
-		if _, ok := g.nodeToTargets[id1][id2]; ok {
-			delete(g.nodeToTargets[id1], id2)
-		}
-	}
-	if _, ok := g.nodeToSources[id2]; ok {
-		if _, ok := g.nodeToSources[id2][id1]; ok {
-			delete(g.nodeToSources[id2], id1)
-		}
-	}
-	return nil
-}
-
 func (g *graph) GetWeight(id1, id2 ID) (float64, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-
-	if !g.unsafeExistID(id1) {
-		return 0, fmt.Errorf("%s does not exist in the graph.", id1)
-	}
-	if !g.unsafeExistID(id2) {
-		return 0, fmt.Errorf("%s does not exist in the graph.", id2)
-	}
 
 	if _, ok := g.nodeToTargets[id1]; ok {
 		if v, ok := g.nodeToTargets[id1][id2]; ok {
@@ -377,6 +277,19 @@ func (g *graph) GetTargets(id ID) (map[ID]Node, error) {
 	return rs, nil
 }
 
+func (g *graph) GetMasters() map[ID][]int {
+	return g.masterWorkers
+}
+
+func (g *graph) GetMirrors() map[ID]int {
+	return g.mirrorWorker
+}
+
+func (g *graph) IsMaster(id ID) bool {
+	_, ok := g.masterWorkers[id]
+	return ok
+}
+
 func (g *graph) String() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -392,15 +305,6 @@ func (g *graph) String() string {
 	return buf.String()
 }
 
-
-func (g *graph) GetTag() map[ID]bool {
-	return g.tag
-}
-
-
-func (g *graph) GetRoute() map[ID]map[ID]RouteMsg {
-	return g.route
-}
 
 // pattern graph should be constructed as the format
 // NodeId type numberOfSuffixNodes id1 id2 id3 ...
@@ -425,74 +329,15 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 		num, _ := strconv.Atoi(msg[2])
 		for i := 3; i < num + 3; i += 1 {
 			v, _ := strconv.Atoi(msg[i])
-			g.AddEdge(StringID(nodeId), StringID(v), 1)
+			g.AddEdge(ID(nodeId), ID(v), 1)
 		}
-
 	}
 
 	return g, nil
 }
 
-func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (Graph, error) {
-	js := make(map[string]map[StringID]map[string]float64)
 
-	//var json = jsoniter.ConfigCompatibleWithStandardLibrary
-
-	dec := json.NewDecoder(rd)
-	for {
-		if err := dec.Decode(&js); err == io.EOF {
-			break
-		} else if err != nil {
-			fmt.Println("load graph error")
-			log.Fatal(err)
-			return nil, err
-		}
-	}
-	if _, ok := js["Graph"+graphID]; !ok {
-		return nil, fmt.Errorf("%s does not exist", graphID)
-	}
-	gmap := js["Graph"+graphID]
-
-	g := newGraph()
-	for id1, mm := range gmap {
-
-		nd1 := g.GetNode(StringID(id1))
-		if nd1 == nil {
-			intId := id1
-			nd1 = NewNode(int64(id1), int64(intId % tools.GraphSimulationTypeModel))
-			if ok := g.AddNode(nd1); !ok {
-				return nil, fmt.Errorf("%s already exists", nd1)
-			}
-		}
-		for id2, weight := range mm {
-			if id2 == "attr" {
-				g.idToNodes[StringID(id1)] = NewNode(int64(id1), int64(weight))
-			} else {
-				id2Int, _ := strconv.Atoi(id2)
-				nd2 := g.GetNode(StringID(id2Int))
-				if nd2 == nil {
-					intId, _ := strconv.Atoi(id2)
-					nd2 = NewNode(int64(id2Int), int64(intId % tools.GraphSimulationTypeModel))
-					if ok := g.AddNode(nd2); !ok {
-						return nil, fmt.Errorf("%s already exists", nd2)
-					}
-				}
-				g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
-			}
-		}
-	}
-
-	tag, route, err := LoadRouteMsgFromJson(partitonReader, graphID)
-	if err != nil {
-		return nil, err
-	}
-	g.tag = tag
-	g.route = route
-
-	return g, nil
-}
-
-func NewGraphFromTXT(rd io.Reader, fxord io.Reader) (Graph, error) {
+func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, error) {
 	g := newGraph()
 	reader := bufio.NewReader(rd)
 	for {
