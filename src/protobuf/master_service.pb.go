@@ -18,6 +18,8 @@
 		FinishResponse
 		ShutDownRequest
 		ShutDownResponse
+		ExchangeRequest
+		ExchangeResponse
 		PEvalRequest
 		PEvalResponse
 		IncEvalRequest
