@@ -11,6 +11,7 @@ option (gogoproto.goproto_getters_all) = false;
 service Master{
   rpc Register(RegisterRequest) returns (RegisterResponse) {}
   rpc SuperStepFinish(FinishRequest) returns (FinishResponse) {}
+  rpc CalculateFinish(CalculateFinishRequest) returns(CalculateFinishResponse) {}
 }
 
 message RegisterRequest {
@@ -18,6 +19,14 @@ message RegisterRequest {
 }
 
 message RegisterResponse {
+  bool ok = 1;
+}
+
+message CalculateFinishRequest {
+  int32 workerIndex = 1;
+}
+
+message CalculateFinishResponse {
   bool ok = 1;
 }
 

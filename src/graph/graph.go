@@ -206,8 +206,8 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 	defer g.mu.Unlock()
 
 	if _, ok := g.nodeToTargets[id1]; ok {
-		if v, ok2 := g.nodeToTargets[id1][id2]; ok2 {
-			g.nodeToTargets[id1][id2] = v + weight
+		if _, ok2 := g.nodeToTargets[id1][id2]; ok2 {
+			g.nodeToTargets[id1][id2] = weight
 		} else {
 			g.nodeToTargets[id1][id2] = weight
 		}
@@ -217,8 +217,8 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 		g.nodeToTargets[id1] = tmap
 	}
 	if _, ok := g.nodeToSources[id2]; ok {
-		if v, ok2 := g.nodeToSources[id2][id1]; ok2 {
-			g.nodeToSources[id2][id1] = v + weight
+		if _, ok2 := g.nodeToSources[id2][id1]; ok2 {
+			g.nodeToSources[id2][id1] = weight
 		} else {
 			g.nodeToSources[id2][id1] = weight
 		}
@@ -339,7 +339,7 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 
 func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, error) {
 	g := newGraph()
-	reader := bufio.NewReader(rd)
+	reader := bufio.NewReader(G)
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil || io.EOF == err {
@@ -356,15 +356,15 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 			log.Fatal("parse dst node id error")
 		}
 
-		srcId := StringID(parseSrc)
-		dstId := StringID(parseDst)
+		srcId := ID(parseSrc)
+		dstId := ID(parseDst)
 
-		/*weight, err := strconv.ParseFloat(paras[3], 64)
+		weight, err := strconv.ParseFloat(paras[3], 64)
 		if err != nil {
-			fmt.Println("zs-log: " + paras[3])
+			//fmt.Println("zs-log: " + paras[3])
 			log.Fatal("parse weight error")
-		}*/
-		weight := 0.0
+		}
+		//weight := 0.0
 
 		nd1 := g.GetNode(srcId)
 		if nd1 == nil {
@@ -381,22 +381,67 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 				return nil, fmt.Errorf("%s already exists", nd2)
 			}
 		}
-		g.ReplaceEdge(nd1.ID(), nd2.ID(), weight)
+		g.AddEdge(nd1.ID(), nd2.ID(), weight)
 	}
 
+	master := bufio.NewReader(Master)
+	for {
+		line, err := master.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 
-	tag, err1 := LoadTagFromTxt(fxord)
-	if err1 != nil {
-		return nil, err1
+		parseMaster, err := strconv.ParseInt(paras[0], 10, 64)
+		if err != nil {
+			log.Fatal("parse master node id error")
+		}
+
+		masterId := ID(parseMaster)
+
+		// 如果是isolated的点
+		masterNode := g.GetNode(masterId)
+		if masterNode == nil {
+			intId := masterId.IntVal()
+			masterNode = NewNode(intId, int64(intId%tools.GraphSimulationTypeModel))
+			if ok := g.AddNode(masterNode); !ok {
+				return nil, fmt.Errorf("%s already exists", intId)
+			}
+		}
+
+		mirrorWorkers := make([]int, 0)
+		for i := 1; i < len(paras); i++ {
+			parseWorker, err := strconv.ParseInt(paras[i], 10, 64)
+			if err != nil {
+				log.Fatal("parse worker id error")
+			}
+			mirrorWorkers = append(mirrorWorkers, int(parseWorker))
+		}
+
+		g.AddMaster(masterId, mirrorWorkers)
 	}
 
-	route, err2 := LoadRouteMsgFromTxt(fxord, true, g)
-	if err2 != nil {
-		return nil, err2
-	}
+	mirror := bufio.NewReader(Mirror)
+	for {
+		line, err := mirror.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 
-	g.tag = tag
-	g.route = route
+		parseMirror, err := strconv.ParseInt(paras[0], 10, 64)
+		if err != nil {
+			log.Fatal("parse mirror node id error")
+		}
+		mirrorId := ID(parseMirror)
+
+		MasterWorker, err := strconv.ParseInt(paras[1], 10, 64)
+		if err != nil {
+			log.Fatal("parse master worker id error")
+		}
+
+		g.AddMirror(mirrorId, int(MasterWorker))
+	}
 
 	return g, nil
 }
