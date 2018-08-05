@@ -13,6 +13,7 @@ service Worker {
 	rpc ShutDown (shutDownRequest) returns (shutDownResponse) {}
 	rpc PEval (pEvalRequest) returns (pEvalResponse) {}
 	rpc IncEval (incEvalRequest) returns (incEvalResponse) {}
+	rpc ExchangeMessage (exchangeRequest) returns (exchangeResponse) {}
 	rpc Assemble (assembleRequest) returns (assembleResponse) {}
 	//service to worker
 	rpc SSSPSend (sSSPMessageRequest) returns (sSSPMessageResponse) {}
@@ -24,6 +25,13 @@ message shutDownRequest {
 }
 message shutDownResponse {
 	int32 iterationNum = 1;
+}
+
+message exchangeRequest {
+}
+
+message exchangeResponse {
+	bool ok = 1;
 }
 
 message pEvalRequest {

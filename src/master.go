@@ -195,18 +195,39 @@ func (mr *Master) PEval() bool {
 			go func(id int) {
 				defer mr.wg.Done()
 
-			/*	endpoint := mr.workersAddress[id]
-				conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
-				if err != nil {
-					panic(err)
-				}
-				defer conn.Close()
-*/
 				handler := mr.workerConn[id]
 				client := pb.NewWorkerClient(handler)
 				//pevalRequest := &pb.PEvalRequest{}
 				if pevalResponse, err := client.PEval(context.Background(), &pb.PEvalRequest{}); err != nil {
 					log.Printf("Fail to execute PEval %d\n", id)
+					log.Fatal(err)
+					//TODO: still something todo: Master Just terminate, how about the Worker
+				} else if !pevalResponse.Ok {
+					log.Printf("This worker %v dosen't participate in this round\n!", id)
+				}
+			}(j)
+		}
+
+		mr.wg.Wait()
+	}
+	return true
+}
+
+func (mr *Master) MessageExchange() bool {
+	batch := (mr.workerNum + tools.MasterConnPoolSize - 1) / tools.MasterConnPoolSize
+
+	for i := 1; i <= batch; i++ {
+		for j := (i-1)*tools.MasterConnPoolSize + 1; j <= mr.workerNum && j <= i*tools.MasterConnPoolSize; j++ {
+			log.Printf("Master: start %d MessageExchange", j)
+			mr.wg.Add(1)
+			go func(id int) {
+				defer mr.wg.Done()
+
+				handler := mr.workerConn[id]
+				client := pb.NewWorkerClient(handler)
+				//pevalRequest := &pb.PEvalRequest{}
+				if exchangeResponse, err := client.MessageExchange(context.Background(), &pb.ExchangeRequest{}); err != nil {
+					log.Printf("Fail to execute Exchange %d\n", id)
 					log.Fatal(err)
 					//TODO: still something todo: Master Just terminate, how about the Worker
 				} else if !pevalResponse.Ok {
@@ -246,6 +267,10 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	log.Printf("iteration num:%v\n", mr.totalIteration)
 
 	return &pb.FinishResponse{Ok:true}, nil
+}
+
+func (mr *Master) CalculateFinish(ctx context.Context, args *pb.CalculateFinishRequest) (r *pb.CalculateFinishResponse, err error) {
+
 }
 
 
