@@ -131,6 +131,8 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair)
 	aggregatorReducedSize := int32(len(updated))
 
 	for _, ssspMsg := range updated {
+
+		log.Printf("update message: id:%v, val:%v\n", ssspMsg.NodeId, ssspMsg.Distance)
 		if ssspMsg.Distance < distance[ssspMsg.NodeId] {
 			startPair := &Pair{
 				NodeId:   ssspMsg.NodeId,
