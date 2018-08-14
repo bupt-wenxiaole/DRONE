@@ -42,6 +42,7 @@ type Master struct {
 
 	finishMap map[int32]bool
 	finishDone chan bool
+
 	allSuperStepFinish bool
 
 	totalIteration int64
@@ -226,11 +227,11 @@ func (mr *Master) MessageExchange() bool {
 				handler := mr.workerConn[id]
 				client := pb.NewWorkerClient(handler)
 				//pevalRequest := &pb.PEvalRequest{}
-				if exchangeResponse, err := client.MessageExchange(context.Background(), &pb.ExchangeRequest{}); err != nil {
+				if exchangeResponse, err := client.ExchangeMessage(context.Background(), &pb.ExchangeRequest{}); err != nil {
 					log.Printf("Fail to execute Exchange %d\n", id)
 					log.Fatal(err)
 					//TODO: still something todo: Master Just terminate, how about the Worker
-				} else if !pevalResponse.Ok {
+				} else if !exchangeResponse.Ok {
 					log.Printf("This worker %v dosen't participate in this round\n!", id)
 				}
 			}(j)
@@ -270,7 +271,15 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 }
 
 func (mr *Master) CalculateFinish(ctx context.Context, args *pb.CalculateFinishRequest) (r *pb.CalculateFinishResponse, err error) {
+	mr.Lock()
+	defer mr.Unlock()
 
+	mr.finishMap[args.WorkerIndex] = true
+
+	if len(mr.finishMap) == mr.workerNum {
+		mr.finishDone <- true
+	}
+	return &pb.CalculateFinishResponse{Ok:true}, nil
 }
 
 
@@ -355,6 +364,10 @@ func RunJob(jobName string) {
 	mr.ClearSuperStepMessgae()
 	mr.PEval()
 	<-mr.finishDone
+
+	mr.ClearSuperStepMessgae()
+	mr.MessageExchange()
+	<-mr.finishDone
 	log.Println("end PEval")
 
 	log.Println("start IncEval")
@@ -367,6 +380,10 @@ func RunJob(jobName string) {
 		if !finish {
 			break
 		}
+
+		mr.ClearSuperStepMessgae()
+		mr.MessageExchange()
+		<-mr.finishDone
 	}
 	log.Println("end IncEval")
 
