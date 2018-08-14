@@ -8,7 +8,7 @@ const (
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 
-	ConfigPath = "test_data/config.txt"
+	ConfigPath = "../test_data/config.txt"
 
 	//PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
