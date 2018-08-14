@@ -117,7 +117,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID) 
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updatedId map[graph.ID]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
 	if len(updated) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
@@ -131,16 +131,20 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair)
 	aggregatorReducedSize := int32(len(updated))
 
 	for _, ssspMsg := range updated {
-
 		log.Printf("update message: id:%v, val:%v\n", ssspMsg.NodeId, ssspMsg.Distance)
 		if ssspMsg.Distance < distance[ssspMsg.NodeId] {
-			startPair := &Pair{
-				NodeId:   ssspMsg.NodeId,
-				Distance: ssspMsg.Distance,
-			}
-			heap.Push(&pq, startPair)
 			distance[ssspMsg.NodeId] = ssspMsg.Distance
+			updatedId[ssspMsg.NodeId] = true
 		}
+	}
+
+	for id := range updatedId {
+		dis := distance[id]
+		startPair := &Pair{
+			NodeId:   id,
+			Distance: dis,
+		}
+		heap.Push(&pq, startPair)
 	}
 
 	var iterationNum int64 = 0

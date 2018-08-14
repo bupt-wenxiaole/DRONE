@@ -63,6 +63,7 @@ type SSSPWorker struct {
 	//exchangeMsg map[graph.ID]float64
 	updatedBuffer     []*algorithm.Pair
 	exchangeBuffer    []*algorithm.Pair
+	updateId          map[graph.ID]bool
 
 	iterationNum int
 	stopChannel  chan bool
@@ -196,9 +197,10 @@ func (w *SSSPWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEva
 func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updateId)
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
+	w.updateId = make(map[graph.ID]bool)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
@@ -269,6 +271,7 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 		}
 
 		w.distance[id] = dis
+		w.updateId[id] = true
 		if w.g.IsMaster(id) {
 			updated[id] = true
 		}
@@ -324,6 +327,7 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.peers = make([]string, 0)
 	w.updatedBuffer = make([]*algorithm.Pair, 0)
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
+	w.updateId = make(map[graph.ID]bool)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
