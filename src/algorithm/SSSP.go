@@ -163,6 +163,8 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 
 		if !g.IsMaster(srcID) {
 			updatedMsg[srcID] = true
+
+			log.Printf("inceval update mirror id: %v\n", srcID)
 		}
 
 		targets, _ := g.GetTargets(srcID)
