@@ -401,6 +401,8 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 
 		masterId := ID(parseMaster)
 
+		log.Printf("masterId: %v", masterId)
+
 		// 如果是isolated的点
 		masterNode := g.GetNode(masterId)
 		if masterNode == nil {
@@ -441,6 +443,8 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 		if err != nil {
 			log.Fatal("parse master worker id error")
 		}
+
+		log.Printf("mirrorId: %v MasterWorker:%v\n", mirrorId, MasterWorker)
 
 		g.AddMirror(mirrorId, int(MasterWorker))
 	}
