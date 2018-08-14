@@ -118,7 +118,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID) 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
 func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updatedId map[graph.ID]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
-	if len(updated) == 0 {
+	if len(updated) == 0 && len(updatedId) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
 
