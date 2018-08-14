@@ -139,6 +139,8 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 	}
 
 	for id := range updatedId {
+		log.Printf("updatedId: %v\n", id)
+
 		dis := distance[id]
 		startPair := &Pair{
 			NodeId:   id,

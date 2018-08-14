@@ -266,12 +266,15 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 		id := pair.NodeId
 		dis := pair.Distance
 
+		log.Printf("updated buffer: id:%v, dis:%v\n", id, dis)
+
 		if dis >= w.distance[id] {
 			continue
 		}
 
 		w.distance[id] = dis
 		w.updateId[id] = true
+		//log.Printf("updated id: %v\n", id)
 		if w.g.IsMaster(id) {
 			updated[id] = true
 		}
