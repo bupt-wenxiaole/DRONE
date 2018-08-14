@@ -55,6 +55,7 @@ message assembleResponse {
 }
 message sSSPMessageRequest {
 	repeated sSSPMessageStruct pair = 1;
+	bool calculateStep = 2;
 }
 message sSSPMessageStruct {
 	int64 nodeID = 1;
@@ -64,6 +65,7 @@ message sSSPMessageResponse {
 }
 message simMessageRequest {
     repeated simMessageStruct pair = 1;
+	bool calculateStep = 2;
 }
 message simMessageResponse {
 }
@@ -74,6 +76,7 @@ message simMessageStruct {
 
 message pRMessageRequest {
     repeated pRMessageStruct pair = 1;
+	bool calculateStep = 2;
 }
 message pRMessageResponse {
 }
