@@ -137,6 +137,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair)
 				Distance: ssspMsg.Distance,
 			}
 			heap.Push(&pq, startPair)
+			distance[ssspMsg.NodeId] = ssspMsg.Distance
 		}
 	}
 
