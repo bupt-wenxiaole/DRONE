@@ -1,5 +1,8 @@
 package algorithm
 
+import "graph"
+
+/*
 import (
 	"graph"
 	"time"
@@ -7,13 +10,13 @@ import (
 	"tools"
 	"Set"
 )
-
+*/
 type SimPair struct {
 	PatternNode graph.ID
 	DataNode    graph.ID
 }
 
-
+/*
 // generate post and pre set for data graph nodes(include FO nodes)
 func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set.Set, map[graph.ID]Set.Set) {
 	preSet := make(map[graph.ID]Set.Set)
@@ -221,20 +224,20 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		}
 	}
 	messageMap = nil
-	/*for v, msgs := range g.GetFIs() {
-		for u := range sim {
-			if !sim[u].Has(v) && u.IntVal() == v.IntVal() % tools.GraphSimulationTypeModel {
-				for _, msg := range msgs {
-					updatePairNum++
-					partitionId := msg.RoutePartition()
-					if _, ok := reducedMsg[partitionId]; !ok {
-						reducedMsg[partitionId] = make([]*SimPair, 0)
-					}
-					reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: u, DataNode: v})
-				}
-			}
-		}
-	}*/
+	//for v, msgs := range g.GetFIs() {
+	//	for u := range sim {
+	//		if !sim[u].Has(v) && u.IntVal() == v.IntVal() % tools.GraphSimulationTypeModel {
+	//			for _, msg := range msgs {
+	//				updatePairNum++
+	//				partitionId := msg.RoutePartition()
+	//				if _, ok := reducedMsg[partitionId]; !ok {
+	//					reducedMsg[partitionId] = make([]*SimPair, 0)
+	//				}
+	//				reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: u, DataNode: v})
+	//			}
+	//		}
+	//	}
+	//}
 
 
 	combineTime := time.Since(combineStart).Seconds()
@@ -358,3 +361,4 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 
 	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, 0, int32(len(messages)), int32(len(messages))
 }
+*/

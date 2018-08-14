@@ -2,17 +2,15 @@ package tools
 
 const (
 	//ResultPath = "/home/acgict/result/"
-	ResultPath = "/mnt/nfs/xwen/generate_graph/"
+	ResultPath = "/mnt/nfs/zpltys/test/"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/generate_graph/"
+	NFSPath = "/mnt/nfs/zpltys/test/"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 
-	LoadFromJson = false
-
 	ConfigPath = "config.txt"
 
-	PatternPath = "pattern.txt"
+	//PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
 
 	RPCSendSize = 10000

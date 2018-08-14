@@ -162,7 +162,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 			continue
 		}
 		reduceMsg[i] = make([]*PRMessage, 0)
-		reduceMsg[i] = append(reduceMsg[i], &PRMessage{PRValue:still,ID:graph.StringID(-1)})
+		reduceMsg[i] = append(reduceMsg[i], &PRMessage{PRValue:still,ID:graph.ID(-1)})
 	}
 
 	//log.Printf("still send:%v\n", still)

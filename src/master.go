@@ -230,13 +230,11 @@ func (mr *Master) MessageExchange() bool {
 				if exchangeResponse, err := client.ExchangeMessage(context.Background(), &pb.ExchangeRequest{}); err != nil {
 					log.Printf("Fail to execute Exchange %d\n", id)
 					log.Fatal(err)
-					//TODO: still something todo: Master Just terminate, how about the Worker
 				} else if !exchangeResponse.Ok {
 					log.Printf("This worker %v dosen't participate in this round\n!", id)
 				}
 			}(j)
 		}
-
 		mr.wg.Wait()
 	}
 	return true
@@ -364,10 +362,7 @@ func RunJob(jobName string) {
 	mr.ClearSuperStepMessgae()
 	mr.PEval()
 	<-mr.finishDone
-
-	mr.ClearSuperStepMessgae()
 	mr.MessageExchange()
-	<-mr.finishDone
 	log.Println("end PEval")
 
 	log.Println("start IncEval")
@@ -380,10 +375,7 @@ func RunJob(jobName string) {
 		if !finish {
 			break
 		}
-
-		mr.ClearSuperStepMessgae()
 		mr.MessageExchange()
-		<-mr.finishDone
 	}
 	log.Println("end IncEval")
 

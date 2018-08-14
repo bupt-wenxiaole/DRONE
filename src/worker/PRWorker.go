@@ -1,5 +1,7 @@
 package worker
 
+/*
+
 import (
 	"algorithm"
 	"bufio"
@@ -110,9 +112,6 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 	var nodeNum int64
 	nodeNum, w.prVal = algorithm.PageRank_PEVal(w.g, w.prVal, w.partitionNum)
 
-	/*for id, val := range w.prVal {
-		log.Printf("PEVal id:%v prval:%v\n", id, val)
-	}*/
 
 	w.totalVertexNum = nodeNum
 	for partitionId := 1; partitionId <= w.partitionNum; partitionId++ {
@@ -136,7 +135,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	w.updated = w.receiveBuffer
 	w.receiveBuffer = make(map[int64]float64, 0)
 	w.UnLock()
-/*
+
 	w.iterationNum++
 	if w.iterationNum == 1 {
 		w.totalVertexNum += int64(w.updated[-1])
@@ -174,7 +173,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 	}
 	wg.Wait()
 	//fullSendDuration = time.Since(fullSendStart).Seconds()
-*/
+
 	return &pb.IncEvalResponse{}, nil
 }
 
@@ -300,6 +299,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 		log.Println("can't load graph")
 	}
 	//w.outerMsg = algorithm.GenerateOuterMsg(w.g.GetFOs())
+
 	return w
 }
 
@@ -336,3 +336,4 @@ func RunPRWorker(id, partitionNum int) {
 	<-w.stopChannel
 	log.Println("finish task")
 }
+*/

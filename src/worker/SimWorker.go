@@ -1,4 +1,5 @@
 package worker
+/*
 
 import (
 	"algorithm"
@@ -159,13 +160,6 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
-	Client := pb.NewMasterClient(masterHandle)
-	defer masterHandle.Close()
-	*/
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
 
@@ -191,13 +185,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	if !isMessageToSend {
-		/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-		if err != nil {
-			log.Fatal(err)
-		}
-		Client := pb.NewMasterClient(masterHandle)
-		defer masterHandle.Close()
-        */
+
 		masterHandle := w.grpcHandlers[0]
 		Client := pb.NewMasterClient(masterHandle)
 
@@ -259,13 +247,6 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
-	/*masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
-	Client := pb.NewMasterClient(masterHandle)
-	defer masterHandle.Close()
-	*/
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
 
@@ -499,3 +480,5 @@ func RunSimWorker(id, partitionNum int) {
 	<-w.stopChannel
 	log.Println("finish task")
 }
+
+*/
