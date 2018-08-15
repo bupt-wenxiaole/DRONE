@@ -154,11 +154,11 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 
 	if w.selfId == 1 {
 		log.Println("my rank is 1")
-		/*for v := range w.g.GetNodes() {
+		for v := range w.g.GetNodes() {
 			startId = v
 			break
-		}*/
-		startId = graph.ID(3)
+		}
+		//startId = graph.ID(3)
 	}
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId)
 
