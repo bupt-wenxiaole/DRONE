@@ -239,7 +239,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 func (w *SSSPWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
 	go w.incEval(args, w.selfId)
-	return &pb.IncEvalResponse{}, nil
+	return &pb.IncEvalResponse{Update:true}, nil
 }
 
 func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {

@@ -311,7 +311,6 @@ func (mr *Master) IncEval(step int) bool {
 		}
 		mr.wg.Wait()
 	}
-
 	return true
 }
 
@@ -372,6 +371,7 @@ func RunJob(jobName string) {
 		mr.ClearSuperStepMessgae()
 		mr.IncEval(step)
 		finish :=<- mr.finishDone
+		log.Printf("finish: %v\n", finish)
 		if !finish {
 			break
 		}
