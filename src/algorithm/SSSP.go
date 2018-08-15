@@ -160,19 +160,19 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 			continue
 		}
 
-		if !g.IsMaster(srcID) {
-			updateMirror[srcID] = true
-			log.Printf("inceval update mirror id: %v\n", srcID)
-		} else {
-			updateMaster[srcID] = true
-		}
-
 		targets, _ := g.GetTargets(srcID)
 		for disID := range targets {
 			weight, _ := g.GetWeight(srcID, disID)
 			if distance[disID] > nowDis+weight {
 				heap.Push(&pq, &Pair{NodeId: disID, Distance: nowDis + weight})
 				distance[disID] = nowDis + weight
+
+				if !g.IsMaster(disID) {
+					updateMirror[disID] = true
+					log.Printf("inceval update mirror id: %v\n", disID)
+				} else {
+					updateMaster[disID] = true
+				}
 			}
 		}
 	}
