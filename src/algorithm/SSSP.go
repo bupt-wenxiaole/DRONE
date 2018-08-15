@@ -194,5 +194,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 
 	updatePairNum := int32(len(updatedMsg))
 	dstPartitionNum := int32(len(messageMap))
+
+	log.Printf("zs-log: messageMap:%v\n", messageMap)
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }

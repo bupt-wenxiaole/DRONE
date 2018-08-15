@@ -200,6 +200,8 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updateId)
 
+	log.Printf("zs-log: isMessageToSend:%v\n", isMessageToSend)
+
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
 	w.updateId = make(map[graph.ID]bool)
 	var fullSendStart time.Time
