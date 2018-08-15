@@ -63,7 +63,9 @@ type SSSPWorker struct {
 	//exchangeMsg map[graph.ID]float64
 	updatedBuffer     []*algorithm.Pair
 	exchangeBuffer    []*algorithm.Pair
-	updateId          map[graph.ID]bool
+	updatedMaster     map[graph.ID]bool
+	updatedMirror     map[graph.ID]bool
+	updatedByMessage  map[graph.ID]bool
 
 	iterationNum int
 	stopChannel  chan bool
@@ -197,13 +199,14 @@ func (w *SSSPWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEva
 
 func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
+
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updateId)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
 
 	log.Printf("zs-log: isMessageToSend:%v\n", isMessageToSend)
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
-	w.updateId = make(map[graph.ID]bool)
+	w.updatedMirror = make(map[graph.ID]bool)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
@@ -263,7 +266,7 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 }
 
 func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
-	updated := make(map[graph.ID]bool)
+	//updated := make(map[graph.ID]bool)
 
 	for _, pair := range w.updatedBuffer {
 		id := pair.NodeId
@@ -276,17 +279,17 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 		}
 
 		w.distance[id] = dis
-		w.updateId[id] = true
+		w.updatedByMessage[id] = true
 		//log.Printf("updated id: %v\n", id)
 		if w.g.IsMaster(id) {
-			updated[id] = true
+			w.updatedMaster[id] = true
 		}
 	}
 	w.updatedBuffer = make([]*algorithm.Pair, 0)
 
 	master := w.g.GetMasters()
 	messageMap := make(map[int][]*algorithm.Pair)
-	for id := range updated {
+	for id := range w.updatedMaster {
 		for _, partition := range master[id] {
 			if _, ok := messageMap[partition]; !ok {
 				messageMap[partition] = make([]*algorithm.Pair, 0)
@@ -296,6 +299,7 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 	}
 
 	w.SSSPMessageSend(messageMap, false)
+	w.updatedMaster = make(map[graph.ID]bool)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
@@ -333,7 +337,9 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.peers = make([]string, 0)
 	w.updatedBuffer = make([]*algorithm.Pair, 0)
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
-	w.updateId = make(map[graph.ID]bool)
+	w.updatedMaster = make(map[graph.ID]bool)
+	w.updatedMirror = make(map[graph.ID]bool)
+	w.updatedByMessage = make(map[graph.ID]bool)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)

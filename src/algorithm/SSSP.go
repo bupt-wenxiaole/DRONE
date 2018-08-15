@@ -117,13 +117,12 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID) 
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updatedId map[graph.ID]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
-	if len(updated) == 0 && len(updatedId) == 0 {
+func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, updatedByMessage map[graph.ID]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+	if len(updated) == 0 && len(updatedByMessage) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
 
 	pq := make(PriorityQueue, 0)
-	updatedMsg := make(map[graph.ID]bool)
 
 	aggregatorOriSize := int32(len(updated))
 	aggregateStart := time.Now()
@@ -134,12 +133,12 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 		log.Printf("update message: id:%v, val:%v\n", ssspMsg.NodeId, ssspMsg.Distance)
 		if ssspMsg.Distance < distance[ssspMsg.NodeId] {
 			distance[ssspMsg.NodeId] = ssspMsg.Distance
-			updatedId[ssspMsg.NodeId] = true
+			updatedByMessage[ssspMsg.NodeId] = true
 		}
 	}
 
-	for id := range updatedId {
-		log.Printf("updatedId: %v\n", id)
+	for id := range updatedByMessage {
+		//log.Printf("updatedId: %v\n", id)
 
 		dis := distance[id]
 		startPair := &Pair{
@@ -162,9 +161,10 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 		}
 
 		if !g.IsMaster(srcID) {
-			updatedMsg[srcID] = true
-
+			updateMirror[srcID] = true
 			log.Printf("inceval update mirror id: %v\n", srcID)
+		} else {
+			updateMaster[srcID] = true
 		}
 
 		targets, _ := g.GetTargets(srcID)
@@ -181,7 +181,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 
 	messageMap := make(map[int][]*Pair)
 	mirrors := g.GetMirrors()
-	for id := range updatedMsg {
+	for id := range updateMirror {
 		partition := mirrors[id]
 		dis := distance[id]
 
@@ -194,9 +194,9 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 
 	combineTime := time.Since(combineStartTime).Seconds()
 
-	updatePairNum := int32(len(updatedMsg))
+	updatePairNum := int32(len(updateMirror))
 	dstPartitionNum := int32(len(messageMap))
 
 	//log.Printf("zs-log: messageMap:%v\n", messageMap)
-	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
+	return len(messageMap) != 0 || len(updateMaster) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }
