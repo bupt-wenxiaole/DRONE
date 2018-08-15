@@ -274,11 +274,12 @@ func (mr *Master) CalculateFinish(ctx context.Context, args *pb.CalculateFinishR
 	mr.Lock()
 	defer mr.Unlock()
 
-	mr.finishMap[args.WorkerIndex] = true
+/*	mr.finishMap[args.WorkerIndex] = true
 
 	if len(mr.finishMap) == mr.workerNum {
 		mr.finishDone <- true
 	}
+*/
 	return &pb.CalculateFinishResponse{Ok:true}, nil
 }
 

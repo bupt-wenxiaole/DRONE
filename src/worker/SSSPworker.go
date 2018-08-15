@@ -174,6 +174,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
+		return
 	} else {
 		fullSendStart = time.Now()
 		w.SSSPMessageSend(messages, true)
@@ -222,7 +223,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
-
+		return
 	} else {
 		fullSendStart = time.Now()
 		w.SSSPMessageSend(messages, true)
@@ -266,8 +267,6 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 }
 
 func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
-	//updated := make(map[graph.ID]bool)
-
 	for _, pair := range w.updatedBuffer {
 		id := pair.NodeId
 		dis := pair.Distance
