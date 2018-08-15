@@ -130,7 +130,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 	aggregatorReducedSize := int32(len(updated))
 
 	for _, ssspMsg := range updated {
-		log.Printf("update message: id:%v, val:%v\n", ssspMsg.NodeId, ssspMsg.Distance)
+		//log.Printf("update message: id:%v, val:%v\n", ssspMsg.NodeId, ssspMsg.Distance)
 		if ssspMsg.Distance < distance[ssspMsg.NodeId] {
 			distance[ssspMsg.NodeId] = ssspMsg.Distance
 			updatedByMessage[ssspMsg.NodeId] = true
@@ -169,7 +169,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 
 				if !g.IsMaster(disID) {
 					updateMirror[disID] = true
-					log.Printf("inceval update mirror id: %v\n", disID)
+					//log.Printf("inceval update mirror id: %v\n", disID)
 				} else {
 					updateMaster[disID] = true
 				}
@@ -185,7 +185,7 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 		partition := mirrors[id]
 		dis := distance[id]
 
-		log.Printf("nodeId: %v, Distance:%v\n", id, dis)
+		//log.Printf("nodeId: %v, Distance:%v\n", id, dis)
 		if _, ok := messageMap[partition]; !ok {
 			messageMap[partition] = make([]*Pair, 0)
 		}

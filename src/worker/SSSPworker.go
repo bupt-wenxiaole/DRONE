@@ -204,7 +204,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
 
-	log.Printf("zs-log: isMessageToSend:%v\n", isMessageToSend)
+	//log.Printf("zs-log: isMessageToSend:%v\n", isMessageToSend)
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
 	w.updatedMirror = make(map[graph.ID]bool)
@@ -272,7 +272,7 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 		id := pair.NodeId
 		dis := pair.Distance
 
-		log.Printf("updated buffer: id:%v, dis:%v\n", id, dis)
+		//log.Printf("updated buffer: id:%v, dis:%v\n", id, dis)
 
 		if dis == w.distance[id] {
 			continue
@@ -304,12 +304,10 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 }
 
 func (w *SSSPWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
-//	log.Println("send receive")
 	decodeMessage := make([]*algorithm.Pair, 0)
 
 	for _, msg := range args.Pair {
 		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.ID(msg.NodeID), Distance: msg.Distance})
-		log.Printf("received msg: nodeId:%v dis:%v\n", graph.ID(msg.NodeID), msg.Distance)
 	}
 	w.Lock()
 	if args.CalculateStep {

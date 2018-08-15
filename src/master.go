@@ -325,13 +325,6 @@ func (mr *Master) Assemble() bool {
 			mr.wg.Add(1)
 			go func(id int) {
 				defer mr.wg.Done()
-				/*endpoint := mr.workersAddress[id]
-				conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
-				if err != nil {
-					panic(err)
-				}
-				defer conn.Close()
-*/
 				handler := mr.workerConn[id]
 
 				client := pb.NewWorkerClient(handler)
@@ -374,7 +367,7 @@ func RunJob(jobName string) {
 		mr.ClearSuperStepMessgae()
 		mr.IncEval(step)
 		finish :=<- mr.finishDone
-		log.Printf("finish: %v\n", finish)
+	//	log.Printf("finish: %v\n", finish)
 		if !finish {
 			break
 		}
