@@ -248,6 +248,8 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	mr.finishMap[args.WorkerID] = args.MessageToSend
 	mr.allSuperStepFinish = mr.allSuperStepFinish || args.MessageToSend
 
+	log.Printf("zs-log: message to send:%v\n", args.MessageToSend)
+
 	if len(mr.finishMap) == mr.workerNum {
 		mr.finishDone <- mr.allSuperStepFinish
 	}
