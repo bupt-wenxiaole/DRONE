@@ -306,7 +306,7 @@ func (w *SSSPWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) 
 
 	for _, msg := range args.Pair {
 		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.ID(msg.NodeID), Distance: msg.Distance})
-		//log.Printf("received msg: nodeId:%v dis:%v\n", graph.StringID(msg.NodeID), msg.Distance)
+		log.Printf("received msg: nodeId:%v dis:%v\n", graph.ID(msg.NodeID), msg.Distance)
 	}
 	w.Lock()
 	if args.CalculateStep {
