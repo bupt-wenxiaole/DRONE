@@ -1,8 +1,5 @@
 package algorithm
 
-import "graph"
-
-/*
 import (
 	"graph"
 	"time"
@@ -10,51 +7,15 @@ import (
 	"tools"
 	"Set"
 )
-*/
+
 type SimPair struct {
 	PatternNode graph.ID
 	DataNode    graph.ID
 }
 
-/*
-// generate post and pre set for data graph nodes(include FO nodes)
-func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set.Set, map[graph.ID]Set.Set) {
-	preSet := make(map[graph.ID]Set.Set)
-	for v := range g.GetNodes() {
-		preSet[v] = Set.NewSet()
-		sources, _ := g.GetSources(v)
-		for id := range sources {
-			preSet[v].Add(id)
-		}
-	}
-	postSet := make(map[graph.ID]Set.Set)
-	for v := range g.GetNodes() {
-		postSet[v] = Set.NewSet()
-		targets, _ := g.GetTargets(v)
-		for id := range targets {
-			postSet[v].Add(id)
-		}
-	}
-
-	for u, routeMsg := range g.GetRoute() {
-		if _, ok := postSet[u]; !ok {
-			postSet[u] = Set.NewSet()
-		}
-		for v := range routeMsg {
-			postSet[u].Add(v)
-			if _, ok := preSet[v]; !ok {
-				preSet[v] = Set.NewSet()
-			}
-			preSet[v].Add(u)
-		}
-	}
-
-	return preSet, postSet
-}
-
 
 // in this algorithm, we assume all node u is in pattern graph while v node is in data graph
-func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, allNodeUnionFO Set.Set, preSet map[graph.ID]Set.Set, postSet map[graph.ID]Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32) {
+func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, postMap map[graph.ID]map[graph.ID]int) (bool, map[int]map[SimPair]int, float64, float64, int64, int32, int) {
 	var iterationNum int64 = 0
 
 	nodeMap := pattern.GetNodes()
@@ -66,15 +27,14 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	//log.Printf("zs-log: start PEVal initial for rank:%v\n", id)
 
 	// initial
-
 	//log.Printf("start calculate remove set for rank:%v\n", id)
 	removeInit := Set.NewSet()
-	log.Printf("allNodeUnionFO size: %v\n", allNodeUnionFO.Size())
 	count := 0
-	for u := range allNodeUnionFO {
+	for u := range g.GetNodes() {
 		count++
-		//targets, _ := g.GetTargets(u)
-		if len(postSet[u]) != 0 {
+
+		targets, _ := g.GetTargets(u)
+		if len(targets) != 0 {
 			removeInit.Add(u)
 		}
 		iterationNum++
@@ -87,12 +47,12 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	//log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
 	//log.Printf("pattern node size:%v\n", patternNodeSet.Size())
 	for id := range patternNodeSet {
-		preSim[id] = allNodeUnionFO.Copy()
+		for v := range g.GetNodes() {
+			preSim[id].Add(v)
+		}
+
 		remove[id] = removeInit.Copy()
 		sim[id] = Set.NewSet()
-		for v := range g.GetTag() {
-			sim[id].Add(v)
-		}
 		allPatternColor[nodeMap[id].Attr()] = true
 	}
 
@@ -104,18 +64,26 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 			for id := range patternNodeSet {
 				if msg.Attr() == nodeMap[id].Attr() {
 					targets, _ := pattern.GetTargets(id)
+					sources, _ := g.GetSources(v)
 					if len(targets) == 0 {
 						sim[id].Add(v)
-						//Set.GetPreSet(g, v, emptySet1)
-						iterationNum += int64(preSet[v].Size())
-						remove[id].Separate(preSet[v])
+						iterationNum += int64(len(sources))
+						remove[id].Separate(sources)
 					} else {
-						if postSet[v].Size() != 0 {
+						vTargets, _ := g.GetTargets(v)
+						if len(vTargets) != 0 || !g.IsMaster(v) {
 							sim[id].Add(v)
 							//Set.GetPreSet(g, v, emptySet2)
-							iterationNum += int64(preSet[v].Size())
-							remove[id].Separate(preSet[v])
+							iterationNum += int64(len(sources))
+							remove[id].Separate(sources)
 						}
+					}
+
+					for v_ := range sources {
+						if _, ok := postMap[v_]; !ok {
+							postMap[v_] = make(map[graph.ID]int)
+						}
+						postMap[v_][id] = postMap[v_][id] + 1
 					}
 				}
 			}
@@ -123,128 +91,23 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 	}
 
 	//log.Println("step 2")
+	messageMap := make(map[int]map[SimPair]int)
+	mirrors := g.GetMirrors()
+	for v := range mirrors {
+		for u := range postMap[v] {
+			partitionId := mirrors[v]
 
-	for v := range g.GetTag() {
-		_, ok := allPatternColor[v.IntVal()%tools.GraphSimulationTypeModel]
-		if ok {
-			for id := range patternNodeSet {
-				if v.IntVal()%tools.GraphSimulationTypeModel == nodeMap[id].Attr() {
-					sim[id].Add(v)
-					//Set.GetPreSet(g, v, emptySet1)
-					iterationNum += int64(len(preSet[v]))
-					remove[id].Separate(preSet[v])
-				}
+			if _, ok := messageMap[partitionId]; !ok {
+				messageMap[partitionId] = make(map[SimPair]int)
 			}
-		}
-	}
-	//log.Println("step 3")
-
-	messageMap := make(map[int]map[SimPair]bool)
-	for v, route := range g.GetRoute() {
-		for u := range sim {
-			if !sim[u].Has(v) {
-				for _, msg := range route {
-					partitionId := msg.RoutePartition()
-					if _, ok := messageMap[partitionId]; !ok {
-						messageMap[partitionId] = make(map[SimPair]bool)
-					}
-					messageMap[partitionId][SimPair{PatternNode: u, DataNode: v}] = true
-				}
-			}
+			simPair := SimPair{DataNode:v, PatternNode:u}
+			messageMap[partitionId][simPair] = messageMap[partitionId][simPair] + postMap[v][u]
 		}
 	}
 
-	log.Println("zs-log: start calculate")
+	//combineStart := time.Now()
 
-	//calculate
-	iterationStartTime := time.Now()
-	for {
-		iterationFinish := true
-		for u := range patternNodeSet {
-			if remove[u].Size() == 0 {
-				continue
-			}
-
-			//log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
-			iterationFinish = false
-			uSources, _ := pattern.GetSources(u)
-			for u_pre := range uSources {
-				for v := range remove[u] {
-
-					iterationNum++
-					if sim[u_pre].Has(v) {
-						sim[u_pre].Remove(v)
-						iterationNum++
-
-						// if v belongs to FI set, we need to send message to other partition at end of this super step
-						route := g.GetRoute()
-						if routeMsgs, ok := route[v]; ok {
-							for _, routeMsg := range routeMsgs {
-								iterationNum++
-								partitionId := routeMsg.RoutePartition()
-								if _, ok = messageMap[partitionId]; !ok {
-									messageMap[partitionId] = make(map[SimPair]bool)
-								}
-								messageMap[partitionId][SimPair{PatternNode: u_pre, DataNode: v}] = true
-							}
-						}
-						//Set.GetPreSet(g, v, emptySet1)
-						for v_pre := range preSet[v] {
-							iterationNum++
-							//Set.GetPostSet(g, v_pre, emptySet2)
-							if !sim[u_pre].HasIntersection(postSet[v_pre]) {
-								remove[u_pre].Add(v_pre)
-							}
-						}
-					}
-				}
-			}
-
-			preSim[u] = sim[u].Copy()
-			remove[u] = Set.NewSet()
-		}
-		if iterationFinish {
-			break
-		}
-	}
-	iterationTime := time.Since(iterationStartTime).Seconds()
-
-	combineStart := time.Now()
-	var updatePairNum int32 = 0
-	var dstPartitionNum int32 = 0
-
-	reducedMsg := make(map[int][]*SimPair)
-	for partitionId, message := range messageMap {
-		updatePairNum += int32(len(message))
-		reducedMsg[partitionId] = make([]*SimPair, 0)
-		for msg := range message {
-			if msg.PatternNode.IntVal() == msg.DataNode.IntVal() % tools.GraphSimulationTypeModel {
-				reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: msg.PatternNode, DataNode: msg.DataNode})
-			}
-		}
-	}
-	messageMap = nil
-	//for v, msgs := range g.GetFIs() {
-	//	for u := range sim {
-	//		if !sim[u].Has(v) && u.IntVal() == v.IntVal() % tools.GraphSimulationTypeModel {
-	//			for _, msg := range msgs {
-	//				updatePairNum++
-	//				partitionId := msg.RoutePartition()
-	//				if _, ok := reducedMsg[partitionId]; !ok {
-	//					reducedMsg[partitionId] = make([]*SimPair, 0)
-	//				}
-	//				reducedMsg[partitionId] = append(reducedMsg[partitionId], &SimPair{PatternNode: u, DataNode: v})
-	//			}
-	//		}
-	//	}
-	//}
-
-
-	combineTime := time.Since(combineStart).Seconds()
-
-	dstPartitionNum = int32(len(reducedMsg))
-
-	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
+	return len(messageMap) != 0, messageMap, 0, 0, iterationNum, 0, len(messageMap)
 }
 
 func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, messages []*SimPair, preSet map[graph.ID]Set.Set, postSet map[graph.ID]Set.Set) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32, float64, int32, int32) {
@@ -361,4 +224,3 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 
 	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, 0, int32(len(messages)), int32(len(messages))
 }
-*/

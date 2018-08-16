@@ -32,7 +32,7 @@ func (s Set) Merge(an Set) {
 	}
 }
 
-func (s Set) Separate(an Set)  {
+func (s Set) Separate(an map[graph.ID]graph.Node)  {
 	for v := range an {
 		delete(s, v)
 	}
@@ -70,27 +70,3 @@ func (s Set) Clear() {
 		s.Remove(v)
 	}
 }
-
-/*
-func GetPreSet(g graph.Graph, id graph.ID, emptySet Set) {
-	emptySet.Clear()
-	sources, _ := g.GetSources(id)
-	for sid := range sources {
-		emptySet.Add(sid)
-	}
-	for _, msg := range g.GetFOs()[id] {
-		emptySet.Add(msg.RelatedId())
-	}
-}
-
-func GetPostSet(g graph.Graph, id graph.ID, emptySet Set) {
-	emptySet.Clear()
-	targets, _ := g.GetTargets(id)
-	for sid := range targets {
-		emptySet.Add(sid)
-	}
-	for _, msg := range g.GetFIs()[id] {
-		emptySet.Add(msg.RelatedId())
-	}
-}
-*/

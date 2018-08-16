@@ -1,5 +1,4 @@
 package worker
-/*
 
 import (
 	"algorithm"
@@ -33,12 +32,11 @@ type SimWorker struct {
 	grpcHandlers map[int]*grpc.ClientConn
 	pattern graph.Graph
 	sim     map[graph.ID]Set.Set
-	preSet  map[graph.ID]Set.Set
-	postSet map[graph.ID]Set.Set
 
 	//edge_count int64
 
-	message []*algorithm.SimPair
+	calMessages []*algorithm.SimPair
+	exchangeMessages []*algorithm.SimPair
 
 	iterationNum int64
 	stopChannel  chan bool
@@ -109,6 +107,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
+		return
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
@@ -169,6 +168,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	Client.SuperStepFinish(context.Background(), finishRequest)
+	return
 }
 
 func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
@@ -195,7 +195,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 			PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
-
+		return
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
@@ -256,6 +256,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	Client.SuperStepFinish(context.Background(), finishRequest)
+	return
 }
 
 func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
@@ -307,7 +308,7 @@ func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*p
 	log.Println("sim send receive")
 	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {
-		message = append(message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
+		message = append(message, &algorithm.SimPair{DataNode: graph.ID(messagePair.DataId), PatternNode: graph.ID(messagePair.PatternId)})
 	}
 
 	w.Lock()
@@ -352,48 +353,31 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	start := time.Now()
 	w.workerNum = partitionNum
 
-	if tools.LoadFromJson {
-		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
-		defer graphIO.Close()
+	var graphIO, master, mirror *os.File
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-
-		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
-		defer partitionIO.Close()
-
-		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
+	if tools.WorkerOnSC {
+		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
 	} else {
-		var graphIO, fxiReader, fxoReader *os.File
-		if tools.WorkerOnSC {
-			graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
-			//graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
-		} else {
-			graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
-		}
-		defer graphIO.Close()
+		graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+	}
+	defer graphIO.Close()
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-		if tools.WorkerOnSC {
-			fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
-			//fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".I")
-			//fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".O")
-		} else {
-			fxoReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
-		}
-		defer fxiReader.Close()
-		defer fxoReader.Close()
+	if graphIO == nil {
+		fmt.Println("graph is nil")
+	}
+	if tools.WorkerOnSC {
+		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
+		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
+	} else {
+		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
+		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
+	}
+	defer master.Close()
+	defer mirror.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxoReader)
-		if err != nil {
-			log.Fatal(err)
-		}
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	patternFile, err := os.Open(tools.PatternPath)
@@ -402,34 +386,6 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	}
 	defer patternFile.Close()
 	w.pattern, _ = graph.NewPatternGraph(patternFile)
-
-	log.Printf("start calculate all nodes%v\n", w.selfId)
-	w.allNodeUnionFO = Set.NewSet()
-	for v := range w.g.GetNodes() {
-		w.allNodeUnionFO.Add(v)
-	}
-	for _, msg := range w.g.GetRoute() {
-		for v := range msg {
-			w.allNodeUnionFO.Add(v)
-		}
-	}
-
-	// Initial some variables from graph
-	w.preSet, w.postSet = algorithm.GeneratePrePostFISet(w.g)
-	w.g.ClearInner()
-
-	var io *os.File
-	defer io.Close()
-	if tools.LoadFromJson {
-		io, _ = os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
-	} else {
-		if tools.WorkerOnSC {
-			io, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
-		} else {
-			io, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
-		}
-	}
-	w.g.ReSetRoute(io, strconv.Itoa(w.selfId-1))
 
 	loadTime := time.Since(start)
 	log.Printf("loadGraph Time: %v\n", loadTime)
@@ -480,5 +436,3 @@ func RunSimWorker(id, partitionNum int) {
 	<-w.stopChannel
 	log.Println("finish task")
 }
-
-*/
