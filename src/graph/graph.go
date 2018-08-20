@@ -78,11 +78,14 @@ type Graph interface {
 	// if the node already existed in the graph.
 	AddNode(nd Node) bool
 
+	DeleteNode(id ID)
+
 	// AddEdge adds an edge from nd1 to nd2 with the weight.
 	// It returns error if a node does not exist.
 	AddEdge(id1, id2 ID, weight float64) error
 
     IsMaster(id ID) bool
+    IsMirror(id ID) bool
 
 	AddMirror(id ID, masterWR int)
 
@@ -160,6 +163,22 @@ func (g *graph) GetNode(id ID) Node {
 	defer g.mu.RUnlock()
 
 	return g.idToNodes[id]
+}
+
+func (g *graph) DeleteNode(id ID) {
+	delete(g.idToNodes, id)
+
+	for an := range g.nodeToSources[id] {
+		delete(g.nodeToTargets[an], id)
+	}
+	for an := range g.nodeToTargets[id] {
+		delete(g.nodeToSources[an], id)
+	}
+	delete(g.nodeToSources, id)
+	delete(g.nodeToTargets, id)
+
+	delete(g.mirrorWorker, id)
+	delete(g.masterWorkers, id)
 }
 
 func (g *graph) GetNodes() map[ID]Node {
@@ -287,6 +306,11 @@ func (g *graph) GetMirrors() map[ID]int {
 
 func (g *graph) IsMaster(id ID) bool {
 	_, ok := g.masterWorkers[id]
+	return ok
+}
+
+func (g *graph) IsMirror(id ID) bool {
+	_, ok := g.mirrorWorker[id]
 	return ok
 }
 

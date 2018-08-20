@@ -70,3 +70,10 @@ func (s Set) Clear() {
 		s.Remove(v)
 	}
 }
+
+func (s Set) Top() graph.ID {
+	for v := range s {
+		return v
+	}
+	return graph.ID(-1)
+}

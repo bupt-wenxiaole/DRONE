@@ -96,7 +96,7 @@ func (w *SSSPWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*p
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
-func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calculateStep bool) {
+func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calculateStep bool) []*pb.WorkerCommunicationSize {
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	var wg sync.WaitGroup
 	messageLen := len(messages)
@@ -144,12 +144,13 @@ func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calcula
 		}
 		wg.Wait()
 	}
+	return SlicePeerSend
 }
 
 func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
-	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
+	var SlicePeerSend []*pb.WorkerCommunicationSize
 	startId := graph.ID(-1)
 
 	if w.selfId == 1 {
@@ -177,7 +178,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 		return
 	} else {
 		fullSendStart = time.Now()
-		w.SSSPMessageSend(messages, true)
+		SlicePeerSend = w.SSSPMessageSend(messages, true)
 	}
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
