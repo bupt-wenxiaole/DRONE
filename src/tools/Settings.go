@@ -10,7 +10,7 @@ const (
 
 	ConfigPath = "../test_data/config.txt"
 
-	PatternPath = "../pattern.txt"
+	PatternPath = "../test_data/pattern.txt"
 	GraphSimulationTypeModel = 3
 
 	RPCSendSize = 10000
