@@ -251,7 +251,6 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	if !isMessageToSend {
-
 		masterHandle := w.grpcHandlers[0]
 		Client := pb.NewMasterClient(masterHandle)
 
