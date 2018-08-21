@@ -149,6 +149,13 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedMirror)
 	w.updatedMirror = Set.NewSet()
+
+	for v := range w.g.GetNodes() {
+		for u, times := range w.postMap[v] {
+			log.Printf("after peval, u: %v, v: %v, time:%v\n", u.IntVal(), v.IntVal(), times)
+		}
+	}
+
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 
