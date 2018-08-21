@@ -3,6 +3,7 @@ package algorithm
 import (
 	"graph"
 	"Set"
+	"time"
 )
 
 type SimPair struct {
@@ -82,12 +83,19 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, simSet map[graph.ID]Set.
 	return len(messageMap) != 0, messageMap, 0, 0, iterationNum, 0, len(messageMap)
 }
 
-func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, postMap map[graph.ID]map[graph.ID]int, updatedMaster Set.Set, updatedMirror Set.Set, updatedByMessage Set.Set, exchangeMessages map[graph.ID]map[graph.ID]]int) (bool, map[int][]*SimPair, float64, float64, int64, int32, int32, float64, int32, int32) {
+func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set, postMap map[graph.ID]map[graph.ID]int, updatedMaster Set.Set, updatedByMessage Set.Set, exchangeMessages map[graph.ID]map[graph.ID]int) (bool, map[int]map[SimPair]int, float64, float64, int64, int32, int32, float64, int32, int32) {
 	for v, posts := range exchangeMessages {
 		if len(posts) != len(postMap[v]) {
 			updatedByMessage.Add(v)
 		}
-		postMap[v] = posts
+
+		for u := range postMap[v] {
+			if posts[u] == 0 {
+				delete(postMap[v], u)
+			}
+			postMap[v][u] = posts[u]
+		}
+		//postMap[v] = posts
 	}
 
 	updated := Set.NewSet()
@@ -115,14 +123,49 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 						pair := SimPair{PatternNode:u, DataNode:source}
 						messageMap[partition][pair] = messageMap[partition][pair] - 1
 					}
+
+					if g.IsMaster(source) {
+						updatedMaster.Add(source)
+					}
 				}
 			}
 		}
 	}
 
+	iterationStartTime := time.Now()
 	for len(updated) != 0 {
-		
-	}
+		v := updated.Top()
+		updated.Remove(v)
 
-	return len(reducedMsg) != 0, reducedMsg, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, 0, int32(len(messages)), int32(len(messages))
+		for u := range sim[v] {
+			if !TestSim(v, u, postMap, pattern) {
+				sim[v].Remove(u)
+				sources, _ := g.GetSources(v)
+				for source := range sources {
+					postMap[source][u] = postMap[source][u] - 1
+					if postMap[source][u] == 0 {
+						delete(postMap[source], u)
+						updated.Add(source)
+					}
+
+					if g.IsMirror(source) {
+						partition := mirrors[source]
+						if _, ok := messageMap[partition]; !ok {
+							messageMap[partition] = make(map[SimPair]int)
+						}
+
+						pair := SimPair{PatternNode:u, DataNode:source}
+						messageMap[partition][pair] = messageMap[partition][pair] - 1
+					}
+
+					if g.IsMaster(source) {
+						updatedMaster.Add(source)
+					}
+				}
+			}
+		}
+	}
+	iterationTime := time.Since(iterationStartTime).Seconds()
+
+	return len(messageMap) != 0, messageMap, iterationTime, 0, 0, 0, 0, 0, 0, 0
 }

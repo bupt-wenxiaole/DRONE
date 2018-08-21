@@ -185,6 +185,7 @@ func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReques
 		for u, val := range posts {
 			w.postMap[v][u] = w.postMap[v][u] + val
 		}
+
 		w.updatedByMessage.Add(v)
 		w.updatedMaster.Add(v)
 	}
@@ -195,6 +196,7 @@ func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReques
 	for v := range w.updatedMaster {
 		for u := range w.postMap[v] {
 			if w.postMap[v][u] == 0 {
+				delete(w.postMap[v], u)
 				continue
 			}
 			for partitionId := range masterMap[v] {
@@ -220,10 +222,9 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedMirror, w.updatedByMessage, w.exchangeMessages)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedByMessage, w.exchangeMessages)
 	w.exchangeMessages = make(map[graph.ID]map[graph.ID]int)
-	w.updatedMirror = Set.NewSet()
-	w.message = make([]*algorithm.SimPair, 0)
+
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
@@ -241,51 +242,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 		return
 	} else {
 		fullSendStart = time.Now()
-		var wg sync.WaitGroup
-
-		messageLen := len(messages)
-		batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
-
-		indexBuffer := make([]int, 0)
-		for partitionId := range messages {
-			indexBuffer = append(indexBuffer, partitionId)
-		}
-		sort.Ints(indexBuffer)
-		start := 0
-		for i := 1; i < len(indexBuffer); i++ {
-			if indexBuffer[i] > id {
-				start = i
-				break
-			}
-		}
-		indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
-
-		for i := 1; i <= batch; i++ {
-			for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
-				wg.Add(1)
-				partitionId := indexBuffer[j]
-				message := messages[partitionId]
-				eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
-				SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-				go func(partitionId int, message []*algorithm.SimPair) {
-					defer wg.Done()
-					workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
-					if err != nil {
-						log.Fatal(err)
-					}
-					defer workerHandle.Close()
-
-					client := pb.NewWorkerClient(workerHandle)
-					encodeMessage := make([]*pb.SimMessageStruct, 0)
-
-					for _, msg := range message {
-						encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: msg.PatternNode.IntVal(), DataId: msg.DataNode.IntVal()})
-					}
-					Peer2PeerSimSend(client, encodeMessage, partitionId + 1, id)
-				}(partitionId, message)
-			}
-			wg.Wait()
-		}
+		SlicePeerSend = w.SimMessageSend(messages, true)
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
@@ -309,27 +266,24 @@ func (w *SimWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.I
 
 func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
 	log.Println("assemble!")
-	innerNodes := w.g.GetNodes()
 
 	var f *os.File
 	if tools.WorkerOnSC {
 		f, _ = os.Create(tools.ResultPath + "simresult_" + strconv.Itoa(w.selfId-1))
 	} else {
-		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
+		f, _ = os.Create(tools.ResultPath + "simresult_" + strconv.Itoa(w.selfId-1))
 	}
 	defer f.Close()
 	writer := bufio.NewWriter(f)
 
 	//result := make([]string, 0)
-	size := 0
-	for u, simSets := range w.sim {
-		for v := range simSets {
-			if _, ok := innerNodes[v]; ok {
-				size++
-				if size < 100 {
-					writer.WriteString(u.String() + "\t" + v.String() + "\n")
-				}
-			}
+	for v, simSets := range w.sim {
+		if w.g.IsMirror(v) {
+			continue
+		}
+
+		for u := range simSets {
+			writer.WriteString(u.String() + "\t" + v.String() + "\n")
 		}
 	}
 	writer.Flush()
@@ -381,8 +335,8 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.peers = make([]string, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
-	w.calMessages = make([]*algorithm.SimPair, 0)
-	w.exchangeMessages = make([]*algorithm.SimPair, 0)
+	w.calMessages = make(map[graph.ID]map[graph.ID]int)
+	w.exchangeMessages = make(map[graph.ID]map[graph.ID]int)
 	w.sim = make(map[graph.ID]Set.Set)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 	w.postMap = make(map[graph.ID]map[graph.ID]int)
