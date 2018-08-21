@@ -15,7 +15,7 @@ type SimPair struct {
 func TestSim(v graph.ID, u graph.ID, postMap map[graph.ID]map[graph.ID]int, pattern graph.Graph) bool {
 	targets, _ := pattern.GetTargets(u)
 	for t := range targets {
-		if postMap[v][t] != 0 {
+		if postMap[v][t] == 0 {
 			return false
 		}
 	}
