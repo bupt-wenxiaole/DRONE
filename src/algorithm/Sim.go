@@ -89,19 +89,19 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 		if len(posts) != len(postMap[v]) {
 			updatedByMessage.Add(v)
 		}
-
+/*
 		for u := range postMap[v] {
 			if posts[u] == 0 {
 				delete(postMap[v], u)
 			}
 			postMap[v][u] = posts[u]
 		}
-		//postMap[v] = posts
+*/		postMap[v] = posts
 	}
 
 	for v := range postMap {
-		for u := range postMap[v] {
-			log.Printf("first level: u: %v, v: %v\n", u.IntVal(), v.IntVal())
+		for u, times := range postMap[v] {
+			log.Printf("first level: u: %v, v: %v, times:%v\n", u.IntVal(), v.IntVal(), times)
 		}
 	}
 
