@@ -1,8 +1,6 @@
 package worker
 
-import "sync"
-
-
+/*
 
 import (
 	"algorithm"
@@ -18,9 +16,9 @@ import (
 	pb "protobuf"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"tools"
+	"sync"
 )
 
 type PRWorker struct {
@@ -36,9 +34,9 @@ type PRWorker struct {
 	partitionNum int
 	totalVertexNum int64
 	updated      map[int64]float64
-	calBuffer map[int64]float64
-	exchangeBuffer map[int64]
-
+	calBuffer map[int64]algorithm.PRPair
+	exchangeBuffer map[int64]algorithm.PRPair
+	targetsNum   map[int64]int
 
 	iterationNum int
 	stopChannel  chan bool
@@ -53,8 +51,7 @@ func (w *PRWorker) UnLock() {
 }
 
 // rpc send has max size limit, so we spilt our transfer into many small block
-func Peer2PeerPRSend(client pb.WorkerClient, message []*pb.PRMessageStruct, wg *sync.WaitGroup)  {
-
+func Peer2PeerPRSend(client pb.WorkerClient, message []*pb.PRMessageStruct, wg *sync.WaitGroup) {
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
@@ -90,6 +87,8 @@ func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.
 	log.Println("shutdown ok")
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
+
+
 
 func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
 	// init grpc handler and store it
@@ -323,3 +322,4 @@ func RunPRWorker(id, partitionNum int) {
 	<-w.stopChannel
 	log.Println("finish task")
 }
+*/

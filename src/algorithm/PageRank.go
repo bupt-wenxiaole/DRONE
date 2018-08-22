@@ -1,5 +1,5 @@
 package algorithm
-
+/*
 import (
 	"graph"
 	"math"
@@ -11,7 +11,6 @@ const eps = 0.01
 type PRPair struct {
 	PRValue float64
 	ID graph.ID
-	sonNum int
 }
 
 func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int64, map[int64]float64) {
@@ -24,13 +23,6 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 	tempPr := make(map[int64]float64)
 	loopTime := 0
 	for {
-		/*
-		if loopTime == 0 {
-			log.Printf("accuracy: %v\n", eps * initVal)
-		}
-		log.Printf("loop time:%v\n", loopTime)
-		var maxerr float64 = 0
-		*/
 		if loopTime == 0 {
 			log.Println("finish peval")
 			break
@@ -76,23 +68,6 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int6
 	return int64(nodeNum), prVal
 }
 
-/*
-func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
-	outerMsg := make(map[int64][]int64)
-	for fo, msgs := range FO {
-		for _, msg := range msgs {
-			srcId := msg.RelatedId()
-			if _, ok := outerMsg[srcId.IntVal()]; !ok {
-				outerMsg[srcId.IntVal()] = make([]int64, 0)
-			}
-
-			nowMsg := fo.IntVal()
-			outerMsg[srcId.IntVal()] = append(outerMsg[srcId.IntVal()], nowMsg)
-		}
-	}
-	return outerMsg
-}
-*/
 func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage, map[int64]float64, map[int64]float64) {
 	maxerr := 0.0
 
@@ -167,14 +142,9 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	}
 
 	//log.Printf("still send:%v\n", still)
-/*
-	for fo, routeMsg := range g.GetFOs() {
-		partition := routeMsg[0].RoutePartition()
-		//log.Printf("send id:%v, val:%v partition:%v\n", fo.IntVal(), tempPr[fo.IntVal()], partition)
-		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:messagePr[fo.IntVal()],ID:fo})
-	}
-*/
+
 	//log.Printf("receive sum:%v\n", receiveSum)
 	//log.Printf("send sum:%v\n", sendSum)
 	return updated, reduceMsg, prVal, tempPr
 }
+*/

@@ -84,5 +84,4 @@ message pRMessageResponse {
 message pRMessageStruct {
     int64 nodeID = 1;
     double prVal = 2;
-	int32 sonNum = 3;
 }
