@@ -366,7 +366,7 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.workerNum = partitionNum
 	start := time.Now()
 
-	var graphIO, master, mirror *os.File
+	var graphIO, master, mirror, isolated *os.File
 
 	if tools.WorkerOnSC {
 		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
@@ -381,14 +381,17 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	if tools.WorkerOnSC {
 		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "Isolateds." + strconv.Itoa(w.selfId-1))
 	}
 	defer master.Close()
 	defer mirror.Close()
+	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
 	if err != nil {
 		log.Fatal(err)
 	}

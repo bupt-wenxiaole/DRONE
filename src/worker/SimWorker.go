@@ -232,18 +232,9 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 
 func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
-	for v := range w.g.GetNodes() {
-		for u, times := range w.postMap[v] {
-			log.Printf("before inceval, u: %v, v: %v, time:%v\n", u.IntVal(), v.IntVal(), times)
-		}
-	}
+
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedByMessage, w.exchangeMessages)
-	for v := range w.g.GetNodes() {
-		for u, times := range w.postMap[v] {
-			log.Printf("after inceval, u: %v, v: %v, time:%v\n", u.IntVal(), v.IntVal(), times)
-		}
-	}
 
 	w.exchangeMessages = make(map[graph.ID]map[graph.ID]int)
 
@@ -389,7 +380,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	start := time.Now()
 	w.workerNum = partitionNum
 
-	var graphIO, master, mirror *os.File
+	var graphIO, master, mirror, isolated *os.File
 
 	if tools.WorkerOnSC {
 		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
@@ -401,17 +392,21 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	if graphIO == nil {
 		fmt.Println("graph is nil")
 	}
+
 	if tools.WorkerOnSC {
 		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "Isolateds." + strconv.Itoa(w.selfId-1))
 	}
 	defer master.Close()
 	defer mirror.Close()
+	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
 	if err != nil {
 		log.Fatal(err)
 	}

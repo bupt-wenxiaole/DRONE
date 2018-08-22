@@ -4,7 +4,6 @@ import (
 	"graph"
 	"Set"
 	"time"
-	"log"
 )
 
 type SimPair struct {
@@ -89,20 +88,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 		if len(posts) != len(postMap[v]) {
 			updatedByMessage.Add(v)
 		}
-/*
-		for u := range postMap[v] {
-			if posts[u] == 0 {
-				delete(postMap[v], u)
-			}
-			postMap[v][u] = posts[u]
-		}
-*/		postMap[v] = posts
-	}
-
-	for v := range postMap {
-		for u, times := range postMap[v] {
-			log.Printf("first level: u: %v, v: %v, times:%v\n", u.IntVal(), v.IntVal(), times)
-		}
+		postMap[v] = posts
 	}
 
 	updated := Set.NewSet()
@@ -112,10 +98,10 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 	for v := range updatedByMessage {
 		for u := range sim[v] {
 			if !TestSim(v, u, postMap, pattern) {
-				log.Printf("delete %v from sim(%v)\n", u, v)
+				/*log.Printf("delete %v from sim(%v)\n", u, v)
 				for temp := range postMap[v] {
 					log.Printf("second level: u: %v, v: %v\n", temp.IntVal(), v.IntVal())
-				}
+				}*/
 
 				sim[v].Remove(u)
 				sources, _ := g.GetSources(v)

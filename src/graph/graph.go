@@ -361,7 +361,7 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 }
 
 
-func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, error) {
+func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated io.Reader) (Graph, error) {
 	g := newGraph()
 	reader := bufio.NewReader(G)
 	for {
@@ -425,9 +425,8 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 
 		masterId := ID(parseMaster)
 
-		log.Printf("masterId: %v", masterId)
+		//log.Printf("masterId: %v", masterId)
 
-		// 如果是isolated的点
 		masterNode := g.GetNode(masterId)
 		if masterNode == nil {
 			intId := masterId.IntVal()
@@ -471,6 +470,20 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 		log.Printf("mirrorId: %v MasterWorker:%v\n", mirrorId, MasterWorker)
 
 		g.AddMirror(mirrorId, int(MasterWorker))
+	}
+
+	isolated := bufio.NewReader(Isolated)
+	for {
+		line, err := isolated.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
+		parseIso, err := strconv.ParseInt(paras[0], 10, 64)
+		isoId := ID(parseIso)
+
+		nd := NewNode(isoId.IntVal(), int64(parseIso%tools.GraphSimulationTypeModel))
+		g.AddNode(nd)
 	}
 
 	return g, nil
