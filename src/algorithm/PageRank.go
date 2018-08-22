@@ -8,9 +8,10 @@ import (
 
 const eps = 0.01
 
-type PRMessage struct {
+type PRPair struct {
 	PRValue float64
 	ID graph.ID
+	sonNum int
 }
 
 func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int64, map[int64]float64) {

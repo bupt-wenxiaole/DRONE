@@ -1,6 +1,8 @@
 package worker
 
-/*
+import "sync"
+
+
 
 import (
 	"algorithm"
@@ -34,8 +36,9 @@ type PRWorker struct {
 	partitionNum int
 	totalVertexNum int64
 	updated      map[int64]float64
-	receiveBuffer map[int64]float64
-	outerMsg    map[int64][]int64
+	calBuffer map[int64]float64
+	exchangeBuffer map[int64]
+
 
 	iterationNum int
 	stopChannel  chan bool
@@ -246,50 +249,34 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 
 	start := time.Now()
 
-	if tools.LoadFromJson {
-		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
-		defer graphIO.Close()
+	var graphIO, master, mirror, isolated *os.File
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-
-		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
-		defer partitionIO.Close()
-
-		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
-		if err != nil {
-			log.Fatal(err)
-		}
+	if tools.WorkerOnSC {
+		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
 	} else {
-		var graphIO, fxiReader, fxoReader *os.File
-		if tools.WorkerOnSC {
-			//graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
-			graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
-		} else {
-			graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
-		}
-		defer graphIO.Close()
+		graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
+	}
+	defer graphIO.Close()
 
-		if graphIO == nil {
-			fmt.Println("graphIO is nil")
-		}
-		if tools.WorkerOnSC {
-			//fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
-			//fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
-			fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".I")
-			fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".O")
-		} else {
-			fxiReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
-			fxoReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
-		}
-		defer fxiReader.Close()
-		defer fxoReader.Close()
+	if graphIO == nil {
+		fmt.Println("graph is nil")
+	}
+	if tools.WorkerOnSC {
+		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
+		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
+	} else {
+		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
+		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "Isolateds." + strconv.Itoa(w.selfId-1))
+	}
+	defer master.Close()
+	defer mirror.Close()
+	defer isolated.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxoReader)
-		if err != nil {
-			log.Fatal(err)
-		}
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	loadTime := time.Since(start)
@@ -336,4 +323,3 @@ func RunPRWorker(id, partitionNum int) {
 	<-w.stopChannel
 	log.Println("finish task")
 }
-*/
