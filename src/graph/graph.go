@@ -416,7 +416,6 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 		if err != nil || io.EOF == err {
 			break
 		}
-		log.Println(line)
 
 		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 
@@ -426,8 +425,6 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 		}
 
 		masterId := ID(parseMaster)
-
-		//log.Printf("masterId: %v", masterId)
 
 		masterNode := g.GetNode(masterId)
 		if masterNode == nil {
@@ -503,12 +500,12 @@ func GetTargetsNum(targetsFile io.Reader) map[int64]int {
 
 		vertexId, err := strconv.ParseInt(paras[0], 10, 64)
 		if err != nil {
-			log.Fatal("parse master node id error")
+			log.Fatal("parse target id error")
 		}
 
 		targetN, err := strconv.ParseInt(paras[1], 10, 64)
 		if err != nil {
-			log.Fatal("parse master node id error")
+			log.Fatal("parse target num error")
 		}
 
 		ans[vertexId] = int(targetN)

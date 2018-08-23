@@ -25,7 +25,7 @@ type PRWorker struct {
 
 	peers        []string
 	selfId       int // the id of this worker itself in workers
-	grpcHandlers []*grpc.ClientConn
+	grpcHandlers map[int]*grpc.ClientConn
 
 	g            graph.Graph
 	prVal        map[int64]float64
@@ -290,6 +290,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.calBuffer = make([]*algorithm.PRPair, 0)
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 	w.targetsNum = make(map[int64]int)
+	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
