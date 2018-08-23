@@ -383,7 +383,7 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 		srcId := ID(parseSrc)
 		dstId := ID(parseDst)
 
-		log.Printf("src: %v dst:%v\n", srcId, dstId)
+		//log.Printf("src: %v dst:%v\n", srcId, dstId)
 
 		weight, err := strconv.ParseFloat(paras[2], 64)
 		if err != nil {
