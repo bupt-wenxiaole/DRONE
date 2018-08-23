@@ -236,7 +236,7 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 }
 
 func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
-	f, err:= os.Create(tools.ResultPath + "result_" + strconv.Itoa(w.selfId - 1))
+	f, err:= os.Create(tools.ResultPath + "PRresult_" + strconv.Itoa(w.selfId - 1))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -245,6 +245,9 @@ func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 	defer f.Close()
 
 	for id, pr := range w.prVal {
+		if w.g.IsMirror(graph.ID(id)) {
+			continue
+		}
 		writer.WriteString(strconv.FormatInt(id, 10) +"\t"+strconv.FormatFloat(pr, 'E', -1, 64) + "\n")
 	}
 	return &pb.AssembleResponse{Ok: true}, nil

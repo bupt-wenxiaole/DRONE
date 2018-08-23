@@ -420,6 +420,7 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 
 		parseMaster, err := strconv.ParseInt(paras[0], 10, 64)
 		if err != nil {
+			log.Println(paras[0])
 			log.Fatal("parse master node id error")
 		}
 
