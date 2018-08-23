@@ -488,3 +488,28 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 
 	return g, nil
 }
+
+func GetTargetsNum(targetsFile io.Reader) map[int64]int {
+	targets := bufio.NewReader(targetsFile)
+	ans := make(map[int64]int)
+	for {
+		line, err := targets.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
+
+		vertexId, err := strconv.ParseInt(paras[0], 10, 64)
+		if err != nil {
+			log.Fatal("parse master node id error")
+		}
+
+		targetN, err := strconv.ParseInt(paras[1], 10, 64)
+		if err != nil {
+			log.Fatal("parse master node id error")
+		}
+
+		ans[vertexId] = int(targetN)
+	}
+	return ans
+}

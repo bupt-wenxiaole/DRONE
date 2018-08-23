@@ -1,17 +1,16 @@
 package tools
 
 const (
-	//ResultPath = "/home/acgict/result/"
-	ResultPath = "/home/xwen/graph/"
-	//NFSPath = "/mnt/nfs/zpltys/test/"
-	//NFSPath = "/home/acgict/inputgraph/"
-	NFSPath = "/mnt/nfs/xwen/graphData/"
+	ResultPath = "/mnt/nfs/zpltys/test/"
+	//ResultPath = "/home/xwen/graph/"
+	NFSPath = "/mnt/nfs/zpltys/test/"
+	//NFSPath = "/mnt/nfs/xwen/graphData/"
 	WorkerOnSC = false
 
-	//ConfigPath = "../test_data/config.txt"
-	ConfigPath = "config.txt"
-	//PatternPath = "../test_data/pattern.txt"
-	PatternPath = "pattern.txt"
+	ConfigPath = "../test_data/config.txt"
+	//ConfigPath = "config.txt"
+	PatternPath = "../test_data/pattern.txt"
+	//PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
 
 	RPCSendSize = 100000

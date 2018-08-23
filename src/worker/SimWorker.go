@@ -400,7 +400,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
-		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "Isolateds." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + "Isolateds." + strconv.Itoa(w.selfId-1))
 	}
 	defer master.Close()
 	defer mirror.Close()
