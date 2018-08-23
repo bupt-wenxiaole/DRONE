@@ -246,13 +246,12 @@ func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 	defer f.Close()
 
 	for id, pr := range w.prVal {
-		log.Printf("id: %v, pr:%v\n", id, pr)
 		if w.g.IsMirror(graph.ID(id)) {
 			continue
 		}
-		log.Printf("id: %v, pr:%v\n", id, pr)
 		writer.WriteString(strconv.FormatInt(id, 10) +"\t"+strconv.FormatFloat(pr, 'E', -1, 64) + "\n")
 	}
+	writer.Flush()
 	return &pb.AssembleResponse{Ok: true}, nil
 }
 
