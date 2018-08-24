@@ -1,15 +1,15 @@
 package tools
 
 const (
-	//ResultPath = "/mnt/nfs/zpltys/test/"
+	ResultPath = "/mnt/nfs/zpltys/test/"
 	//ResultPath = "/home/xwen/graph/"
-	ResultPath = "/mnt/nfs/xwen/graphData/"
-	//NFSPath = "/mnt/nfs/zpltys/test/"
-	NFSPath = "/mnt/nfs/xwen/graphData/"
+	//ResultPath = "/mnt/nfs/xwen/graphData/"
+	NFSPath = "/mnt/nfs/zpltys/test/"
+	//NFSPath = "/mnt/nfs/xwen/graphData/"
 	WorkerOnSC = false
 
-	//ConfigPath = "../test_data/config.txt"
-	ConfigPath = "config.txt"
+	ConfigPath = "../test_data/config.txt"
+	//ConfigPath = "config.txt"
 	//PatternPath = "../test_data/pattern.txt"
 	PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
