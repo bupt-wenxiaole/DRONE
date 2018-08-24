@@ -1,11 +1,13 @@
 package tools
 
 const (
-	ResultPath = "/mnt/nfs/zpltys/test/"
+	//ResultPath = "/mnt/nfs/zpltys/test/"
 	//ResultPath = "/home/xwen/graph/"
 	//ResultPath = "/mnt/nfs/xwen/graphData/"
-	NFSPath = "/mnt/nfs/zpltys/test/"
+	ResultPath = "/mnt/nfs/xwen/generate_graph/"
+	//NFSPath = "/mnt/nfs/zpltys/test/"
 	//NFSPath = "/mnt/nfs/xwen/graphData/"
+	NFSPath = "/mnt/nfs/xwen/generate_graph/"
 	WorkerOnSC = false
 
 	ConfigPath = "../test_data/config.txt"
