@@ -259,9 +259,9 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 	defer f.Close()
 
 	for id, dist := range w.distance {
-	//	if w.g.IsMaster(id) {
+		if w.g.IsMaster(id) && dist != math.MaxFloat64 {
 			writer.WriteString(id.String() + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
-	//	}
+		}
 	}
 	writer.Flush()
 
