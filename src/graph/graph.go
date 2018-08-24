@@ -466,7 +466,7 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 			log.Fatal("parse master worker id error")
 		}
 
-		log.Printf("mirrorId: %v MasterWorker:%v\n", mirrorId, MasterWorker)
+		//log.Printf("mirrorId: %v MasterWorker:%v\n", mirrorId, MasterWorker)
 
 		g.AddMirror(mirrorId, int(MasterWorker))
 	}
