@@ -70,6 +70,14 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 	var iterationNum int64 = 0
 	itertationStartTime := time.Now()
 
+	if g.IsMirror(startID) {
+		updateMirror[startID] = true
+	}
+
+	if g.IsMaster(startID) {
+		updateMaster[startID] = true
+	}
+
 	// begin SSSP iteration
 	for pq.Len() > 0 {
 		iterationNum++
@@ -80,19 +88,18 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 			continue
 		}
 
-		if g.IsMirror(srcID) {
-			updateMirror[srcID] = true
-		}
-		if g.IsMaster(srcID) {
-			updateMaster[srcID] = true
-		}
-
 		targets, _ := g.GetTargets(srcID)
 		for disID := range targets {
 			weight, _ := g.GetWeight(srcID, disID)
 			if distance[disID] > nowDis+weight {
 				heap.Push(&pq, &Pair{NodeId: disID, Distance: nowDis + weight})
 				distance[disID] = nowDis + weight
+				if g.IsMirror(disID) {
+					updateMirror[disID] = true
+				}
+				if g.IsMaster(disID) {
+					updateMaster[disID] = true
+				}
 			}
 		}
 	}

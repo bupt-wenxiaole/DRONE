@@ -153,14 +153,11 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 	startId := graph.ID(-1)
 
-	if w.selfId == 1 {
-		log.Println("my rank is 1")
-		for v := range w.g.GetNodes() {
-			startId = v
-			break
-		}
-		//startId = graph.ID(3)
+	for v := range w.g.GetNodes() {
+		startId = v
+		break
 	}
+
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
 
 	if !isMessageToSend {
