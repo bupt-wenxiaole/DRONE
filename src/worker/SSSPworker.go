@@ -161,7 +161,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 		}
 		//startId = graph.ID(3)
 	}
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
