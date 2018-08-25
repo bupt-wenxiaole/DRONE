@@ -194,6 +194,9 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
 	for v, posts := range w.calMessages {
 		for u, val := range posts {
+			if w.postMap[v] == nil {
+				w.postMap[v] = make(map[graph.ID]int)
+			}
 			w.postMap[v][u] = w.postMap[v][u] + val
 		}
 
