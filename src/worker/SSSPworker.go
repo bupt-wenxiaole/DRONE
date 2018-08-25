@@ -272,8 +272,6 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 		id := pair.NodeId
 		dis := pair.Distance
 
-		//log.Printf("updated buffer: id:%v, dis:%v\n", id, dis)
-
 		if dis == w.distance[id] {
 			continue
 		}
