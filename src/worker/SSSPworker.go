@@ -19,6 +19,7 @@ import (
 	"time"
 	"tools"
 	"sort"
+	"Set"
 )
 
 func Generate(g graph.Graph) map[graph.ID]float64 {
@@ -66,6 +67,8 @@ type SSSPWorker struct {
 	updatedMaster     map[graph.ID]bool
 	updatedMirror     map[graph.ID]bool
 	updatedByMessage  map[graph.ID]bool
+
+	visited       Set.Set
 
 	iterationNum int
 	stopChannel  chan bool
@@ -160,7 +163,9 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 		}
 	}
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror, w.visited)
+
+	log.Printf("zs-log: visited:%v, percent:%v%%\n", w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -202,9 +207,9 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage, w.visited)
 
-	//log.Printf("zs-log: isMessageToSend:%v\n", isMessageToSend)
+	log.Printf("zs-log: visited:%v, percent:%v%%\n", w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
 	w.updatedMirror = make(map[graph.ID]bool)
@@ -340,6 +345,8 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
+
+	w.visited = Set.NewSet()
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
