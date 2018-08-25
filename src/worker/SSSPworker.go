@@ -165,7 +165,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror, w.visited)
 
-	log.Printf("zs-log: visited:%v, percent:%v%%\n", w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
+	log.Printf("zs-log:worker%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -209,7 +209,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage, w.visited)
 
-	log.Printf("zs-log: visited:%v, percent:%v%%\n", w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
+	log.Printf("zs-log: worker:%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
 	w.updatedMirror = make(map[graph.ID]bool)

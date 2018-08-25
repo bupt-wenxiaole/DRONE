@@ -131,7 +131,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, updatedByMessage map[graph.ID]bool, visited Set.Set) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, updatedByMessage map[graph.ID]bool, visited Set.Set, id int) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
 	if len(updated) == 0 && len(updatedByMessage) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
@@ -163,6 +163,8 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 		}
 		heap.Push(&pq, startPair)
 	}
+
+	log.Printf("worker%v updatedbymessage:%v", id, len(updatedByMessage))
 
 	var iterationNum int64 = 0
 	iterationStartTime := time.Now()

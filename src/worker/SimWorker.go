@@ -149,13 +149,13 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedMirror)
 	w.updatedMirror = Set.NewSet()
-
+/*
 	for v := range w.g.GetNodes() {
 		for u, times := range w.postMap[v] {
 			log.Printf("after peval, u: %v, v: %v, time:%v\n", u.IntVal(), v.IntVal(), times)
 		}
 	}
-
+*/
 	for v := range w.g.GetNodes() {
 		w.updatedByMessage.Add(v)
 	}
@@ -313,7 +313,7 @@ func (w *SimWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.
 }
 
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
-	log.Println("sim send receive")
+	//log.Println("sim send receive")
 
 	w.Lock()
 	if args.CalculateStep {
@@ -422,7 +422,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	//log.Printf("zs-log: start PEval initial for Pattern Node for rank:%v \n", id)
 	//log.Printf("pattern node size:%v\n", patternNodeSet.Size())
-	log.Printf("zs-log: start delete useless node\n")
+	//log.Printf("zs-log: start delete useless node\n")
 	for _, node := range w.pattern.GetNodes() {
 		allPatternColor[node.Attr()] = true
 	}
@@ -436,7 +436,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 
 	loadTime := time.Since(start)
 	log.Printf("loadGraph Time: %v\n", loadTime)
-	fmt.Printf("loadGraph Time: %v\n", loadTime)
+	//fmt.Printf("loadGraph Time: %v\n", loadTime)
 
 	if w.g == nil {
 		log.Println("can't load graph")
