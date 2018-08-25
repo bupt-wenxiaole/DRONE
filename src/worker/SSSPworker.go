@@ -19,6 +19,7 @@ import (
 	"time"
 	"tools"
 	"sort"
+	"Set"
 )
 
 func Generate(g graph.Graph) map[graph.ID]float64 {
@@ -67,6 +68,8 @@ type SSSPWorker struct {
 	updatedMirror     map[graph.ID]bool
 	updatedByMessage  map[graph.ID]bool
 
+	visited       Set.Set
+
 	iterationNum int
 	stopChannel  chan bool
 }
@@ -96,7 +99,7 @@ func (w *SSSPWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*p
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
-func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calculateStep bool) {
+func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calculateStep bool) []*pb.WorkerCommunicationSize {
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	var wg sync.WaitGroup
 	messageLen := len(messages)
@@ -144,23 +147,25 @@ func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calcula
 		}
 		wg.Wait()
 	}
+	return SlicePeerSend
 }
 
 func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
-	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
+	var SlicePeerSend []*pb.WorkerCommunicationSize
 	startId := graph.ID(-1)
 
-	if w.selfId == 1 {
-		log.Println("my rank is 1")
+	if id == 1 {
 		for v := range w.g.GetNodes() {
 			startId = v
 			break
 		}
-		//startId = graph.ID(3)
 	}
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId)
+
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror, w.visited)
+
+	log.Printf("zs-log:worker%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -177,7 +182,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 		return
 	} else {
 		fullSendStart = time.Now()
-		w.SSSPMessageSend(messages, true)
+		SlicePeerSend = w.SSSPMessageSend(messages, true)
 	}
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
@@ -202,9 +207,9 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage, w.visited, id)
 
-	//log.Printf("zs-log: isMessageToSend:%v\n", isMessageToSend)
+	log.Printf("zs-log: worker:%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
 	w.updatedMirror = make(map[graph.ID]bool)
@@ -258,9 +263,9 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 	defer f.Close()
 
 	for id, dist := range w.distance {
-	//	if w.g.IsMaster(id) {
+		if !w.g.IsMirror(id) && dist != math.MaxFloat64 {
 			writer.WriteString(id.String() + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
-	//	}
+		}
 	}
 	writer.Flush()
 
@@ -339,6 +344,8 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 
+	w.visited = Set.NewSet()
+
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
 	// while id means the id of this worker, and 0 means master
@@ -363,7 +370,7 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.workerNum = partitionNum
 	start := time.Now()
 
-	var graphIO, master, mirror *os.File
+	var graphIO, master, mirror, isolated *os.File
 
 	if tools.WorkerOnSC {
 		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
@@ -378,14 +385,17 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	if tools.WorkerOnSC {
 		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + "Isolateds." + strconv.Itoa(w.selfId-1))
 	}
 	defer master.Close()
 	defer mirror.Close()
+	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
 	if err != nil {
 		log.Fatal(err)
 	}

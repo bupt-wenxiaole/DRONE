@@ -78,11 +78,14 @@ type Graph interface {
 	// if the node already existed in the graph.
 	AddNode(nd Node) bool
 
+	DeleteNode(id ID)
+
 	// AddEdge adds an edge from nd1 to nd2 with the weight.
 	// It returns error if a node does not exist.
 	AddEdge(id1, id2 ID, weight float64) error
 
     IsMaster(id ID) bool
+    IsMirror(id ID) bool
 
 	AddMirror(id ID, masterWR int)
 
@@ -160,6 +163,22 @@ func (g *graph) GetNode(id ID) Node {
 	defer g.mu.RUnlock()
 
 	return g.idToNodes[id]
+}
+
+func (g *graph) DeleteNode(id ID) {
+	delete(g.idToNodes, id)
+
+	for an := range g.nodeToSources[id] {
+		delete(g.nodeToTargets[an], id)
+	}
+	for an := range g.nodeToTargets[id] {
+		delete(g.nodeToSources[an], id)
+	}
+	delete(g.nodeToSources, id)
+	delete(g.nodeToTargets, id)
+
+	delete(g.mirrorWorker, id)
+	delete(g.masterWorkers, id)
 }
 
 func (g *graph) GetNodes() map[ID]Node {
@@ -290,6 +309,11 @@ func (g *graph) IsMaster(id ID) bool {
 	return ok
 }
 
+func (g *graph) IsMirror(id ID) bool {
+	_, ok := g.mirrorWorker[id]
+	return ok
+}
+
 func (g *graph) String() string {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
@@ -337,7 +361,7 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 }
 
 
-func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, error) {
+func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated io.Reader) (Graph, error) {
 	g := newGraph()
 	reader := bufio.NewReader(G)
 	for {
@@ -359,9 +383,10 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 		srcId := ID(parseSrc)
 		dstId := ID(parseDst)
 
-		log.Printf("src: %v dst:%v\n", srcId, dstId)
+		//log.Printf("src: %v dst:%v\n", srcId, dstId)
 
-		weight, err := strconv.ParseFloat(paras[2], 64)
+		//weight, err := strconv.ParseFloat(paras[2], 64)
+		weight := 0.0
 		if err != nil {
 			//fmt.Println("zs-log: " + paras[3])
 			log.Fatal("parse weight error")
@@ -392,6 +417,7 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 		if err != nil || io.EOF == err {
 			break
 		}
+
 		paras := strings.Split(strings.Split(line, "\n")[0], " ")
 
 		parseMaster, err := strconv.ParseInt(paras[0], 10, 64)
@@ -401,9 +427,6 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 
 		masterId := ID(parseMaster)
 
-		log.Printf("masterId: %v", masterId)
-
-		// 如果是isolated的点
 		masterNode := g.GetNode(masterId)
 		if masterNode == nil {
 			intId := masterId.IntVal()
@@ -444,10 +467,49 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader) (Graph, er
 			log.Fatal("parse master worker id error")
 		}
 
-		log.Printf("mirrorId: %v MasterWorker:%v\n", mirrorId, MasterWorker)
+		//log.Printf("mirrorId: %v MasterWorker:%v\n", mirrorId, MasterWorker)
 
 		g.AddMirror(mirrorId, int(MasterWorker))
 	}
 
+	isolated := bufio.NewReader(Isolated)
+	for {
+		line, err := isolated.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
+		parseIso, err := strconv.ParseInt(paras[0], 10, 64)
+		isoId := ID(parseIso)
+
+		nd := NewNode(isoId.IntVal(), int64(parseIso%tools.GraphSimulationTypeModel))
+		g.AddNode(nd)
+	}
+
 	return g, nil
+}
+
+func GetTargetsNum(targetsFile io.Reader) map[int64]int {
+	targets := bufio.NewReader(targetsFile)
+	ans := make(map[int64]int)
+	for {
+		line, err := targets.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		paras := strings.Split(strings.Split(line, "\n")[0], " ")
+
+		vertexId, err := strconv.ParseInt(paras[0], 10, 64)
+		if err != nil {
+			log.Fatal("parse target id error")
+		}
+
+		targetN, err := strconv.ParseInt(paras[1], 10, 64)
+		if err != nil {
+			log.Fatal("parse target num error")
+		}
+
+		ans[vertexId] = int(targetN)
+	}
+	return ans
 }
