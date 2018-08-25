@@ -3,15 +3,15 @@ package tools
 const (
 	//ResultPath = "/mnt/nfs/zpltys/test/"
 	//ResultPath = "/home/xwen/graph/"
-	ResultPath = "/mnt/nfs/xwen/liveJournal_vc_part4/"
+	//ResultPath = "/mnt/nfs/xwen/liveJournal_vc_part"
 	//ResultPath = "/mnt/nfs/xwen/generate_graph/"
-	//ResultPath = "/mnt/nfs/xwen/graphData/"
+	ResultPath = "/mnt/nfs/xwen/graphData/"
 	//NFSPath = "/mnt/nfs/zpltys/test/"
 	//NFSPath = "/mnt/nfs/xwen/graphData/"
 	//NFSPath = "/mnt/nfs/xwen/generate_graph/"
 
-	NFSPath = "/mnt/nfs/xwen/liveJournal_vc_part4/"
-	WorkerOnSC = false
+	NFSPath = "/mnt/nfs/xwen/liveJournal_vc_part"
+	WorkerOnSC = true
 
 	//ConfigPath = "../test_data/config.txt"
 	ConfigPath = "config.txt"
