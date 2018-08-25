@@ -239,6 +239,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedByMessage, w.exchangeMessages)
 
+	w.updatedByMessage = Set.NewSet()
 	w.exchangeMessages = make(map[graph.ID]map[graph.ID]int)
 
 	var fullSendStart time.Time
