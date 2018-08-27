@@ -385,12 +385,12 @@ func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated i
 
 		//log.Printf("src: %v dst:%v\n", srcId, dstId)
 
-		weight, err := strconv.ParseFloat(paras[2], 64)
+		/*weight, err := strconv.ParseFloat(paras[2], 64)
 		if err != nil {
 			//fmt.Println("zs-log: " + paras[3])
 			log.Fatal("parse weight error")
-		}
-		//weight := 0.0
+		}*/
+		weight := 0.0
 
 		nd1 := g.GetNode(srcId)
 		if nd1 == nil {
