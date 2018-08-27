@@ -347,7 +347,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	defer isolated.Close()
 	defer targetsFile.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, true)
 	if err != nil {
 		log.Fatal(err)
 	}

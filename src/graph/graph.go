@@ -129,6 +129,8 @@ type graph struct {
 
 	// nodeToTargets maps a Node identifer to targets(children) with edge weights.
 	nodeToTargets map[ID]map[ID]float64
+
+	useTargets bool
 }
 
 // newGraph returns a new graph.
@@ -224,29 +226,31 @@ func (g *graph) AddEdge(id1, id2 ID, weight float64) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	if _, ok := g.nodeToTargets[id1]; ok {
-		if _, ok2 := g.nodeToTargets[id1][id2]; ok2 {
-			g.nodeToTargets[id1][id2] = weight
+	if g.useTargets {
+		if _, ok := g.nodeToTargets[id1]; ok {
+			if _, ok2 := g.nodeToTargets[id1][id2]; ok2 {
+				g.nodeToTargets[id1][id2] = weight
+			} else {
+				g.nodeToTargets[id1][id2] = weight
+			}
 		} else {
-			g.nodeToTargets[id1][id2] = weight
+			tmap := make(map[ID]float64)
+			tmap[id2] = weight
+			g.nodeToTargets[id1] = tmap
 		}
 	} else {
-		tmap := make(map[ID]float64)
-		tmap[id2] = weight
-		g.nodeToTargets[id1] = tmap
-	}
-	if _, ok := g.nodeToSources[id2]; ok {
-		if _, ok2 := g.nodeToSources[id2][id1]; ok2 {
-			g.nodeToSources[id2][id1] = weight
+		if _, ok := g.nodeToSources[id2]; ok {
+			if _, ok2 := g.nodeToSources[id2][id1]; ok2 {
+				g.nodeToSources[id2][id1] = weight
+			} else {
+				g.nodeToSources[id2][id1] = weight
+			}
 		} else {
-			g.nodeToSources[id2][id1] = weight
+			tmap := make(map[ID]float64)
+			tmap[id1] = weight
+			g.nodeToSources[id2] = tmap
 		}
-	} else {
-		tmap := make(map[ID]float64)
-		tmap[id1] = weight
-		g.nodeToSources[id2] = tmap
 	}
-
 	return nil
 }
 
@@ -337,6 +341,7 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 	buffer := bufio.NewReader(rd)
 
 	g := newGraph()
+	g.useTargets = true
 	for {
 		line, err := buffer.ReadString('\n')
 		if err != nil || io.EOF == err {
@@ -361,8 +366,9 @@ func NewPatternGraph(rd io.Reader) (Graph, error) {
 }
 
 
-func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated io.Reader) (Graph, error) {
+func NewGraphFromTXT(G io.Reader, Master io.Reader, Mirror io.Reader, Isolated io.Reader, useTargets bool) (Graph, error) {
 	g := newGraph()
+	g.useTargets = useTargets
 	reader := bufio.NewReader(G)
 	for {
 		line, err := reader.ReadString('\n')

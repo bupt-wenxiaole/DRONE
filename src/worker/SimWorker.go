@@ -410,7 +410,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	defer mirror.Close()
 	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, false)
 	if err != nil {
 		log.Fatal(err)
 	}

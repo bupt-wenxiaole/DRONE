@@ -396,7 +396,7 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	defer mirror.Close()
 	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, true)
 	if err != nil {
 		log.Fatal(err)
 	}
