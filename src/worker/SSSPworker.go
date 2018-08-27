@@ -209,6 +209,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage, w.visited, id)
 
+	w.updatedByMessage = make(map[graph.ID]bool)
 	log.Printf("zs-log: worker:%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
