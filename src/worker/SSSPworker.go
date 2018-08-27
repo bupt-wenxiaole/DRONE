@@ -213,6 +213,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
 	w.updatedMirror = make(map[graph.ID]bool)
+	w.updatedByMessage = make(map[graph.ID]bool)
 
 	var fullSendStart time.Time
 	var fullSendDuration float64
