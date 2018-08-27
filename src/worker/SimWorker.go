@@ -387,7 +387,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	var graphIO, master, mirror, isolated *os.File
 
 	if tools.WorkerOnSC {
-		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
+		graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
 	} else {
 		graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
 	}
@@ -398,9 +398,9 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	}
 
 	if tools.WorkerOnSC {
-		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
-		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
-		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
+		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/Master." + strconv.Itoa(w.selfId-1))
+		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/Mirror." + strconv.Itoa(w.selfId-1))
+		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/Isolateds." + strconv.Itoa(w.selfId-1))
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
