@@ -198,6 +198,8 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	isMessageToSend, messagesMap, w.oldPr, w.prVal, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.targetsNum, w.exchangeBuffer)
 
+	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
+
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
 
