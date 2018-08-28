@@ -145,7 +145,7 @@ func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 		id := pair.ID
 		diff := pair.PRValue
 
-		log.Printf("message: id:%v, acc:%v\n", id, diff)
+		//log.Printf("message: id:%v, acc:%v\n", id, diff)
 		w.diffVal[id] += diff
 		w.updatedMaster.Add(id)
 		w.updated.Add(id)
