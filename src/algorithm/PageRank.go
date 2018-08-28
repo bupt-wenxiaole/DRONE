@@ -24,7 +24,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, accVal map[int64]flo
 
 	iterationStartTime := time.Now()
 	for u := range g.GetNodes() {
-		temp := alpha * prVal[u] / float64(targetsNum[u])
+		temp := prVal[u] / float64(targetsNum[u])
 		for v := range g.GetTargets(u) {
 			accVal[v] += temp
 			updatedSet.Add(v)
@@ -66,13 +66,13 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 
 	iterationStartTime := time.Now()
 	for u := range updatedSet {
-		pr := accVal[u] + 1 - alpha
+		pr := alpha * accVal[u] + 1 - alpha
 		log.Printf("u: %v, pr: %v, acc:%v\n", u, prVal[u], accVal[u])
 		if math.Abs(prVal[u] - pr) > eps {
 			maxerr = math.Max(maxerr, math.Abs(prVal[u] - pr))
 			for v := range g.GetTargets(u) {
 				nextUpdated.Add(v)
-				tempAcc[v] += alpha * (pr - prVal[u]) / float64(targetsNum[u])
+				tempAcc[v] += (pr - prVal[u]) / float64(targetsNum[u])
 				if g.IsMirror(v) {
 					updatedMirror.Add(v)
 				}

@@ -144,6 +144,7 @@ func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 		id := pair.ID
 		acc := pair.PRValue
 
+		log.Printf("message: id:%v, acc:%v\n", id, acc)
 		w.accVal[id] += acc
 		w.updatedMaster.Add(id)
 		w.updated.Add(id)
