@@ -200,21 +200,6 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 
-	if !isMessageToSend {
-		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
-
-		masterHandle := w.grpcHandlers[0]
-		Client := pb.NewMasterClient(masterHandle)
-
-		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
-			CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: 0,
-			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
-
-		Client.SuperStepFinish(context.Background(), finishRequest)
-		return
-	}
-
 	dstPartitionNum := len(messagesMap)
 
 	fullSendStart := time.Now()
