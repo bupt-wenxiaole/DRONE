@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const eps = 0.01
+const eps = 100
 
 type PRPair struct {
 	PRValue float64
