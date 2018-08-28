@@ -31,17 +31,17 @@ type SimWorker struct {
 	g       graph.Graph
 	grpcHandlers map[int]*grpc.ClientConn
 	pattern graph.Graph
-	sim     map[graph.ID]Set.Set
+	sim     map[int64]Set.Set
 	updatedMirror Set.Set
 	updatedMaster Set.Set
 	updatedByMessage Set.Set
 
-	postMap map[graph.ID]map[graph.ID]int
+	postMap map[int64]map[int64]int
 
 	//edge_count int64
 
-	calMessages map[graph.ID]map[graph.ID]int
-	exchangeMessages map[graph.ID]map[graph.ID]int
+	calMessages map[int64]map[int64]int
+	exchangeMessages map[int64]map[int64]int
 
 	iterationNum int64
 	stopChannel  chan bool
@@ -131,7 +131,7 @@ func (w *SimWorker) SimMessageSend(messageMap map[int]map[algorithm.SimPair]int,
 				client := pb.NewWorkerClient(workerHandle)
 				encodeMessage := make([]*pb.SimMessageStruct, 0)
 				for pair, times := range message {
-					encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: pair.PatternNode.IntVal(), DataId: pair.DataNode.IntVal(), Times:int32(times)})
+					encodeMessage = append(encodeMessage, &pb.SimMessageStruct{PatternId: pair.PatternNode, DataId: pair.DataNode, Times:int32(times)})
 				}
 				Peer2PeerSimSend(client, encodeMessage, partitionId+1, w.selfId, calculateStep)
 			}(partitionId, message)
@@ -195,7 +195,7 @@ func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReques
 	for v, posts := range w.calMessages {
 		for u, val := range posts {
 			if w.postMap[v] == nil {
-				w.postMap[v] = make(map[graph.ID]int)
+				w.postMap[v] = make(map[int64]int)
 			}
 			w.postMap[v][u] = w.postMap[v][u] + val
 		}
@@ -203,7 +203,7 @@ func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReques
 		w.updatedByMessage.Add(v)
 		w.updatedMaster.Add(v)
 	}
-	w.calMessages = make(map[graph.ID]map[graph.ID]int)
+	w.calMessages = make(map[int64]map[int64]int)
 
 	messageMap := make(map[int]map[algorithm.SimPair]int)
 	masterMap := w.g.GetMasters()
@@ -240,7 +240,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedByMessage, w.exchangeMessages)
 
 	w.updatedByMessage = Set.NewSet()
-	w.exchangeMessages = make(map[graph.ID]map[graph.ID]int)
+	w.exchangeMessages = make(map[int64]map[int64]int)
 
 	var fullSendStart time.Time
 	var fullSendDuration float64
@@ -299,7 +299,7 @@ func (w *SimWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb
 		}
 
 		for u := range simSets {
-			writer.WriteString(u.String() + "\t" + v.String() + "\n")
+			writer.WriteString(strconv.FormatInt(u,10) + "\t" + strconv.FormatInt(v,10) + "\n")
 		}
 	}
 	writer.Flush()
@@ -322,19 +322,19 @@ func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*p
 	w.Lock()
 	if args.CalculateStep {
 		for _, pair := range args.Pair {
-			u := graph.ID(pair.PatternId)
-			v := graph.ID(pair.DataId)
+			u := pair.PatternId
+			v := pair.DataId
 			if _, ok := w.calMessages[v]; !ok {
-				w.calMessages[v] = make(map[graph.ID]int)
+				w.calMessages[v] = make(map[int64]int)
 			}
 			w.calMessages[v][u] = w.calMessages[v][u] + int(pair.Times)
 		}
 	} else {
 		for _, pair := range args.Pair {
-			u := graph.ID(pair.PatternId)
-			v := graph.ID(pair.DataId)
+			u := pair.PatternId
+			v := pair.DataId
 			if _, ok := w.exchangeMessages[v]; !ok {
-				w.exchangeMessages[v] = make(map[graph.ID]int)
+				w.exchangeMessages[v] = make(map[int64]int)
 			}
 			w.exchangeMessages[v][u] = w.exchangeMessages[v][u] + int(pair.Times)
 		}
@@ -351,11 +351,11 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.peers = make([]string, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
-	w.calMessages = make(map[graph.ID]map[graph.ID]int)
-	w.exchangeMessages = make(map[graph.ID]map[graph.ID]int)
-	w.sim = make(map[graph.ID]Set.Set)
+	w.calMessages = make(map[int64]map[int64]int)
+	w.exchangeMessages = make(map[int64]map[int64]int)
+	w.sim = make(map[int64]Set.Set)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
-	w.postMap = make(map[graph.ID]map[graph.ID]int)
+	w.postMap = make(map[int64]map[int64]int)
 	w.updatedMirror = Set.NewSet()
 	w.updatedMaster = Set.NewSet()
 	w.updatedByMessage = Set.NewSet()
@@ -410,7 +410,7 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	defer mirror.Close()
 	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, false)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, false, false)
 	if err != nil {
 		log.Fatal(err)
 	}

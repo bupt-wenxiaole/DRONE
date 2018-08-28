@@ -5,111 +5,96 @@ import (
 	"math"
 	"log"
 	"time"
+	"Set"
 )
 
-const eps = 100
+const eps = 0.01
+const alpha = 0.85
 
 type PRPair struct {
 	PRValue float64
-	ID graph.ID
+	ID int64
 }
 
-func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, targetsNum map[int64]int) (bool, map[int][]*PRPair, float64) {
-	nodeNum := len(g.GetNodes())
+func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, accVal map[int64]float64, targetsNum map[int64]int, updatedSet Set.Set, updatedMaster Set.Set, updatedMirror Set.Set) (bool, map[int][]*PRPair, float64) {
 	initVal := 1.0
 	for id := range g.GetNodes() {
-		oldPr[id.IntVal()] = initVal
+		prVal[id] = initVal
 	}
 
-	still := 0.0
 	iterationStartTime := time.Now()
-
-	for id := range g.GetNodes() {
-		targets, _ := g.GetTargets(id)
-		if len(targets) == 0 {
-			still += oldPr[id.IntVal()]
-		} else {
-			num := float64(targetsNum[id.IntVal()])
-			for dstId := range targets {
-				prVal[dstId.IntVal()] += 0.85 * oldPr[id.IntVal()] / num
+	for u := range g.GetNodes() {
+		temp := alpha * prVal[u] / float64(targetsNum[u])
+		for v := range g.GetTargets(u) {
+			accVal[v] += temp
+			updatedSet.Add(v)
+			if g.IsMirror(v) {
+				updatedMirror.Add(v)
+			}
+			if g.IsMaster(v) {
+				updatedMaster.Add(v)
 			}
 		}
-	}
-	still = 0.85 * still / float64(nodeNum) + 0.15 * initVal
-
-	for id := range g.GetNodes() {
-		prVal[id.IntVal()] += still
 	}
 	iterationTime := time.Since(iterationStartTime).Seconds()
 
 	messageMap := make(map[int][]*PRPair)
-	for mirror, workerId := range g.GetMirrors() {
+	mirrorMap := g.GetMirrors()
+	for v := range updatedMirror {
+		workerId := mirrorMap[v]
 		if _, ok := messageMap[workerId]; !ok {
 			messageMap[workerId] = make([]*PRPair, 0)
 		}
-		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:mirror,PRValue:prVal[mirror.IntVal()]})
+		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:v,PRValue:accVal[v]})
 	}
 
 	return true, messageMap, iterationTime
 }
 
-func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, targetsNum map[int64]int, exchangeBuffer []*PRPair) (bool, map[int][]*PRPair, float64) {
-	maxerr := 0.0
-
-	initVal := 1.0
-	nodeNum := len(g.GetNodes())
-	updated := false
-
+func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]float64, targetsNum map[int64]int, updatedSet Set.Set, updatedMaster Set.Set, updatedMirror Set.Set, exchangeBuffer []*PRPair) (bool, map[int][]*PRPair, float64) {
 	for _, msg := range exchangeBuffer {
-		prVal[msg.ID.IntVal()] = msg.PRValue
+		accVal[msg.ID] = msg.PRValue
+		updatedSet.Add(msg.ID)
 	}
 
-	for id := range g.GetNodes() {
-		maxerr = math.Max(maxerr, math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]))
-	}
-	log.Printf("max error:%v\n", maxerr)
+	nextUpdated := Set.NewSet()
 
-	if maxerr > eps {
-		updated = true
-	}
-	messageMap := make(map[int][]*PRPair)
-
-	//oldPr = prVal
-	//prVal = make(map[int64]float64)
-
-	for u := range g.GetNodes() {
-		uval := u.IntVal()
-		oldPr[uval] = prVal[uval]
-		prVal[uval] = 0
-	}
+	log.Printf("updated vertexnum:%v\n", updatedSet.Size())
 
 	iterationStartTime := time.Now()
-
-	still := 0.0
-	for id := range g.GetNodes() {
-		targets, _ := g.GetTargets(id)
-		if len(targets) == 0 {
-			still += oldPr[id.IntVal()]
-		} else {
-			num := float64(targetsNum[id.IntVal()])
-			for dstId := range targets {
-				prVal[dstId.IntVal()] += 0.85 * oldPr[id.IntVal()] / num
+	for u := range updatedSet {
+		pr := accVal[u] + 1 - alpha
+		if math.Abs(prVal[u] - pr) > eps {
+			for v := range g.GetTargets(u) {
+				nextUpdated.Add(v)
+				accVal[v] += alpha * (pr - prVal[u]) / float64(targetsNum[u])
+				if g.IsMirror(v) {
+					updatedMirror.Add(v)
+				}
+				if g.IsMaster(v) {
+					updatedMaster.Add(v)
+				}
 			}
 		}
-	}
-	still = 0.85 * still / float64(nodeNum) + 0.15 * initVal
-
-	for id := range g.GetNodes() {
-		prVal[id.IntVal()] += still
+		prVal[u] = pr
 	}
 	iterationTime := time.Since(iterationStartTime).Seconds()
 
-	for mirror, workerId := range g.GetMirrors() {
+	updatedSet.Clear()
+	for u := range nextUpdated {
+		updatedSet.Add(u)
+	}
+	nextUpdated.Clear()
+
+	messageMap := make(map[int][]*PRPair)
+	mirrorMap := g.GetMirrors()
+	for v := range updatedMirror {
+		workerId := mirrorMap[v]
 		if _, ok := messageMap[workerId]; !ok {
 			messageMap[workerId] = make([]*PRPair, 0)
 		}
-		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:mirror,PRValue:prVal[mirror.IntVal()]})
+		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:v,PRValue:accVal[v]})
 	}
 
-	return updated, messageMap, iterationTime
+	return len(messageMap) != 0, messageMap, iterationTime
 }
