@@ -206,7 +206,7 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 	isMessageToSend, messagesMap, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
-
+	w.updatedMirror.Clear()
 	dstPartitionNum := len(messagesMap)
 
 	fullSendStart := time.Now()

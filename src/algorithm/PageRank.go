@@ -61,10 +61,13 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 
 	log.Printf("updated vertexnum:%v\n", updatedSet.Size())
 
+	maxerr := 0.0
+
 	iterationStartTime := time.Now()
 	for u := range updatedSet {
 		pr := accVal[u] + 1 - alpha
 		if math.Abs(prVal[u] - pr) > eps {
+			maxerr = math.Max(maxerr, math.Abs(prVal[u] - pr))
 			for v := range g.GetTargets(u) {
 				nextUpdated.Add(v)
 				accVal[v] += alpha * (pr - prVal[u]) / float64(targetsNum[u])
@@ -78,6 +81,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 		}
 		prVal[u] = pr
 	}
+	log.Printf("max error:%v\n", maxerr)
 	iterationTime := time.Since(iterationStartTime).Seconds()
 
 	updatedSet.Clear()
