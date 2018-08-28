@@ -139,7 +139,7 @@ func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 		id := pair.ID
 		pr := pair.PRValue
 
-		w.prVal[id.IntVal()] = w.prVal[id.IntVal()] + pr
+		w.prVal[id.IntVal()] += pr
 	}
 	w.calBuffer = make([]*algorithm.PRPair, 0)
 
@@ -196,7 +196,7 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	var iterationTime float64
 
-	isMessageToSend, messagesMap, w.oldPr, w.prVal, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.targetsNum, w.exchangeBuffer)
+	isMessageToSend, messagesMap, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.targetsNum, w.exchangeBuffer)
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 

@@ -53,7 +53,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, oldPr map[int64]floa
 	return true, messageMap, iterationTime
 }
 
-func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, targetsNum map[int64]int, exchangeBuffer []*PRPair) (bool, map[int][]*PRPair, map[int64]float64, map[int64]float64, float64) {
+func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, targetsNum map[int64]int, exchangeBuffer []*PRPair) (bool, map[int][]*PRPair, float64) {
 	maxerr := 0.0
 
 	initVal := 1.0
@@ -74,12 +74,15 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 	}
 	messageMap := make(map[int][]*PRPair)
 
-	if !updated {
-		return updated, messageMap, oldPr, prVal, 0.0
+	//oldPr = prVal
+	//prVal = make(map[int64]float64)
+
+	for u := range g.GetNodes() {
+		uval := u.IntVal()
+		oldPr[uval] = prVal[uval]
+		prVal[uval] = 0
 	}
 
-	oldPr = prVal
-	prVal = make(map[int64]float64)
 	iterationStartTime := time.Now()
 
 	still := 0.0
@@ -108,5 +111,5 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:mirror,PRValue:prVal[mirror.IntVal()]})
 	}
 
-	return updated, messageMap, oldPr, prVal, iterationTime
+	return updated, messageMap, iterationTime
 }
