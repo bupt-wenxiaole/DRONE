@@ -270,7 +270,8 @@ func (g *graph) GetSources(id ID) (map[ID]Node, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	if !g.unsafeExistID(id) {
+	if g.useTargets {
+		log.Fatal("get sources error")
 		return nil, fmt.Errorf("%s does not exist in the graph.", id)
 	}
 
@@ -287,7 +288,8 @@ func (g *graph) GetTargets(id ID) (map[ID]Node, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	if !g.unsafeExistID(id) {
+	if !g.useTargets {
+		log.Fatal("get targets error")
 		return nil, fmt.Errorf("%s does not exist in the graph.", id)
 	}
 

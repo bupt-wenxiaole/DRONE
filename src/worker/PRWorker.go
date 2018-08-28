@@ -335,12 +335,12 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
 		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
-		targetsFile, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "Targets." + strconv.Itoa(w.selfId-1))
+		targetsFile, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Degree." + strconv.Itoa(w.selfId-1))
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
 		isolated, _ = os.Open(tools.NFSPath + "Isolateds." + strconv.Itoa(w.selfId-1))
-		targetsFile, _ = os.Open(tools.NFSPath + "Targets." + strconv.Itoa(w.selfId-1))
+		targetsFile, _ = os.Open(tools.NFSPath + "Degree." + strconv.Itoa(w.selfId-1))
 	}
 	defer master.Close()
 	defer mirror.Close()
