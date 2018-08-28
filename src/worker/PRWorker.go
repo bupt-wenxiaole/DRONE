@@ -36,6 +36,7 @@ type PRWorker struct {
 	targetsNum     map[int64]int
 
 	accVal        map[int64]float64
+	diffVal       map[int64]float64
 	updated       Set.Set
 	updatedMaster Set.Set
 	updatedMirror Set.Set
@@ -142,10 +143,10 @@ func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.
 func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
 	for _, pair := range w.calBuffer {
 		id := pair.ID
-		acc := pair.PRValue
+		diff := pair.PRValue
 
-		log.Printf("message: id:%v, acc:%v\n", id, acc)
-		w.accVal[id] += acc
+		log.Printf("message: id:%v, acc:%v\n", id, diff)
+		w.diffVal[id] += diff
 		w.updatedMaster.Add(id)
 		w.updated.Add(id)
 	}
@@ -158,7 +159,7 @@ func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 			if _, ok := messageMap[partition]; !ok {
 				messageMap[partition] = make([]*algorithm.PRPair, 0)
 			}
-			messageMap[partition] = append(messageMap[partition], &algorithm.PRPair{ID: id, PRValue: w.accVal[id]})
+			messageMap[partition] = append(messageMap[partition], &algorithm.PRPair{ID: id, PRValue: w.diffVal[id]})
 		}
 	}
 	w.updatedMaster.Clear()
@@ -172,7 +173,7 @@ func (w *PRWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	_, messagesMap, iterationTime := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
+	_, messagesMap, iterationTime := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
 
 	dstPartitionNum := len(messagesMap)
 
@@ -204,7 +205,7 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	var iterationTime float64
 
-	isMessageToSend, messagesMap, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
+	isMessageToSend, messagesMap, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 	w.updatedMirror.Clear()
@@ -281,8 +282,8 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.peers = make([]string, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
-	w.prVal = make(map[int64]float64, 0)
-	w.accVal = make(map[int64]float64, 0)
+	w.prVal = make(map[int64]float64)
+	w.accVal = make(map[int64]float64)
 	w.partitionNum = partitionNum
 	w.calBuffer = make([]*algorithm.PRPair, 0)
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
@@ -291,6 +292,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.updated = Set.NewSet()
 	w.updatedMaster = Set.NewSet()
 	w.updatedMirror = Set.NewSet()
+	w.diffVal = make(map[int64]float64)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n

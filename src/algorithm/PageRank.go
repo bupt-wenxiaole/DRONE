@@ -16,17 +16,18 @@ type PRPair struct {
 	ID int64
 }
 
-func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, accVal map[int64]float64, targetsNum map[int64]int, updatedSet Set.Set, updatedMaster Set.Set, updatedMirror Set.Set) (bool, map[int][]*PRPair, float64) {
+func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, accVal map[int64]float64, diffVal map[int64]float64,targetsNum map[int64]int, updatedSet Set.Set, updatedMaster Set.Set, updatedMirror Set.Set) (bool, map[int][]*PRPair, float64) {
 	initVal := 1.0
 	for id := range g.GetNodes() {
 		prVal[id] = initVal
+		accVal[id] = 0.0
 	}
 
 	iterationStartTime := time.Now()
 	for u := range g.GetNodes() {
 		temp := prVal[u] / float64(targetsNum[u])
 		for v := range g.GetTargets(u) {
-			accVal[v] += temp
+			diffVal[v] += temp
 			updatedSet.Add(v)
 			if g.IsMirror(v) {
 				updatedMirror.Add(v)
@@ -45,20 +46,19 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, accVal map[int64]flo
 		if _, ok := messageMap[workerId]; !ok {
 			messageMap[workerId] = make([]*PRPair, 0)
 		}
-		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:v,PRValue:accVal[v]})
+		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:v,PRValue:diffVal[v]})
 	}
 
 	return true, messageMap, iterationTime
 }
 
-func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]float64, targetsNum map[int64]int, updatedSet Set.Set, updatedMaster Set.Set, updatedMirror Set.Set, exchangeBuffer []*PRPair) (bool, map[int][]*PRPair, float64) {
+func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]float64, diffVal map[int64]float64, targetsNum map[int64]int, updatedSet Set.Set, updatedMaster Set.Set, updatedMirror Set.Set, exchangeBuffer []*PRPair) (bool, map[int][]*PRPair, float64) {
 	for _, msg := range exchangeBuffer {
-		accVal[msg.ID] = msg.PRValue
+		diffVal[msg.ID] = msg.PRValue
 		updatedSet.Add(msg.ID)
 	}
 
 	nextUpdated := Set.NewSet()
-	tempAcc := make(map[int64]float64)
 
 	log.Printf("updated vertexnum:%v\n", updatedSet.Size())
 
@@ -66,13 +66,18 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 
 	iterationStartTime := time.Now()
 	for u := range updatedSet {
+		accVal[u] += diffVal[u]
+		delete(diffVal, u)
+	}
+
+	for u := range updatedSet {
 		pr := alpha * accVal[u] + 1 - alpha
 		log.Printf("u: %v, pr: %v, acc:%v\n", u, prVal[u], accVal[u])
 		if math.Abs(prVal[u] - pr) > eps {
 			maxerr = math.Max(maxerr, math.Abs(prVal[u] - pr))
 			for v := range g.GetTargets(u) {
 				nextUpdated.Add(v)
-				tempAcc[v] += (pr - prVal[u]) / float64(targetsNum[u])
+				diffVal[v] += (pr - prVal[u]) / float64(targetsNum[u])
 				if g.IsMirror(v) {
 					updatedMirror.Add(v)
 				}
@@ -84,10 +89,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 		prVal[u] = pr
 	}
 	log.Printf("max error:%v\n", maxerr)
-	for u, val := range tempAcc {
-		accVal[u] += val
-		delete(tempAcc, u)
-	}
+
 	iterationTime := time.Since(iterationStartTime).Seconds()
 
 	updatedSet.Clear()
@@ -103,7 +105,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 		if _, ok := messageMap[workerId]; !ok {
 			messageMap[workerId] = make([]*PRPair, 0)
 		}
-		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:v,PRValue:accVal[v]})
+		messageMap[workerId] = append(messageMap[workerId], &PRPair{ID:v,PRValue:diffVal[v]})
 	}
 
 	return len(messageMap) != 0, messageMap, iterationTime
