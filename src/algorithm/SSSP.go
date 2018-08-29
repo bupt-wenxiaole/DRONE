@@ -121,9 +121,8 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 			}
 		}
 
-		targets, _ := g.GetTargets(srcID)
-		for disID := range targets {
-			weight, _ := g.GetWeight(srcID, disID)
+		targets := g.GetTargets(srcID)
+		for disID, weight := range targets {
 			if distance[disID] > nowDis+weight {
 				heap.Push(&pq, &Pair{NodeId: disID, Distance: nowDis + weight})
 			}
@@ -200,9 +199,8 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 			}
 		}
 
-		targets, _ := g.GetTargets(srcID)
-		for disID := range targets {
-			weight, _ := g.GetWeight(srcID, disID)
+		targets := g.GetTargets(srcID)
+		for disID, weight := range targets {
 			if distance[disID] > nowDis+weight {
 				heap.Push(&pq, &Pair{NodeId: disID, Distance: nowDis + weight})
 			}

@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 	"tools"
+	"sort"
+	"Set"
 )
 
 type PRWorker struct {
@@ -28,12 +30,13 @@ type PRWorker struct {
 
 	g            graph.Graph
 	prVal        map[int64]float64
-	oldPr        map[int64]float64
+	accVal       map[int64]float64
+	diffVal      map[int64]float64
+	updatedSet   Set.Set
 	partitionNum int
-	totalVertexNum int64
-	updated      map[int64]float64
 	receiveBuffer map[int64]float64
-	outerMsg    map[int64][]int64
+
+	targetNum    map[int64]int
 
 	iterationNum int
 	stopChannel  chan bool
@@ -48,25 +51,22 @@ func (w *PRWorker) UnLock() {
 }
 
 // rpc send has max size limit, so we spilt our transfer into many small block
-func Peer2PeerPRSend(client pb.WorkerClient, message []*pb.PRMessageStruct, wg *sync.WaitGroup)  {
+func Peer2PeerPRSend(client pb.WorkerClient, message []*pb.PRMessageStruct)  {
 
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
 		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: slice})
 		if err != nil {
-			log.Println("send error")
 			log.Fatal(err)
 		}
 	}
 	if len(message) != 0 {
 		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: message})
 		if err != nil {
-			log.Println("send error")
 			log.Fatal(err)
 		}
 	}
-	wg.Done()
 }
 
 func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
@@ -86,62 +86,86 @@ func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
+func (w *PRWorker) PRMessageSend(messages map[int][]*algorithm.PRPair) []*pb.WorkerCommunicationSize {
+	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
+	var wg sync.WaitGroup
+	messageLen := len(messages)
+	batch := (messageLen + tools.ConnPoolSize - 1) / tools.ConnPoolSize
+
+	indexBuffer := make([]int, 0)
+	for partitionId := range messages {
+		indexBuffer = append(indexBuffer, partitionId)
+	}
+	sort.Ints(indexBuffer)
+	start := 0
+	for i := 1; i < len(indexBuffer); i++ {
+		if indexBuffer[i] > w.selfId {
+			start = i
+			break
+		}
+	}
+	indexBuffer = append(indexBuffer[start:], indexBuffer[:start]...)
+
+	for i := 1; i <= batch; i++ {
+		for j := (i - 1) * tools.ConnPoolSize; j < i * tools.ConnPoolSize && j < len(indexBuffer); j++ {
+			partitionId := indexBuffer[j]
+			message := messages[partitionId]
+			wg.Add(1)
+
+			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
+			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
+
+			go func(partitionId int, message []*algorithm.PRPair) {
+				defer wg.Done()
+				workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer workerHandle.Close()
+
+				client := pb.NewWorkerClient(workerHandle)
+				encodeMessage := make([]*pb.PRMessageStruct, 0)
+				for _, msg := range message {
+					encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID:msg.ID, PrVal:msg.PRValue})
+				}
+				Peer2PeerPRSend(client, encodeMessage)
+			}(partitionId, message)
+		}
+		wg.Wait()
+	}
+	return SlicePeerSend
+}
+
+func (w * PRWorker) peval(args *pb.PEvalRequest, id int) {
+	var fullSendStart time.Time
+	var fullSendDuration float64
+
+	_, messagesMap, iterationTime := algorithm.PageRank_PEVal(w.g, w.targetNum, w.prVal, w.accVal, w.updatedSet)
+
+	dstPartitionNum := len(messagesMap)
+
+	fullSendStart = time.Now()
+	SlicePeerSend := w.PRMessageSend(messagesMap)
+	fullSendDuration = time.Since(fullSendStart).Seconds()
+
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
+
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
+		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: true}
+
+	Client.SuperStepFinish(context.Background(), finishRequest)
+}
+
 func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
-	// init grpc handler and store it
-	// cause until now, we can ensure all workers have in work,
-	// so we do this here
-
-	w.grpcHandlers = make([]*grpc.ClientConn, len(w.peers))
-	for id, peer := range w.peers {
-		if id == w.selfId || id == 0 {
-			continue
-		}
-		conn, err := grpc.Dial(peer, grpc.WithInsecure())
-		if err != nil {
-			panic(err)
-		}
-		w.grpcHandlers[id] = conn
-	}
-
-	// Load graph data
-	//var fullSendStart time.Time
-	//var fullSendDuration float64
-	//var SlicePeerSend []*pb.WorkerCommunicationSize
-	var nodeNum int64
-	nodeNum, w.prVal = algorithm.PageRank_PEVal(w.g, w.prVal, w.partitionNum)
-
-	/*for id, val := range w.prVal {
-		log.Printf("PEVal id:%v prval:%v\n", id, val)
-	}*/
-
-	w.totalVertexNum = nodeNum
-	for partitionId := 1; partitionId <= w.partitionNum; partitionId++ {
-		if partitionId == w.selfId {
-			continue
-		}
-		encodeMessage := make([]*pb.PRMessageStruct, 0)
-		encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID:-1,PrVal:float64(nodeNum)})
-		client := pb.NewWorkerClient(w.grpcHandlers[partitionId])
-		_, err := client.PRSend(context.Background(), &pb.PRMessageRequest{Pair: encodeMessage})
-		if err != nil {
-			log.Println("send error")
-			log.Fatal(err)
-		}
-	}
+	go w.peval(args, w.selfId)
 	return &pb.PEvalResponse{Ok: true}, nil
 }
 
-func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
-	w.Lock()
-	w.updated = w.receiveBuffer
-	w.receiveBuffer = make(map[int64]float64, 0)
-	w.UnLock()
-/*
+func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
-	if w.iterationNum == 1 {
-		w.totalVertexNum += int64(w.updated[-1])
-		w.updated = make(map[int64]float64, 0)
-	}
 
 	var isMessageToSend bool
 	var messages map[int][]*algorithm.PRMessage
@@ -157,25 +181,12 @@ func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.In
 
 	//time.Sleep(time.Second)
 
-	var wg sync.WaitGroup
-	fullSendStart = time.Now()
-	for partitionId, message := range messages {
-		//log.Printf("message send partition id:%v\n", partitionId)
-		client := pb.NewWorkerClient(w.grpcHandlers[partitionId+1])
-		encodeMessage := make([]*pb.PRMessageStruct, 0)
-		eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{int32(partitionId), int32(len(message))}
-		SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
-		for _, msg := range message {
-			encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID: msg.ID.IntVal(), PrVal:msg.PRValue})
-			//log.Printf("send id:%v prVal:%v\n", msg.ID.IntVal(), msg.PRValue)
-		}
-		wg.Add(1)
-		go Peer2PeerPRSend(client, encodeMessage, &wg)
-	}
-	wg.Wait()
-	//fullSendDuration = time.Since(fullSendStart).Seconds()
-*/
-	return &pb.IncEvalResponse{}, nil
+
+}
+
+func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+	go w.incEval(args, w.selfId)
+	return &pb.IncEvalResponse{true}, nil
 }
 
 func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
@@ -265,7 +276,6 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	} else {
 		var graphIO, fxiReader, fxoReader *os.File
 		if tools.WorkerOnSC {
-			//graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/G." + strconv.Itoa(w.selfId-1))
 			graphIO, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/G." + strconv.Itoa(w.selfId-1))
 		} else {
 			graphIO, _ = os.Open(tools.NFSPath + "G." + strconv.Itoa(w.selfId-1))
@@ -276,8 +286,6 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 			fmt.Println("graphIO is nil")
 		}
 		if tools.WorkerOnSC {
-			//fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".I")
-			//fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "cores/F" + strconv.Itoa(w.selfId-1) + ".O")
 			fxiReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".I")
 			fxoReader, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/F" + strconv.Itoa(w.selfId-1) + ".O")
 		} else {
@@ -293,13 +301,15 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 		}
 	}
 
+	w.targetNum = algorithm.GenerateTarget(w.g)
+
 	loadTime := time.Since(start)
 	fmt.Printf("loadGraph Time: %v", loadTime)
+	log.Printf("graph size:%v\n", len(w.g.GetNodes()))
 
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
-	//w.outerMsg = algorithm.GenerateOuterMsg(w.g.GetFOs())
 	return w
 }
 

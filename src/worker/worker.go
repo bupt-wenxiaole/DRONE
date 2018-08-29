@@ -104,17 +104,6 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	var startId graph.ID = graph.StringID(-1)
 
-/*	for id, peer := range w.peers {
-		if id == w.selfId || id == 0 {
-			continue
-		}
-		conn, err := grpc.Dial(peer, grpc.WithInsecure())
-		if err != nil {
-			panic(err)
-		}
-		w.grpcHandlers[id] = conn
-	}
-*/
 	if w.selfId == 1 {
 		log.Println("my rank is 1")
 		for v := range w.g.GetNodes() {
@@ -127,13 +116,6 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
 
-		/*
-		masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer masterHandle.Close()
-		*/
 		masterHandle := w.grpcHandlers[0]
 		Client := pb.NewMasterClient(masterHandle)
 
@@ -143,6 +125,7 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
+		return
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
@@ -195,15 +178,9 @@ func (w * Worker) peval(args *pb.PEvalRequest, id int)  {
 		}
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
-/*
-	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
-	if err != nil {
-		log.Fatal(err)
-	}
-*/
+
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
-	//defer masterHandle.Close()
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
@@ -245,7 +222,7 @@ func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
-
+		return
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup

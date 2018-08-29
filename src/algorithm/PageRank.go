@@ -4,94 +4,75 @@ import (
 	"graph"
 	"math"
 	"log"
+	"Set"
+	"time"
 )
 
 const eps = 0.01
+const alpha = 0.85
 
-type PRMessage struct {
+type PRPair struct {
 	PRValue float64
 	ID graph.ID
 }
 
-func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, workerNum int) (int64, map[int64]float64) {
-	nodeNum := len(g.GetNodes())
-	initVal := 1.0 / float64(nodeNum * workerNum)
+type PRBorder struct {
+	ID graph.ID
+	partitionId int
+}
+
+func GenerateTarget(g graph.Graph) map[int64]int {
+	ans := make(map[int64]int)
+
+	route := g.GetRoute()
+	for u := range g.GetNodes() {
+		ans[u.IntVal()] = len(g.GetTargets(u)) + len(route[u])
+	}
+	return ans
+}
+
+func PageRank_PEVal(g graph.Graph, targetNum map[int64]int, prVal map[int64]float64, accVal map[int64]float64, updated Set.Set) (bool, map[int][]*PRPair, float64) {
+
+	initVal := 1.0
 	for id := range g.GetNodes() {
 		prVal[id.IntVal()] = initVal
+		accVal[id.IntVal()] = 0
 	}
 
-	tempPr := make(map[int64]float64)
-	loopTime := 0
-	for {
-		/*
-		if loopTime == 0 {
-			log.Printf("accuracy: %v\n", eps * initVal)
+	updatedBorder := make(map[PRBorder]bool)
+	routes := g.GetRoute()
+
+	iterationStartTime := time.Now()
+
+	for u := range g.GetNodes() {
+		temp := prVal[u.IntVal()] / float64(targetNum[u.IntVal()])
+		for v := range g.GetTargets(u) {
+			accVal[v.IntVal()] += temp
+			updated.Add(v)
 		}
-		log.Printf("loop time:%v\n", loopTime)
-		var maxerr float64 = 0
-		*/
-		if loopTime == 0 {
-			log.Println("finish peval")
-			break
-		}
-
-		updated := false
-		still := 0.0
-		loopTime++
-
-		log.Printf("loop time:%v\n", loopTime)
-
-		for id := range g.GetNodes() {
-			targets, _ := g.GetTargets(id)
-			if len(targets) == 0 {
-				still += prVal[id.IntVal()]
-			} else {
-				num := float64(len(targets))
-				for dstId := range targets {
-					tempPr[dstId.IntVal()] += 0.85 * prVal[id.IntVal()] / num
-				}
+		if route, ok := routes[u]; ok {
+			for v, msg := range route {
+				accVal[v.IntVal()] += temp
+				updatedBorder[PRBorder{ID:v, partitionId:msg.RoutePartition()}] = true
 			}
 		}
-		still = 0.85 * still / float64(nodeNum) + 0.15 * initVal
-		for id := range g.GetNodes() {
-			tempPr[id.IntVal()] += still
-			if math.Abs(tempPr[id.IntVal()] - prVal[id.IntVal()]) > eps * initVal {
-				updated = true
-			}
-			//maxerr = math.Max(maxerr, math.Abs(tempPr[id.IntVal()] - prVal[id.IntVal()]))
-		}
-		//log.Printf("max error:%v\n", maxerr)
-
-		if !updated {
-			prVal = tempPr
-			break
-		}
-
-		prVal = tempPr
-		tempPr = make(map[int64]float64)
 	}
 
-	log.Printf("loop time:%v\n", loopTime)
-	return int64(nodeNum), prVal
+	iterationTime := time.Since(iterationStartTime).Seconds()
+
+	messageMap := make(map[int][]*PRPair)
+	for border := range updatedBorder {
+		partitionId := border.partitionId
+		id := border.ID
+		if messageMap[partitionId] == nil {
+			messageMap[partitionId] = make([]*PRPair, 0)
+		}
+		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:accVal[id.IntVal()]})
+	}
+
+	return len(messageMap) != 0, messageMap, iterationTime
 }
 
-/*
-func GenerateOuterMsg(FO map[graph.ID][]graph.RouteMsg) map[int64][]int64 {
-	outerMsg := make(map[int64][]int64)
-	for fo, msgs := range FO {
-		for _, msg := range msgs {
-			srcId := msg.RelatedId()
-			if _, ok := outerMsg[srcId.IntVal()]; !ok {
-				outerMsg[srcId.IntVal()] = make([]int64, 0)
-			}
-
-			nowMsg := fo.IntVal()
-			outerMsg[srcId.IntVal()] = append(outerMsg[srcId.IntVal()], nowMsg)
-		}
-	}
-	return outerMsg
-}
-*/
 func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage, map[int64]float64, map[int64]float64) {
 	maxerr := 0.0
 

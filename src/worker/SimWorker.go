@@ -108,6 +108,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
+		return
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
@@ -207,7 +208,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 			PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
-
+		return
 	} else {
 		fullSendStart = time.Now()
 		var wg sync.WaitGroup
