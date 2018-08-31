@@ -334,9 +334,12 @@ func RunPRWorker(id, partitionNum int) {
 	}()
 
 	masterHandle, err := grpc.Dial(w.peers[0], grpc.WithInsecure())
+	w.grpcHandlers[0] = masterHandle
+	defer masterHandle.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	registerClient := pb.NewMasterClient(masterHandle)
 	response, err := registerClient.Register(context.Background(), &pb.RegisterRequest{WorkerIndex: int32(w.selfId)})
 	if err != nil || !response.Ok {
