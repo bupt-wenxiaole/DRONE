@@ -126,7 +126,7 @@ func (w *PRWorker) PRMessageSend(messages map[int][]*algorithm.PRPair) []*pb.Wor
 				client := pb.NewWorkerClient(workerHandle)
 				encodeMessage := make([]*pb.PRMessageStruct, 0)
 				for _, msg := range message {
-					encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID:msg.ID, PrVal:msg.PRValue})
+					encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID:msg.ID.IntVal(), PrVal:msg.PRValue})
 				}
 				Peer2PeerPRSend(client, encodeMessage)
 			}(partitionId, message)
@@ -167,21 +167,23 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 
-	var isMessageToSend bool
-	var messages map[int][]*algorithm.PRMessage
+	isMessageToSend, messagesMap, iterationTime := algorithm.PageRank_IncEval(w.g, w.targetNum, w.prVal, w.accVal,w.updatedSet, w.receiveBuffer)
 
-	runStart := time.Now()
-	isMessageToSend, messages, w.oldPr, w.prVal = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.partitionNum, w.selfId-1, w.outerMsg, w.updated, w.totalVertexNum)
-	runTime := time.Since(runStart).Seconds()
+	dstPartitionNum := len(messagesMap)
 
-	w.updated = make(map[int64]float64, 0)
-	var fullSendStart time.Time
-	//var fullSendDuration float64
-	var SlicePeerSend []*pb.WorkerCommunicationSize
+	fullSendStart := time.Now()
+	SlicePeerSend := w.PRMessageSend(messagesMap)
+	fullSendDuration := time.Since(fullSendStart).Seconds()
 
-	//time.Sleep(time.Second)
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
 
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
+		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
+	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
 func (w *PRWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
@@ -229,10 +231,9 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.peers = make([]string, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
-	w.prVal = make(map[int64]float64, 0)
-	w.oldPr = make(map[int64]float64, 0)
+	w.prVal = make(map[int64]float64)
+	w.accVal = make(map[int64]float64)
 	w.partitionNum = partitionNum
-	w.updated = make(map[int64]float64, 0)
 	w.receiveBuffer = make(map[int64]float64, 0)
 
 	// read config file get ip:port config

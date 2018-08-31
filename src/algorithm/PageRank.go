@@ -68,93 +68,71 @@ func PageRank_PEVal(g graph.Graph, targetNum map[int64]int, prVal map[int64]floa
 			messageMap[partitionId] = make([]*PRPair, 0)
 		}
 		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:accVal[id.IntVal()]})
+		delete(accVal, id.IntVal())
 	}
 
 	return len(messageMap) != 0, messageMap, iterationTime
 }
 
-func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]float64, workerNum int, partitionId int, outerMsg map[int64][]int64, messages map[int64]float64, totalVertexNum int64) (bool, map[int][]*PRMessage, map[int64]float64, map[int64]float64) {
+func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]float64, accVal map[int64]float64, updatedSet Set.Set, receiveBuffer map[int64]float64) (bool, map[int][]*PRPair, float64) {
 	maxerr := 0.0
 
-	still := 0.0
-	initVal := 1.0 / float64(totalVertexNum)
-	updated := false
-
-	//var receiveSum float64 = 0
-	//var sendSum float64 = 0
-
-	for id, msg := range messages {
-		//log.Printf("id:%v, val:%v\n", id, msg)
-		if id != -1 {
-			prVal[id] += msg
-			//receiveSum += msg
-		} else {
-			still += msg
-		}
+	for id, msg := range receiveBuffer {
+		accVal[id] += msg
+		updatedSet.Add(graph.StringID(id))
 	}
 
-	log.Printf("threshold:%v\n", eps * initVal)
+	tempSet := Set.NewSet()
+	tempAcc := make(map[int64]float64)
 
-	var sum float64 = 0
-	for id := range g.GetNodes() {
-		prVal[id.IntVal()] += still * 0.85
-		if math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]) > eps * initVal {
-			updated = true
-		}
-		maxerr = math.Max(maxerr, math.Abs(prVal[id.IntVal()] - oldPr[id.IntVal()]))
-		sum += prVal[id.IntVal()]
-	}
-	//log.Printf("total vertex num:%v\n", totalVertexNum)
-	//log.Printf("still receive:%v\n", still)
-	log.Printf("max error:%v\n", maxerr)
+	updatedBorder := make(map[PRBorder]bool)
+	routes := g.GetRoute()
+	iterationStartTime := time.Now()
 
-	tempPr := make(map[int64]float64)
-	messagePr := make(map[int64]float64)
-	still = 0
+	log.Printf("updated size:%v\n", len(updatedSet))
 
-	for id := range g.GetNodes() {
-		targets, _ := g.GetTargets(id)
-		sonNum := len(targets) + len(outerMsg[id.IntVal()])
-		tempPr[id.IntVal()] += 0.15 * initVal
-		if sonNum == 0 {
-			still += prVal[id.IntVal()] / float64(totalVertexNum)
-		} else {
-			val := prVal[id.IntVal()] / float64(sonNum)
-			//log.Printf("val: %v\n", val)
-			for target := range targets {
-				tempPr[target.IntVal()] += 0.85 * val
+	for u := range updatedSet {
+		pr := alpha * accVal[u.IntVal()] + (1 - alpha)
+		err := math.Abs(pr - prVal[u.IntVal()])
+		maxerr = math.Max(maxerr, err)
+
+		if err > eps {
+			diff := (pr - prVal[u.IntVal()]) / float64(targetNum[u.IntVal()])
+			for v := range g.GetTargets(u) {
+				tempAcc[v.IntVal()] += diff
+				tempSet.Add(v)
 			}
-			for _, outer := range outerMsg[id.IntVal()] {
-				//log.Printf("out node:%v\n", outer)
 
-				messagePr[outer] += 0.85 * val
-				//sendSum += 0.85 * val
+			if route, ok := routes[u]; ok {
+				for v, msg := range route {
+					accVal[v.IntVal()] += diff
+					updatedBorder[PRBorder{ID:v, partitionId:msg.RoutePartition()}] = true
+				}
 			}
 		}
+		prVal[u.IntVal()] = pr
 	}
-	for id := range g.GetNodes() {
-		tempPr[id.IntVal()] += 0.85 * still
+	log.Printf("maxerr:%v\n", maxerr)
+
+	updatedSet.Clear()
+	for u := range tempSet {
+		accVal[u.IntVal()] += tempAcc[u.IntVal()]
+		updatedSet.Add(u)
+		delete(tempAcc, u.IntVal())
 	}
+	tempSet.Clear()
+	iterationTime := time.Since(iterationStartTime).Seconds()
 
-	reduceMsg := make(map[int][]*PRMessage)
-
-	for i := 0; i < workerNum; i++ {
-		if i == partitionId {
-			continue
+	messageMap := make(map[int][]*PRPair)
+	for border := range updatedBorder {
+		partitionId := border.partitionId
+		id := border.ID
+		if messageMap[partitionId] == nil {
+			messageMap[partitionId] = make([]*PRPair, 0)
 		}
-		reduceMsg[i] = make([]*PRMessage, 0)
-		reduceMsg[i] = append(reduceMsg[i], &PRMessage{PRValue:still,ID:graph.StringID(-1)})
+		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:accVal[id.IntVal()]})
+		delete(accVal, id.IntVal())
 	}
 
-	//log.Printf("still send:%v\n", still)
-/*
-	for fo, routeMsg := range g.GetFOs() {
-		partition := routeMsg[0].RoutePartition()
-		//log.Printf("send id:%v, val:%v partition:%v\n", fo.IntVal(), tempPr[fo.IntVal()], partition)
-		reduceMsg[partition] = append(reduceMsg[partition], &PRMessage{PRValue:messagePr[fo.IntVal()],ID:fo})
-	}
-*/
-	//log.Printf("receive sum:%v\n", receiveSum)
-	//log.Printf("send sum:%v\n", sendSum)
-	return updated, reduceMsg, prVal, tempPr
+	return len(messageMap) != 0, messageMap, iterationTime
 }
