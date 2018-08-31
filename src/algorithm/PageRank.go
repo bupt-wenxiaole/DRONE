@@ -78,7 +78,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 	maxerr := 0.0
 
 	for id, msg := range receiveBuffer {
-		log.Printf("receive msg: id:%v, diff:%v\n", id, msg)
+	//	log.Printf("receive msg: id:%v, diff:%v\n", id, msg)
 		accVal[id] += msg
 		updatedSet.Add(graph.StringID(id))
 	}
@@ -95,13 +95,13 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 	for u := range updatedSet {
 		log.Printf("u:%v, acc:%v, pr:%v\n", u.IntVal(), accVal[u.IntVal()], prVal[u.IntVal()])
 		pr := alpha * accVal[u.IntVal()] + (1 - alpha)
-		log.Printf("pr:%v\n", pr)
+		//log.Printf("pr:%v\n", pr)
 		err := math.Abs(pr - prVal[u.IntVal()])
 		maxerr = math.Max(maxerr, err)
 
 		if err > eps {
 			diff := (pr - prVal[u.IntVal()]) / float64(targetNum[u.IntVal()])
-			log.Printf("diff:%v\n", diff)
+		//	log.Printf("diff:%v\n", diff)
 			for v := range g.GetTargets(u) {
 				tempAcc[v.IntVal()] += diff
 				tempSet.Add(v)
@@ -113,6 +113,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 					updatedBorder[PRBorder{ID:v, partitionId:msg.RoutePartition()}] = true
 				}
 			}
+			prVal[u.IntVal()] = pr
 		}
 	}
 	log.Printf("maxerr:%v\n", maxerr)
@@ -120,7 +121,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 	updatedSet.Clear()
 	for u := range tempSet {
 		accVal[u.IntVal()] += tempAcc[u.IntVal()]
-		log.Printf("u:%v, tempAcc:%v\n", u.IntVal(), tempAcc[u.IntVal()])
+	//	log.Printf("u:%v, tempAcc:%v\n", u.IntVal(), tempAcc[u.IntVal()])
 		updatedSet.Add(u)
 		delete(tempAcc, u.IntVal())
 	}
@@ -135,7 +136,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 			messageMap[partitionId] = make([]*PRPair, 0)
 		}
 		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:tempAcc[id.IntVal()]})
-		log.Printf("send msg: id:%v, diff:%v\n", id.IntVal(), tempAcc[id.IntVal()])
+	//	log.Printf("send msg: id:%v, diff:%v\n", id.IntVal(), tempAcc[id.IntVal()])
 		delete(tempAcc, id.IntVal())
 	}
 
