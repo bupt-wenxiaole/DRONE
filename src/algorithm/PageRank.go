@@ -108,7 +108,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 
 			if route, ok := routes[u]; ok {
 				for v, msg := range route {
-					accVal[v.IntVal()] += diff
+					tempAcc[v.IntVal()] += diff
 					updatedBorder[PRBorder{ID:v, partitionId:msg.RoutePartition()}] = true
 				}
 			}
@@ -132,9 +132,9 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 		if messageMap[partitionId] == nil {
 			messageMap[partitionId] = make([]*PRPair, 0)
 		}
-		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:accVal[id.IntVal()]})
+		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:tempAcc[id.IntVal()]})
 		log.Printf("msg: id:%v, diff:%v\n", id.IntVal(), tempAcc[id.IntVal()])
-		delete(accVal, id.IntVal())
+		delete(tempAcc, id.IntVal())
 	}
 
 	return len(messageMap) != 0, messageMap, iterationTime
