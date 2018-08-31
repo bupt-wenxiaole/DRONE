@@ -78,6 +78,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 	maxerr := 0.0
 
 	for id, msg := range receiveBuffer {
+		log.Printf("receive msg: id:%v, diff:%v\n", id, msg)
 		accVal[id] += msg
 		updatedSet.Add(graph.StringID(id))
 	}
@@ -119,6 +120,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 	updatedSet.Clear()
 	for u := range tempSet {
 		accVal[u.IntVal()] += tempAcc[u.IntVal()]
+		log.Printf("u:%v, tempAcc:%v\n", u.IntVal(), tempAcc[u.IntVal()])
 		updatedSet.Add(u)
 		delete(tempAcc, u.IntVal())
 	}
@@ -133,7 +135,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 			messageMap[partitionId] = make([]*PRPair, 0)
 		}
 		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:tempAcc[id.IntVal()]})
-		log.Printf("msg: id:%v, diff:%v\n", id.IntVal(), tempAcc[id.IntVal()])
+		log.Printf("send msg: id:%v, diff:%v\n", id.IntVal(), tempAcc[id.IntVal()])
 		delete(tempAcc, id.IntVal())
 	}
 
