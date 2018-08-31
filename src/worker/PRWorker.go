@@ -164,9 +164,14 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 }
 
 func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
+	w.mutex.Lock()
+	tempBuffer := w.receiveBuffer
+	w.receiveBuffer = make(map[int64]float64)
+	w.mutex.Unlock()
+
 	w.iterationNum++
 
-	isMessageToSend, messagesMap, iterationTime := algorithm.PageRank_IncEval(w.g, w.targetNum, w.prVal, w.accVal,w.updatedSet, w.receiveBuffer)
+	isMessageToSend, messagesMap, iterationTime := algorithm.PageRank_IncEval(w.g, w.targetNum, w.prVal, w.accVal,w.updatedSet, tempBuffer)
 
 	dstPartitionNum := len(messagesMap)
 
