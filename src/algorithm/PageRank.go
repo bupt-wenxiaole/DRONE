@@ -134,7 +134,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 			messageMap[partitionId] = make([]*PRPair, 0)
 		}
 		messageMap[partitionId] = append(messageMap[partitionId], &PRPair{ID:id, PRValue:accVal[id.IntVal()]})
-		log.Printf("msg: id:%v, diff:%v\n", id.IntVal(), accVal[id.IntVal()])
+		log.Printf("msg: id:%v, diff:%v\n", id.IntVal(), tempAcc[id.IntVal()])
 		delete(accVal, id.IntVal())
 	}
 
