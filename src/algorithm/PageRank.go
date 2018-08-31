@@ -113,7 +113,6 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 				}
 			}
 		}
-		prVal[u.IntVal()] = pr
 	}
 	log.Printf("maxerr:%v\n", maxerr)
 
