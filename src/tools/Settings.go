@@ -2,15 +2,19 @@ package tools
 
 const (
 	//ResultPath = "/home/acgict/result/"
-	ResultPath = "/mnt/nfs/xwen/result/"
+	//ResultPath = "/mnt/nfs/xwen/result/"
+	ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/liveJournal_ec_json/"
+	//NFSPath = "/mnt/nfs/xwen/liveJournal_ec_json/"
+	NFSPath = "../test_data/subgraph.json"
+	PartionPath = "../test_data/partition.json"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 
 	LoadFromJson = true
 
-	ConfigPath = "config.txt"
+	//ConfigPath = "config.txt"
+	ConfigPath = "../test_data/config.txt"
 
 	PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
@@ -18,6 +22,6 @@ const (
 	RPCSendSize = 10000
 
 
-	ConnPoolSize = 16
+	ConnPoolSize = 128
 	MasterConnPoolSize = 1024
 )
