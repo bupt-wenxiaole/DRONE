@@ -31,7 +31,6 @@ type PRWorker struct {
 	g            graph.Graph
 	prVal        map[int64]float64
 	accVal       map[int64]float64
-	diffVal      map[int64]float64
 	updatedSet   Set.Set
 	partitionNum int
 	receiveBuffer map[int64]float64
@@ -235,6 +234,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.accVal = make(map[int64]float64)
 	w.partitionNum = partitionNum
 	w.receiveBuffer = make(map[int64]float64, 0)
+	w.updatedSet = Set.NewSet()
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n

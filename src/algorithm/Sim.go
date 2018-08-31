@@ -19,7 +19,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set.Set, map[graph.ID]Set
 	preSet := make(map[graph.ID]Set.Set)
 	for v := range g.GetNodes() {
 		preSet[v] = Set.NewSet()
-		sources, _ := g.GetSources(v)
+		sources := g.GetSources(v)
 		for id := range sources {
 			preSet[v].Add(id)
 		}
@@ -27,7 +27,7 @@ func GeneratePrePostFISet(g graph.Graph) (map[graph.ID]Set.Set, map[graph.ID]Set
 	postSet := make(map[graph.ID]Set.Set)
 	for v := range g.GetNodes() {
 		postSet[v] = Set.NewSet()
-		targets, _ := g.GetTargets(v)
+		targets := g.GetTargets(v)
 		for id := range targets {
 			postSet[v].Add(id)
 		}
@@ -100,7 +100,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 		if ok {
 			for id := range patternNodeSet {
 				if msg.Attr() == nodeMap[id].Attr() {
-					targets, _ := pattern.GetTargets(id)
+					targets := pattern.GetTargets(id)
 					if len(targets) == 0 {
 						sim[id].Add(v)
 						//Set.GetPreSet(g, v, emptySet1)
@@ -164,7 +164,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.Set
 
 			//log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
-			uSources, _ := pattern.GetSources(u)
+			uSources := pattern.GetSources(u)
 			for u_pre := range uSources {
 				for v := range remove[u] {
 
@@ -291,7 +291,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 			}
 			log.Printf("u: %v,  iterationNum: %v,  removeSize: %v \n", u.String(), iterationNum, remove[u].Size())
 			iterationFinish = false
-			uSources, _ := pattern.GetSources(u)
+			uSources := pattern.GetSources(u)
 			for u_pre := range uSources {
 				var count int64 = 0
 				for v := range remove[u] {
