@@ -3,9 +3,9 @@ package algorithm
 import (
 	"graph"
 	"math"
-	"log"
 	"Set"
 	"time"
+	"log"
 )
 
 const eps = 0.01
@@ -93,7 +93,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 	log.Printf("updated size:%v\n", len(updatedSet))
 
 	for u := range updatedSet {
-		log.Printf("u:%v, acc:%v, pr:%v\n", u.IntVal(), accVal[u.IntVal()], prVal[u.IntVal()])
+		//log.Printf("u:%v, acc:%v, pr:%v\n", u.IntVal(), accVal[u.IntVal()], prVal[u.IntVal()])
 		pr := alpha * accVal[u.IntVal()] + (1 - alpha)
 		//log.Printf("pr:%v\n", pr)
 		err := math.Abs(pr - prVal[u.IntVal()])
