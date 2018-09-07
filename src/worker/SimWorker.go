@@ -324,7 +324,7 @@ func (w *SimWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.
 }
 
 func (w *SimWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
-	log.Println("sim send receive")
+	//log.Println("sim send receive")
 	message := make([]*algorithm.SimPair, 0)
 	for _, messagePair := range args.Pair {
 		message = append(message, &algorithm.SimPair{DataNode: graph.StringID(messagePair.DataId), PatternNode: graph.StringID(messagePair.PatternId)})
