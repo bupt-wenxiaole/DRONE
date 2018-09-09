@@ -257,7 +257,7 @@ func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 			continue
 		}
 
-		if cc > w.CCValue[id] {
+		if cc < w.CCValue[id] {
 			w.CCValue[id] = cc
 			w.updatedByMessage[id] = true
 		}
