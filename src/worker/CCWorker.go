@@ -313,6 +313,9 @@ func newCCWorker(id, partitionNum int) *CCWorker {
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 
+	w.CCValue = make(map[graph.ID]int64)
+	w.ExchangeValue = make(map[graph.ID]int64)
+
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
 	// while id means the id of this worker, and 0 means master
