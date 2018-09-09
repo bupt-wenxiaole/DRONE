@@ -4,7 +4,6 @@ import (
 	"graph"
 	"sort"
 	"time"
-	"log"
 )
 
 type CCPair struct {
@@ -97,13 +96,13 @@ func CC_IncEval(g graph.Graph, ccValue map[graph.ID]int64, exchangeValue map[gra
 			array = append(array, val)
 		}
 	}
-	messages
+	messages = nil
 
-	sort.Sort(Array(messages))
+	sort.Sort(array)
 
 	updated := make(map[updateMsg]bool)
 	itertationStartTime := time.Now()
-	for _, pair := range messages {
+	for _, pair := range array {
 		v := pair.NodeId
 		cc := pair.CCvalue
 		if cc != ccValue[v] {
