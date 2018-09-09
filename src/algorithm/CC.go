@@ -8,7 +8,7 @@ import (
 )
 
 type CCPair struct {
-	NodeId graph.ID
+	NodeId int64
 	CCvalue  int64
 }
 
@@ -25,7 +25,7 @@ func (a Array) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-func dfs(s graph.ID, cc int64, g graph.Graph, ccValue map[graph.ID]int64, updateMaster Set.Set, updateMirror Set.Set) {
+func dfs(s int64, cc int64, g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, updateMirror Set.Set) {
 	for v := range g.GetTargets(s) {
 		if ccValue[v] <= cc {
 			continue
@@ -42,12 +42,12 @@ func dfs(s graph.ID, cc int64, g graph.Graph, ccValue map[graph.ID]int64, update
 	}
 }
 
-func CC_PEVal(g graph.Graph, ccValue map[graph.ID]int64, updateMaster Set.Set, updateMirror Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
+func CC_PEVal(g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, updateMirror Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
 	var array Array
 
 	for v := range g.GetNodes() {
-		ccValue[v] = v.IntVal()
-		array = append(array, &CCPair{NodeId:v, CCvalue:v.IntVal()})
+		ccValue[v] = v
+		array = append(array, &CCPair{NodeId:v, CCvalue:v})
 	}
 
 	sort.Sort(array)
@@ -83,7 +83,7 @@ func CC_PEVal(g graph.Graph, ccValue map[graph.ID]int64, updateMaster Set.Set, u
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum
 }
 
-func CC_IncEval(g graph.Graph, ccValue map[graph.ID]int64, updated []*CCPair, updateMaster Set.Set, updateMirror Set.Set, updatedByMessage Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
+func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updateMaster Set.Set, updateMirror Set.Set, updatedByMessage Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
 	if len(updated) == 0 && len(updatedByMessage) == 0 {
 		return false, make(map[int][]*CCPair), 0, 0, 0, 0
 	}
@@ -97,8 +97,8 @@ func CC_IncEval(g graph.Graph, ccValue map[graph.ID]int64, updated []*CCPair, up
 
 	var array Array
 	for v := range updatedByMessage {
-		ccValue[v] = v.IntVal()
-		array = append(array, &CCPair{NodeId:v, CCvalue:v.IntVal()})
+		ccValue[v] = v
+		array = append(array, &CCPair{NodeId:v, CCvalue:v})
 	}
 
 	sort.Sort(array)

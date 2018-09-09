@@ -57,7 +57,7 @@ type CCWorker struct {
 	updatedMirror     Set.Set
 	updatedByMessage  Set.Set
 
-	CCValue map[graph.ID]int64
+	CCValue map[int64]int64
 
 	iterationNum int
 	stopChannel  chan bool
@@ -128,7 +128,7 @@ func (w *CCWorker) CCMessageSend(messages map[int][]*algorithm.CCPair, calculate
 				client := pb.NewWorkerClient(workerHandle)
 				encodeMessage := make([]*pb.SimMessageStruct, 0)
 				for _, msg := range message {
-					encodeMessage = append(encodeMessage, &pb.SimMessageStruct{DataId:msg.NodeId.IntVal(), PatternId:msg.CCvalue})
+					encodeMessage = append(encodeMessage, &pb.SimMessageStruct{DataId:msg.NodeId, PatternId:msg.CCvalue})
 				}
 				Peer2PeerCCSend(client, encodeMessage, partitionId + 1, calculateStep)
 			}(partitionId, message)
@@ -241,7 +241,7 @@ func (w *CCWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 	defer f.Close()
 
 	for id, cc := range w.CCValue {
-		writer.WriteString(id.String() + "\t" + strconv.FormatInt(cc, 10) + "\n")
+		writer.WriteString(strconv.FormatInt(id,10) + "\t" + strconv.FormatInt(cc, 10) + "\n")
 	}
 	writer.Flush()
 
@@ -277,7 +277,7 @@ func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 	}
 
 	w.CCMessageSend(messageMap, false)
-	w.updatedMaster = make(map[graph.ID]bool)
+	w.updatedMaster = make(map[int64]bool)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
@@ -289,7 +289,7 @@ func (w *CCWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*
 func (w *CCWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
 	message := make([]*algorithm.CCPair, 0)
 	for _, messagePair := range args.Pair {
-		message = append(message, &algorithm.CCPair{NodeId: graph.ID(messagePair.DataId), CCvalue: messagePair.PatternId})
+		message = append(message, &algorithm.CCPair{NodeId: messagePair.DataId, CCvalue: messagePair.PatternId})
 	}
 
 	w.Lock()
@@ -369,7 +369,7 @@ func newCCWorker(id, partitionNum int) *CCWorker {
 	defer mirror.Close()
 	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, true, false)
 	if err != nil {
 		log.Fatal(err)
 	}
