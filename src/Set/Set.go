@@ -1,17 +1,13 @@
 package Set
 
-import (
-	"graph"
-)
+type Set map[int64]bool
 
-type Set map[graph.ID]bool
-
-func (s Set) Add(id graph.ID) {
+func (s Set) Add(id int64) {
 	s[id] = true
 }
 
 func NewSet() Set {
-	return make(map[graph.ID]bool)
+	return make(map[int64]bool)
 }
 
 func (s Set) Copy() Set {
@@ -32,18 +28,12 @@ func (s Set) Merge(an Set) {
 	}
 }
 
-func (s Set) Separate(an map[graph.ID]graph.Node)  {
-	for v := range an {
-		delete(s, v)
-	}
-}
-
-func (s Set) Has(v graph.ID) bool {
+func (s Set) Has(v int64) bool {
 	_, ok := s[v]
 	return ok
 }
 
-func (s Set) Remove(v graph.ID)  {
+func (s Set) Remove(v int64)  {
 	delete(s, v)
 }
 
@@ -71,9 +61,9 @@ func (s Set) Clear() {
 	}
 }
 
-func (s Set) Top() graph.ID {
+func (s Set) Top() int64 {
 	for v := range s {
 		return v
 	}
-	return graph.ID(-1)
+	return -1
 }

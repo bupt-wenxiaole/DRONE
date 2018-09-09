@@ -18,6 +18,7 @@ import (
 	"tools"
 	"sync"
 	"sort"
+	"Set"
 )
 
 type PRWorker struct {
@@ -27,13 +28,18 @@ type PRWorker struct {
 	selfId       int // the id of this worker itself in workers
 	grpcHandlers map[int]*grpc.ClientConn
 
-	g            graph.Graph
-	prVal        map[int64]float64
-	oldPr        map[int64]float64
-	partitionNum int
-	calBuffer    []*algorithm.PRPair
+	g              graph.Graph
+	prVal          map[int64]float64
+	partitionNum   int
+	calBuffer      []*algorithm.PRPair
 	exchangeBuffer []*algorithm.PRPair
-	targetsNum   map[int64]int
+	targetsNum     map[int64]int
+
+	accVal        map[int64]float64
+	diffVal       map[int64]float64
+	updated       Set.Set
+	updatedMaster Set.Set
+	updatedMirror Set.Set
 
 	iterationNum int
 	stopChannel  chan bool
@@ -107,7 +113,7 @@ func (w *PRWorker) PRMessageSend(messages map[int][]*algorithm.PRPair, calculate
 				client := pb.NewWorkerClient(workerHandle)
 				encodeMessage := make([]*pb.PRMessageStruct, 0)
 				for _, msg := range message {
-					encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID:msg.ID.IntVal(), PrVal:msg.PRValue})
+					encodeMessage = append(encodeMessage, &pb.PRMessageStruct{NodeID:msg.ID, PrVal:msg.PRValue})
 				}
 				Peer2PeerPRSend(client, encodeMessage, partitionId + 1, calculateStep)
 			}(partitionId, message)
@@ -137,23 +143,26 @@ func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.
 func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
 	for _, pair := range w.calBuffer {
 		id := pair.ID
-		pr := pair.PRValue
+		diff := pair.PRValue
 
-		w.prVal[id.IntVal()] = w.prVal[id.IntVal()] + pr
+		//log.Printf("message: id:%v, acc:%v\n", id, diff)
+		w.diffVal[id] += diff
+		w.updatedMaster.Add(id)
+		w.updated.Add(id)
 	}
 	w.calBuffer = make([]*algorithm.PRPair, 0)
 
 	master := w.g.GetMasters()
 	messageMap := make(map[int][]*algorithm.PRPair)
-	for id, partitions := range master {
-		for _, partition := range partitions {
+	for id := range w.updatedMaster {
+		for _, partition := range master[id] {
 			if _, ok := messageMap[partition]; !ok {
 				messageMap[partition] = make([]*algorithm.PRPair, 0)
 			}
-			messageMap[partition] = append(messageMap[partition], &algorithm.PRPair{ID: id, PRValue: w.prVal[id.IntVal()]})
+			messageMap[partition] = append(messageMap[partition], &algorithm.PRPair{ID: id, PRValue: w.diffVal[id]})
 		}
 	}
-
+	w.updatedMaster.Clear()
 	w.PRMessageSend(messageMap, false)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
@@ -164,7 +173,7 @@ func (w *PRWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	_, messagesMap, iterationTime := algorithm.PageRank_PEVal(w.g, w.prVal, w.oldPr, w.targetsNum)
+	_, messagesMap, iterationTime := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
 
 	dstPartitionNum := len(messagesMap)
 
@@ -196,25 +205,10 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	var iterationTime float64
 
-	isMessageToSend, messagesMap, w.oldPr, w.prVal, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.oldPr, w.targetsNum, w.exchangeBuffer)
+	isMessageToSend, messagesMap, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
-
-	if !isMessageToSend {
-		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
-
-		masterHandle := w.grpcHandlers[0]
-		Client := pb.NewMasterClient(masterHandle)
-
-		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
-			CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: 0,
-			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
-
-		Client.SuperStepFinish(context.Background(), finishRequest)
-		return
-	}
-
+	w.updatedMirror.Clear()
 	dstPartitionNum := len(messagesMap)
 
 	fullSendStart := time.Now()
@@ -248,7 +242,7 @@ func (w *PRWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 	defer f.Close()
 
 	for id, pr := range w.prVal {
-		if w.g.IsMirror(graph.ID(id)) {
+		if w.g.IsMirror(id) {
 			continue
 		}
 		writer.WriteString(strconv.FormatInt(id, 10) +"\t"+strconv.FormatFloat(pr, 'E', -1, 64) + "\n")
@@ -267,7 +261,7 @@ func (w *PRWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb
 func (w *PRWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
 	decodeMessage := make([]*algorithm.PRPair, 0)
 	for _, msg := range args.Pair {
-		decodeMessage = append(decodeMessage, &algorithm.PRPair{PRValue:msg.PrVal, ID:graph.ID(msg.NodeID)})
+		decodeMessage = append(decodeMessage, &algorithm.PRPair{PRValue:msg.PrVal, ID:msg.NodeID})
 	}
 
 	w.Lock()
@@ -288,13 +282,17 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.peers = make([]string, 0)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
-	w.prVal = make(map[int64]float64, 0)
-	w.oldPr = make(map[int64]float64, 0)
+	w.prVal = make(map[int64]float64)
+	w.accVal = make(map[int64]float64)
 	w.partitionNum = partitionNum
 	w.calBuffer = make([]*algorithm.PRPair, 0)
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 	w.targetsNum = make(map[int64]int)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
+	w.updated = Set.NewSet()
+	w.updatedMaster = Set.NewSet()
+	w.updatedMirror = Set.NewSet()
+	w.diffVal = make(map[int64]float64)
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
@@ -335,19 +333,19 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Mirror." + strconv.Itoa(w.selfId-1))
 		isolated, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Isolateds." + strconv.Itoa(w.selfId-1))
-		targetsFile, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "Targets." + strconv.Itoa(w.selfId-1))
+		targetsFile, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Degree." + strconv.Itoa(w.selfId-1))
 	} else {
 		master, _ = os.Open(tools.NFSPath + "Master." + strconv.Itoa(w.selfId-1))
 		mirror, _ = os.Open(tools.NFSPath + "Mirror." + strconv.Itoa(w.selfId-1))
 		isolated, _ = os.Open(tools.NFSPath + "Isolateds." + strconv.Itoa(w.selfId-1))
-		targetsFile, _ = os.Open(tools.NFSPath + "Targets." + strconv.Itoa(w.selfId-1))
+		targetsFile, _ = os.Open(tools.NFSPath + "Degree." + strconv.Itoa(w.selfId-1))
 	}
 	defer master.Close()
 	defer mirror.Close()
 	defer isolated.Close()
 	defer targetsFile.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, true, false)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -360,7 +358,6 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
-	//w.outerMsg = algorithm.GenerateOuterMsg(w.g.GetFOs())
 
 	return w
 }

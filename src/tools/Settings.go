@@ -8,6 +8,7 @@ const (
 	//NFSPath = "/mnt/nfs/xwen/generate_graph/"
 
 	//NFSPath = "/mnt/nfs/xwen/liveJournal_vc_part"
+
 	WorkerOnSC = true
 
 	ConfigPath = "../test_data/config.txt"

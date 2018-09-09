@@ -14,7 +14,7 @@ import (
 
 // in this struct, Distance is the distance from the global start node to this node
 type Pair struct {
-	NodeId   graph.ID
+	NodeId   int64
 	Distance float64
 }
 
@@ -51,8 +51,9 @@ func (pq *PriorityQueue) Pop() interface{} {
 // returned bool value indicates which there has some message need to be send
 // the map value is the message need to be send
 // map[i] is a list of message need to be sent to partition i
-func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
-	log.Printf("start id:%v\n", startID.IntVal())
+
+func SSSP_PEVal(g graph.Graph, distance map[int64]float64, startID int64, updateMaster map[int64]bool, updateMirror map[int64]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
+	log.Printf("start id:%v\n", startID)
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
@@ -89,9 +90,8 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 			continue
 		}
 
-		targets := g.GetTargets(srcID)
-		for disID := range targets {
-			weight, _ := g.GetWeight(srcID, disID)
+
+		for disID, weight := range g.GetTargets(srcID) {
 			if distance[disID] > nowDis+weight {
 				heap.Push(&pq, &Pair{NodeId: disID, Distance: nowDis + weight})
 				distance[disID] = nowDis + weight
@@ -128,7 +128,9 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, updatedByMessage map[graph.ID]bool, id int) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+
+func SSSP_IncEval(g graph.Graph, distance map[int64]float64, updated []*Pair, updateMaster map[int64]bool, updateMirror map[int64]bool, updatedByMessage map[int64]bool, id int) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+
 	if len(updated) == 0 && len(updatedByMessage) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
@@ -173,9 +175,8 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 			continue
 		}
 
-		targets := g.GetTargets(srcID)
-		for disID := range targets {
-			weight, _ := g.GetWeight(srcID, disID)
+
+		for disID, weight := range g.GetTargets(srcID) {
 			if distance[disID] > nowDis+weight {
 				heap.Push(&pq, &Pair{NodeId: disID, Distance: nowDis + weight})
 				distance[disID] = nowDis + weight

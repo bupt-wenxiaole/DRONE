@@ -21,8 +21,8 @@ import (
 	"sort"
 )
 
-func Generate(g graph.Graph) map[graph.ID]float64 {
-	distance := make(map[graph.ID]float64)
+func Generate(g graph.Graph) map[int64]float64 {
+	distance := make(map[int64]float64)
 
 	for id := range g.GetNodes() {
 		distance[id] = math.MaxFloat64
@@ -59,13 +59,13 @@ type SSSPWorker struct {
 	workerNum int
 
 	g           graph.Graph
-	distance    map[graph.ID]float64 //
+	distance    map[int64]float64 //
 	//exchangeMsg map[graph.ID]float64
 	updatedBuffer     []*algorithm.Pair
 	exchangeBuffer    []*algorithm.Pair
-	updatedMaster     map[graph.ID]bool
-	updatedMirror     map[graph.ID]bool
-	updatedByMessage  map[graph.ID]bool
+	updatedMaster     map[int64]bool
+	updatedMirror     map[int64]bool
+	updatedByMessage  map[int64]bool
 
 	iterationNum int
 	stopChannel  chan bool
@@ -136,7 +136,7 @@ func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calcula
 				client := pb.NewWorkerClient(workerHandle)
 				encodeMessage := make([]*pb.SSSPMessageStruct, 0)
 				for _, msg := range message {
-					encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance:msg.Distance})
+					encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId, Distance:msg.Distance})
 				}
 				Peer2PeerSSSPSend(client, encodeMessage, partitionId + 1, calculateStep)
 			}(partitionId, message)
@@ -151,14 +151,14 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	startId := graph.ID(-1)
+	startId := int64(-1)
 
-	if id == 1 {
+	//if id == 1 {
 		for v := range w.g.GetNodes() {
 			startId = v
 			break
 		}
-	}
+	//}
 
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
 
@@ -209,8 +209,8 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	//log.Printf("zs-log: worker:%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
-	w.updatedMirror = make(map[graph.ID]bool)
-	w.updatedByMessage = make(map[graph.ID]bool)
+	w.updatedMirror = make(map[int64]bool)
+	w.updatedByMessage = make(map[int64]bool)
 
 	var fullSendStart time.Time
 	var fullSendDuration float64
@@ -262,7 +262,7 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 
 	for id, dist := range w.distance {
 		if !w.g.IsMirror(id) && dist != math.MaxFloat64 {
-			writer.WriteString(id.String() + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
+			writer.WriteString(strconv.FormatInt(id,10) + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
 		}
 	}
 	writer.Flush()
@@ -299,7 +299,7 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 	}
 
 	w.SSSPMessageSend(messageMap, false)
-	w.updatedMaster = make(map[graph.ID]bool)
+	w.updatedMaster = make(map[int64]bool)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
@@ -308,7 +308,7 @@ func (w *SSSPWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) 
 	decodeMessage := make([]*algorithm.Pair, 0)
 
 	for _, msg := range args.Pair {
-		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.ID(msg.NodeID), Distance: msg.Distance})
+		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: msg.NodeID, Distance: msg.Distance})
 	}
 	w.Lock()
 	if args.CalculateStep {
@@ -335,9 +335,9 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.peers = make([]string, 0)
 	w.updatedBuffer = make([]*algorithm.Pair, 0)
 	w.exchangeBuffer = make([]*algorithm.Pair, 0)
-	w.updatedMaster = make(map[graph.ID]bool)
-	w.updatedMirror = make(map[graph.ID]bool)
-	w.updatedByMessage = make(map[graph.ID]bool)
+	w.updatedMaster = make(map[int64]bool)
+	w.updatedMirror = make(map[int64]bool)
+	w.updatedByMessage = make(map[int64]bool)
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
@@ -391,7 +391,7 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	defer mirror.Close()
 	defer isolated.Close()
 
-	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated)
+	w.g, err = graph.NewGraphFromTXT(graphIO, master, mirror, isolated, true, false)
 	if err != nil {
 		log.Fatal(err)
 	}
