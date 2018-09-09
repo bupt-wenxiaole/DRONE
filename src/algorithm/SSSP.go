@@ -6,7 +6,6 @@ import (
 	"time"
 	//"fmt"
 	"log"
-	"Set"
 )
 
 // for more information about this implement of priority queue,
@@ -52,7 +51,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 // returned bool value indicates which there has some message need to be send
 // the map value is the message need to be send
 // map[i] is a list of message need to be sent to partition i
-func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, visited Set.Set) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
+func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
 	log.Printf("start id:%v\n", startID.IntVal())
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
@@ -85,14 +84,12 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 		top := heap.Pop(&pq).(*Pair)
 		srcID := top.NodeId
 
-		visited.Add(srcID)
-
 		nowDis := top.Distance
 		if nowDis > distance[srcID] {
 			continue
 		}
 
-		targets, _ := g.GetTargets(srcID)
+		targets := g.GetTargets(srcID)
 		for disID := range targets {
 			weight, _ := g.GetWeight(srcID, disID)
 			if distance[disID] > nowDis+weight {
@@ -131,7 +128,7 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, startID graph.ID, 
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
-func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, updatedByMessage map[graph.ID]bool, visited Set.Set, id int) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair, updateMaster map[graph.ID]bool, updateMirror map[graph.ID]bool, updatedByMessage map[graph.ID]bool, id int) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
 	if len(updated) == 0 && len(updatedByMessage) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
@@ -144,12 +141,9 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 	aggregatorReducedSize := int32(len(updated))
 
 	for _, ssspMsg := range updated {
-		//log.Printf("update message: id:%v, val:%v\n", ssspMsg.NodeId, ssspMsg.Distance)
 		if ssspMsg.Distance < distance[ssspMsg.NodeId] {
 			distance[ssspMsg.NodeId] = ssspMsg.Distance
 			updatedByMessage[ssspMsg.NodeId] = true
-
-			visited.Add(ssspMsg.NodeId)
 		}
 	}
 
@@ -174,14 +168,12 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, updated []*Pair,
 		top := heap.Pop(&pq).(*Pair)
 		srcID := top.NodeId
 
-		visited.Add(srcID)
-
 		nowDis := top.Distance
 		if nowDis > distance[srcID] {
 			continue
 		}
 
-		targets, _ := g.GetTargets(srcID)
+		targets := g.GetTargets(srcID)
 		for disID := range targets {
 			weight, _ := g.GetWeight(srcID, disID)
 			if distance[disID] > nowDis+weight {

@@ -25,7 +25,7 @@ func PageRank_PEVal(g graph.Graph, prVal map[int64]float64, oldPr map[int64]floa
 	iterationStartTime := time.Now()
 
 	for id := range g.GetNodes() {
-		targets, _ := g.GetTargets(id)
+		targets := g.GetTargets(id)
 		if len(targets) == 0 {
 			still += oldPr[id.IntVal()]
 		} else {
@@ -84,7 +84,7 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, oldPr map[int64]fl
 
 	still := 0.0
 	for id := range g.GetNodes() {
-		targets, _ := g.GetTargets(id)
+		targets := g.GetTargets(id)
 		if len(targets) == 0 {
 			still += oldPr[id.IntVal()]
 		} else {

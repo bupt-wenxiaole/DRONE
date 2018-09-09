@@ -1,0 +1,135 @@
+package algorithm
+
+import (
+	"graph"
+	"time"
+	"sort"
+	"Set"
+)
+
+type CCPair struct {
+	NodeId graph.ID
+	CCvalue  int64
+}
+
+type Array []*CCPair
+
+func (a Array) Len() int { return len(a) }
+
+func (a Array) Less(i, j int) bool {
+	// We want Pop to give us the highest, not lowest, priority so we use greater than here.
+	return a[i].CCvalue < a[j].CCvalue
+}
+
+func (a Array) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func dfs(s graph.ID, cc int64, g graph.Graph, ccValue map[graph.ID]int64, updateMaster Set.Set, updateMirror Set.Set) {
+	for v := range g.GetTargets(s) {
+		if ccValue[v] <= cc {
+			continue
+		}
+		ccValue[v] = cc
+		if g.IsMaster(v) {
+			updateMaster.Add(v)
+		}
+		if g.IsMirror(v) {
+			updateMirror.Add(v)
+		}
+
+		dfs(v, cc, g, ccValue, updateMaster, updateMirror)
+	}
+}
+
+func CC_PEVal(g graph.Graph, ccValue map[graph.ID]int64, updateMaster Set.Set, updateMirror Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
+	var array Array
+
+	for v := range g.GetNodes() {
+		ccValue[v] = v.IntVal()
+		array = append(array, &CCPair{NodeId:v, CCvalue:v.IntVal()})
+	}
+
+	sort.Sort(array)
+
+	itertationStartTime := time.Now()
+	for _, pair := range array {
+		v := pair.NodeId
+		cc := pair.CCvalue
+		if cc != ccValue[v] {
+			continue
+		}
+		dfs(v, cc, g, ccValue, updateMaster, updateMirror)
+	}
+	iterationTime := time.Since(itertationStartTime).Seconds()
+
+	combineStartTime := time.Now()
+	messageMap := make(map[int][]*CCPair)
+	mirrors := g.GetMirrors()
+	for id := range updateMirror {
+		partition := mirrors[id]
+		cc := ccValue[id]
+
+		//log.Printf("nodeId: %v, Distance:%v\n", id, dis)
+		if _, ok := messageMap[partition]; !ok {
+			messageMap[partition] = make([]*CCPair, 0)
+		}
+		messageMap[partition] = append(messageMap[partition], &CCPair{NodeId: id, CCvalue:cc})
+	}
+	combineTime := time.Since(combineStartTime).Seconds()
+
+	updatePairNum := int32(len(updateMirror))
+	dstPartitionNum := int32(len(messageMap))
+	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum
+}
+
+func CC_IncEval(g graph.Graph, ccValue map[graph.ID]int64, updated []*CCPair, updateMaster Set.Set, updateMirror Set.Set, updatedByMessage Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
+	if len(updated) == 0 && len(updatedByMessage) == 0 {
+		return false, make(map[int][]*CCPair), 0, 0, 0, 0
+	}
+
+	for _, msg := range updated {
+		if msg.CCvalue < ccValue[msg.NodeId] {
+			ccValue[msg.NodeId] = msg.CCvalue
+			updatedByMessage.Add(msg.NodeId)
+		}
+	}
+
+	var array Array
+	for v := range updatedByMessage {
+		ccValue[v] = v.IntVal()
+		array = append(array, &CCPair{NodeId:v, CCvalue:v.IntVal()})
+	}
+
+	sort.Sort(array)
+
+	itertationStartTime := time.Now()
+	for _, pair := range array {
+		v := pair.NodeId
+		cc := pair.CCvalue
+		if cc != ccValue[v] {
+			continue
+		}
+		dfs(v, cc, g, ccValue, updateMaster, updateMirror)
+	}
+	iterationTime := time.Since(itertationStartTime).Seconds()
+
+	combineStartTime := time.Now()
+	messageMap := make(map[int][]*CCPair)
+	mirrors := g.GetMirrors()
+	for id := range updateMirror {
+		partition := mirrors[id]
+		cc := ccValue[id]
+
+		//log.Printf("nodeId: %v, Distance:%v\n", id, dis)
+		if _, ok := messageMap[partition]; !ok {
+			messageMap[partition] = make([]*CCPair, 0)
+		}
+		messageMap[partition] = append(messageMap[partition], &CCPair{NodeId: id, CCvalue:cc})
+	}
+	combineTime := time.Since(combineStartTime).Seconds()
+
+	updatePairNum := int32(len(updateMirror))
+	dstPartitionNum := int32(len(messageMap))
+	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum
+}

@@ -12,7 +12,7 @@ type SimPair struct {
 }
 
 func TestSim(v graph.ID, u graph.ID, postMap map[graph.ID]map[graph.ID]int, pattern graph.Graph) bool {
-	targets, _ := pattern.GetTargets(u)
+	targets := pattern.GetTargets(u)
 	for t := range targets {
 		if postMap[v][t] == 0 {
 			return false
@@ -42,8 +42,8 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, simSet map[graph.ID]Set.
 	for v, msg := range g.GetNodes() {
 		for u := range patternNodeSet {
 			if msg.Attr() == nodeMap[u].Attr() {
-				targets, _ := pattern.GetTargets(u)
-				sources, _ := g.GetSources(v)
+				targets := pattern.GetTargets(u)
+				sources := g.GetSources(v)
 				simSet[v].Add(u)
 				if len(targets) != 0 {
 					if g.IsMirror(v) {
@@ -104,7 +104,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 				}*/
 
 				sim[v].Remove(u)
-				sources, _ := g.GetSources(v)
+				sources := g.GetSources(v)
 				for source := range sources {
 					postMap[source][u] = postMap[source][u] - 1
 					if postMap[source][u] == 0 {
@@ -138,7 +138,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[graph.ID]Set.S
 		for u := range sim[v] {
 			if !TestSim(v, u, postMap, pattern) {
 				sim[v].Remove(u)
-				sources, _ := g.GetSources(v)
+				sources := g.GetSources(v)
 				for source := range sources {
 					postMap[source][u] = postMap[source][u] - 1
 					if postMap[source][u] == 0 {

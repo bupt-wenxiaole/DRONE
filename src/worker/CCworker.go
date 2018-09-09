@@ -9,7 +9,6 @@ import (
 	"graph"
 	"io"
 	"log"
-	"math"
 	"net"
 	"os"
 	pb "protobuf"
@@ -19,30 +18,22 @@ import (
 	"time"
 	"tools"
 	"sort"
+	"Set"
 )
 
-func Generate(g graph.Graph) map[graph.ID]float64 {
-	distance := make(map[graph.ID]float64)
-
-	for id := range g.GetNodes() {
-		distance[id] = math.MaxFloat64
-	}
-	return distance
-}
-
 // rpc send has max size limit, so we spilt our transfer into many small block
-func Peer2PeerSSSPSend(client pb.WorkerClient, message []*pb.SSSPMessageStruct, id int, calculateStep bool)  {
+func Peer2PeerCCSend(client pb.WorkerClient, message []*pb.SimMessageStruct, id int, calculateStep bool)  {
 	for len(message) > tools.RPCSendSize {
 		slice := message[0:tools.RPCSendSize]
 		message = message[tools.RPCSendSize:]
-		_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: slice, CalculateStep:calculateStep})
+		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: slice, CalculateStep:calculateStep})
 		if err != nil {
 			log.Printf("send to %v error\n", id)
 			log.Fatal(err)
 		}
 	}
 	if len(message) != 0 {
-		_, err := client.SSSPSend(context.Background(), &pb.SSSPMessageRequest{Pair: message, CalculateStep:calculateStep})
+		_, err := client.SimSend(context.Background(), &pb.SimMessageRequest{Pair: message, CalculateStep:calculateStep})
 		if err != nil {
 			log.Printf("send to %v error\n", id)
 			log.Fatal(err)
@@ -50,7 +41,7 @@ func Peer2PeerSSSPSend(client pb.WorkerClient, message []*pb.SSSPMessageStruct, 
 	}
 }
 
-type SSSPWorker struct {
+type CCWorker struct {
 	mutex *sync.Mutex
 
 	peers        []string
@@ -59,27 +50,28 @@ type SSSPWorker struct {
 	workerNum int
 
 	g           graph.Graph
-	distance    map[graph.ID]float64 //
-	//exchangeMsg map[graph.ID]float64
-	updatedBuffer     []*algorithm.Pair
-	exchangeBuffer    []*algorithm.Pair
-	updatedMaster     map[graph.ID]bool
-	updatedMirror     map[graph.ID]bool
-	updatedByMessage  map[graph.ID]bool
+
+	updatedBuffer     []*algorithm.CCPair
+	exchangeBuffer    []*algorithm.CCPair
+	updatedMaster     Set.Set
+	updatedMirror     Set.Set
+	updatedByMessage  Set.Set
+
+	CCValue map[graph.ID]int64
 
 	iterationNum int
 	stopChannel  chan bool
 }
 
-func (w *SSSPWorker) Lock() {
+func (w *CCWorker) Lock() {
 	w.mutex.Lock()
 }
 
-func (w *SSSPWorker) UnLock() {
+func (w *CCWorker) UnLock() {
 	w.mutex.Unlock()
 }
 
-func (w *SSSPWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
+func (w *CCWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
 	w.Lock()
 	defer w.Lock()
@@ -96,7 +88,7 @@ func (w *SSSPWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*p
 	return &pb.ShutDownResponse{IterationNum: int32(w.iterationNum)}, nil
 }
 
-func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calculateStep bool) []*pb.WorkerCommunicationSize {
+func (w *CCWorker) CCMessageSend(messages map[int][]*algorithm.CCPair, calculateStep bool) []*pb.WorkerCommunicationSize {
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 	var wg sync.WaitGroup
 	messageLen := len(messages)
@@ -125,7 +117,7 @@ func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calcula
 			eachWorkerCommunicationSize := &pb.WorkerCommunicationSize{WorkerID:int32(partitionId + 1), CommunicationSize:int32(len(message))}
 			SlicePeerSend = append(SlicePeerSend, eachWorkerCommunicationSize)
 
-			go func(partitionId int, message []*algorithm.Pair) {
+			go func(partitionId int, message []*algorithm.CCPair) {
 				defer wg.Done()
 				workerHandle, err := grpc.Dial(w.peers[partitionId+1], grpc.WithInsecure())
 				if err != nil {
@@ -134,11 +126,11 @@ func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calcula
 				defer workerHandle.Close()
 
 				client := pb.NewWorkerClient(workerHandle)
-				encodeMessage := make([]*pb.SSSPMessageStruct, 0)
+				encodeMessage := make([]*pb.SimMessageStruct, 0)
 				for _, msg := range message {
-					encodeMessage = append(encodeMessage, &pb.SSSPMessageStruct{NodeID: msg.NodeId.IntVal(), Distance:msg.Distance})
+					encodeMessage = append(encodeMessage, &pb.SimMessageStruct{DataId:msg.NodeId.IntVal(), PatternId:msg.CCvalue})
 				}
-				Peer2PeerSSSPSend(client, encodeMessage, partitionId + 1, calculateStep)
+				Peer2PeerCCSend(client, encodeMessage, partitionId + 1, calculateStep)
 			}(partitionId, message)
 
 		}
@@ -147,22 +139,13 @@ func (w *SSSPWorker) SSSPMessageSend(messages map[int][]*algorithm.Pair, calcula
 	return SlicePeerSend
 }
 
-func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
+func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
-	startId := graph.ID(-1)
 
-	if id == 1 {
-		for v := range w.g.GetNodes() {
-			startId = v
-			break
-		}
-	}
+	isMessageToSend, messages, iterationTime, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_PEVal(w.g, w.CCValue,  w.updatedMaster, w.updatedMirror)
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
-
-	//log.Printf("zs-log:worker%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -172,14 +155,14 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
-			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+			CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
 		return
 	} else {
 		fullSendStart = time.Now()
-		SlicePeerSend = w.SSSPMessageSend(messages, true)
+		SlicePeerSend = w.CCMessageSend(messages, true)
 	}
 
 	fullSendDuration = time.Since(fullSendStart).Seconds()
@@ -189,28 +172,25 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
-		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+		CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
-func (w *SSSPWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
+func (w *CCWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
 	go w.peval(args, w.selfId)
 	return &pb.PEvalResponse{Ok:true}, nil
 }
 
-func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
+func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage, id)
+	isMessageToSend, messages, iterationTime, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_IncEval(w.g, w.CCValue, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
 
-	//log.Printf("zs-log: worker:%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
-
-	w.exchangeBuffer = make([]*algorithm.Pair, 0)
-	w.updatedMirror = make(map[graph.ID]bool)
-	w.updatedByMessage = make(map[graph.ID]bool)
+	w.exchangeBuffer = make([]*algorithm.CCPair, 0)
+	w.updatedMirror = Set.NewSet()
+	w.updatedByMessage = Set.NewSet()
 
 	var fullSendStart time.Time
 	var fullSendDuration float64
@@ -221,123 +201,121 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 		masterHandle := w.grpcHandlers[0]
 		Client := pb.NewMasterClient(masterHandle)
 
-		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
-			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
-			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
 		return
 	} else {
 		fullSendStart = time.Now()
-		w.SSSPMessageSend(messages, true)
+		w.CCMessageSend(messages, true)
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
 
-	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
-		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
-		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
-func (w *SSSPWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
+func (w *CCWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
 	go w.incEval(args, w.selfId)
 	return &pb.IncEvalResponse{Update:true}, nil
 }
 
-func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
+func (w *CCWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
 	var f *os.File
 	if tools.WorkerOnSC {
-		f, _ = os.Create(tools.ResultPath + "ssspresult_" + strconv.Itoa(w.selfId-1))
+		f, _ = os.Create(tools.ResultPath + "ccresult_" + strconv.Itoa(w.selfId-1))
 	} else {
 		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
 	}
 	writer := bufio.NewWriter(f)
 	defer f.Close()
 
-	for id, dist := range w.distance {
-		if !w.g.IsMirror(id) && dist != math.MaxFloat64 {
-			writer.WriteString(id.String() + "\t" + strconv.FormatFloat(dist, 'E', -1, 64) + "\n")
-		}
+	for id, cc := range w.CCValue {
+		writer.WriteString(id.String() + "\t" + strconv.FormatInt(cc, 10) + "\n")
 	}
 	writer.Flush()
 
 	return &pb.AssembleResponse{Ok: true}, nil
 }
 
-func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
+func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
 	for _, pair := range w.updatedBuffer {
 		id := pair.NodeId
-		dis := pair.Distance
+		cc := pair.CCvalue
 
-		if dis == w.distance[id] {
+		if cc == w.CCValue[id] {
 			continue
 		}
 
-		if dis < w.distance[id] {
-			w.distance[id] = dis
+		if cc > w.CCValue[id] {
+			w.CCValue[id] = cc
 			w.updatedByMessage[id] = true
 		}
 		w.updatedMaster[id] = true
 	}
-	w.updatedBuffer = make([]*algorithm.Pair, 0)
+	w.updatedBuffer = make([]*algorithm.CCPair, 0)
 
 	master := w.g.GetMasters()
-	messageMap := make(map[int][]*algorithm.Pair)
+	messageMap := make(map[int][]*algorithm.CCPair)
 	for id := range w.updatedMaster {
 		for _, partition := range master[id] {
 			if _, ok := messageMap[partition]; !ok {
-				messageMap[partition] = make([]*algorithm.Pair, 0)
+				messageMap[partition] = make([]*algorithm.CCPair, 0)
 			}
-			messageMap[partition] = append(messageMap[partition], &algorithm.Pair{NodeId: id, Distance: w.distance[id]})
+			messageMap[partition] = append(messageMap[partition], &algorithm.CCPair{NodeId: id, CCvalue: w.CCValue[id]})
 		}
 	}
 
-	w.SSSPMessageSend(messageMap, false)
+	w.CCMessageSend(messageMap, false)
 	w.updatedMaster = make(map[graph.ID]bool)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
 
-func (w *SSSPWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
-	decodeMessage := make([]*algorithm.Pair, 0)
+func (w *CCWorker) SSSPSend(ctx context.Context, args *pb.SSSPMessageRequest) (*pb.SSSPMessageResponse, error) {
+	return nil, nil
+}
 
-	for _, msg := range args.Pair {
-		decodeMessage = append(decodeMessage, &algorithm.Pair{NodeId: graph.ID(msg.NodeID), Distance: msg.Distance})
+func (w *CCWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
+	message := make([]*algorithm.CCPair, 0)
+	for _, messagePair := range args.Pair {
+		message = append(message, &algorithm.CCPair{NodeId: graph.ID(messagePair.DataId), CCvalue: messagePair.PatternId})
 	}
+
 	w.Lock()
 	if args.CalculateStep {
-		w.updatedBuffer = append(w.updatedBuffer, decodeMessage...)
+		w.updatedBuffer = append(w.updatedBuffer, message...)
 	} else {
-		w.exchangeBuffer = append(w.exchangeBuffer, decodeMessage...)
+		w.exchangeBuffer = append(w.exchangeBuffer, message...)
 	}
 	w.UnLock()
 
-	return &pb.SSSPMessageResponse{}, nil
+	return &pb.SimMessageResponse{}, nil
 }
-
-func (w *SSSPWorker) SimSend(ctx context.Context, args *pb.SimMessageRequest) (*pb.SimMessageResponse, error) {
-	return nil, nil
-}
-func (w *SSSPWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
+func (w *CCWorker) PRSend(ctx context.Context, args *pb.PRMessageRequest) (*pb.PRMessageResponse, error) {
 	return nil, nil
 }
 
-func newWorker(id, partitionNum int) *SSSPWorker {
-	w := new(SSSPWorker)
+func newCCWorker(id, partitionNum int) *CCWorker {
+	w := new(CCWorker)
 	w.mutex = new(sync.Mutex)
 	w.selfId = id
 	w.peers = make([]string, 0)
-	w.updatedBuffer = make([]*algorithm.Pair, 0)
-	w.exchangeBuffer = make([]*algorithm.Pair, 0)
-	w.updatedMaster = make(map[graph.ID]bool)
-	w.updatedMirror = make(map[graph.ID]bool)
-	w.updatedByMessage = make(map[graph.ID]bool)
+	w.updatedBuffer = make([]*algorithm.CCPair, 0)
+	w.exchangeBuffer = make([]*algorithm.CCPair, 0)
+	w.updatedMaster = Set.NewSet()
+	w.updatedMirror = Set.NewSet()
+	w.updatedByMessage = Set.NewSet()
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
@@ -403,13 +381,12 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	if w.g == nil {
 		log.Println("can't load graph")
 	}
-	w.distance = Generate(w.g)
 
 	return w
 }
 
-func RunWorker(id, partitionNum int) {
-	w := newWorker(id, partitionNum)
+func RunCCWorker(id, partitionNum int) {
+	w := newCCWorker(id, partitionNum)
 
 	log.Println(w.selfId)
 	log.Println(w.peers[w.selfId])

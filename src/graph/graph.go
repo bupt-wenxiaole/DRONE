@@ -100,11 +100,11 @@ type Graph interface {
 
 	// GetSources returns the map of parent Nodes.
 	// (Nodes that come towards the argument vertex.)
-	GetSources(id ID) (map[ID]Node, error)
+	GetSources(id ID) map[ID]float64
 
 	// GetTargets returns the map of child Nodes.
 	// (Nodes that go out of the argument vertex.)
-	GetTargets(id ID) (map[ID]Node, error)
+	GetTargets(id ID) map[ID]float64
 
 	// String describes the Graph.
 	String() string
@@ -262,38 +262,12 @@ func (g *graph) GetWeight(id1, id2 ID) (float64, error) {
 	return 0, fmt.Errorf("there is no edge from %s to %s", id1, id2)
 }
 
-func (g *graph) GetSources(id ID) (map[ID]Node, error) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	if !g.unsafeExistID(id) {
-		return nil, fmt.Errorf("%s does not exist in the graph.", id)
-	}
-
-	rs := make(map[ID]Node)
-	if _, ok := g.nodeToSources[id]; ok {
-		for n := range g.nodeToSources[id] {
-			rs[n] = g.idToNodes[n]
-		}
-	}
-	return rs, nil
+func (g *graph) GetSources(id ID) map[ID]float64 {
+	return g.nodeToSources[id]
 }
 
-func (g *graph) GetTargets(id ID) (map[ID]Node, error) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	if !g.unsafeExistID(id) {
-		return nil, fmt.Errorf("%s does not exist in the graph.", id)
-	}
-
-	rs := make(map[ID]Node)
-	if _, ok := g.nodeToTargets[id]; ok {
-		for n := range g.nodeToTargets[id] {
-			rs[n] = g.idToNodes[n]
-		}
-	}
-	return rs, nil
+func (g *graph) GetTargets(id ID) map[ID]float64 {
+	return g.nodeToTargets[id]
 }
 
 func (g *graph) GetMasters() map[ID][]int {
