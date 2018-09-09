@@ -5,6 +5,7 @@ import (
 	"time"
 	"sort"
 	"Set"
+	"log"
 )
 
 type CCPair struct {
@@ -89,6 +90,7 @@ func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updat
 	}
 
 	for _, msg := range updated {
+		log.Printf("receive from master: id:%v, cc:%v\n", msg.NodeId, msg.CCvalue)
 		if msg.CCvalue < ccValue[msg.NodeId] {
 			ccValue[msg.NodeId] = msg.CCvalue
 			updatedByMessage.Add(msg.NodeId)
