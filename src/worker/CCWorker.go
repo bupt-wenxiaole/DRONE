@@ -171,7 +171,7 @@ func (w * CCWorker) peval(args *pb.PEvalRequest, id int)  {
 
 func (w *CCWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalResponse, error) {
 	go w.peval(args, w.selfId)
-	return &pb.PEvalResponse{}, nil
+	return &pb.PEvalResponse{Ok:true}, nil
 }
 
 func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
@@ -266,7 +266,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 func (w *CCWorker) IncEval(ctx context.Context, args *pb.IncEvalRequest) (*pb.IncEvalResponse, error) {
 	go w.incEval(args, w.selfId)
-	return &pb.IncEvalResponse{}, nil
+	return &pb.IncEvalResponse{Update:true}, nil
 }
 
 func (w *CCWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.AssembleResponse, error) {
