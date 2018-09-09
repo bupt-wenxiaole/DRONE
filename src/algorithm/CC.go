@@ -99,8 +99,7 @@ func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updat
 
 	var array Array
 	for v := range updatedByMessage {
-		ccValue[v] = v
-		array = append(array, &CCPair{NodeId:v, CCvalue:v})
+		array = append(array, &CCPair{NodeId:v, CCvalue:ccValue[v]})
 	}
 
 	sort.Sort(array)
