@@ -235,7 +235,7 @@ func (w *CCWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 	if tools.WorkerOnSC {
 		f, _ = os.Create(tools.ResultPath + "ccresult_" + strconv.Itoa(w.selfId-1))
 	} else {
-		f, _ = os.Create(tools.ResultPath + "/result_" + strconv.Itoa(w.selfId-1))
+		f, _ = os.Create(tools.ResultPath + "ccresult_" + strconv.Itoa(w.selfId-1))
 	}
 	writer := bufio.NewWriter(f)
 	defer f.Close()
