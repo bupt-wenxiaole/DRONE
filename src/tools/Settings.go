@@ -7,6 +7,7 @@ const (
 	//NFSPath = "/home/xwen/graph/16/"
 	//NFSPath = "/mnt/nfs/xwen/liveJournal_ec_json/"
 	NFSPath = "../test_data/subgraph.json"
+	PartitionPath = "../test_data/partition.json"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 

@@ -340,14 +340,16 @@ func newCCWorker(id, partitionNum int) *CCWorker {
 	w.workerNum = partitionNum
 	start := time.Now()
 	if tools.LoadFromJson {
-		graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		//graphIO, _ := os.Open(tools.NFSPath + "G" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		graphIO, _ := os.Open(tools.NFSPath)
 		defer graphIO.Close()
 
 		if graphIO == nil {
 			fmt.Println("graphIO is nil")
 		}
 
-		partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		//partitionIO, _ := os.Open(tools.NFSPath + "P" + strconv.Itoa(partitionNum) + "_" + strconv.Itoa(w.selfId-1) + ".json")
+		partitionIO, _ := os.Open(tools.PartitionPath)
 		defer partitionIO.Close()
 
 		w.g, err = graph.NewGraphFromJSON(graphIO, partitionIO, strconv.Itoa(w.selfId-1))
@@ -394,7 +396,7 @@ func newCCWorker(id, partitionNum int) *CCWorker {
 }
 
 func RunCCWorker(id, partitionNum int) {
-	w := newWorker(id, partitionNum)
+	w := newCCWorker(id, partitionNum)
 
 	log.Println(w.selfId)
 	log.Println(w.peers[w.selfId])
