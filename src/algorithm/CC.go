@@ -5,7 +5,6 @@ import (
 	"time"
 	"sort"
 	"Set"
-	"log"
 )
 
 type CCPair struct {
