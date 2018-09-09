@@ -354,7 +354,7 @@ func newCCWorker(id, partitionNum int) *CCWorker {
 	defer graphIO.Close()
 
 	if graphIO == nil {
-		fmt.Println("graph is nil")
+		fmt.Println("graphIO is nil")
 	}
 	if tools.WorkerOnSC {
 		master, _ = os.Open(tools.NFSPath + strconv.Itoa(partitionNum) + "/Master." + strconv.Itoa(w.selfId-1))
