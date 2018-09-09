@@ -272,7 +272,7 @@ func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 			if _, ok := messageMap[partition]; !ok {
 				messageMap[partition] = make([]*algorithm.CCPair, 0)
 			}
-			log.Printf("zs-log: master send: id:%v, cc:%v\n", id, w.CCValue[id])
+			//log.Printf("zs-log: master send: id:%v, cc:%v\n", id, w.CCValue[id])
 			messageMap[partition] = append(messageMap[partition], &algorithm.CCPair{NodeId: id, CCvalue: w.CCValue[id]})
 		}
 	}
