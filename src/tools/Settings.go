@@ -7,7 +7,8 @@ const (
 	//NFSPath = "/mnt/nfs/xwen/graphData/"
 	//NFSPath = "/mnt/nfs/xwen/generate_graph/"
 
-	NFSPath = "/mnt/nfs/xwen/liveJournal_vc_part"
+	//NFSPath = "/mnt/nfs/xwen/liveJournal_vc_part"
+	NFSPath = "/mnt/nfs/xwen/sssp_vc_part"
 
 	WorkerOnSC = true
 
