@@ -175,9 +175,14 @@ func (w *CCWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 }
 
 func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
-	w.iterationNum++
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.CC_IncEval(w.g, w.CCValue, w.ExchangeValue, w.message)
+	w.Lock()
+	tempBuf := w.message
 	w.message = make([]*algorithm.CCPair, 0)
+	w.UnLock()
+
+	w.iterationNum++
+
+	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.CC_IncEval(w.g, w.CCValue, w.ExchangeValue, tempBuf)
 
 	var fullSendStart time.Time
 	var fullSendDuration float64

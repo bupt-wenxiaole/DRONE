@@ -90,14 +90,16 @@ func CC_PEVal(g graph.Graph, ccValue map[graph.ID]int64, exchangeValue map[graph
 }
 
 func CC_IncEval(g graph.Graph, ccValue map[graph.ID]int64, exchangeValue map[graph.ID]int64, messages []*CCPair) (bool, map[int][]*CCPair, float64, float64, int64, int32, int32) {
-
-	sort.Sort(Array(messages))
-
-	for i := 0; i < len(messages) - 1; i++ {
-		if messages[i].CCvalue > messages[i + 1].CCvalue {
-			log.Fatal("doesn't sort!")
+	var array Array
+	for _, val := range messages {
+		if ccValue[val.NodeId] > val.CCvalue {
+			ccValue[val.NodeId] = val.CCvalue
+			array = append(array, val)
 		}
 	}
+	messages
+
+	sort.Sort(Array(messages))
 
 	updated := make(map[updateMsg]bool)
 	itertationStartTime := time.Now()

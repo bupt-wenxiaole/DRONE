@@ -196,11 +196,16 @@ func (w *Worker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalRes
 }
 
 func (w *Worker) incEval(args *pb.IncEvalRequest, id int) {
+	w.Lock()
+	tempBuf := w.updated
+	w.updated = make([]*algorithm.Pair, 0)
+	w.UnLock()
+
+
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, w.updated)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeMsg, tempBuf)
 
-	w.updated = make([]*algorithm.Pair, 0)
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)

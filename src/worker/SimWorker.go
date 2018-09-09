@@ -184,10 +184,15 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 }
 
 func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
+	w.Lock()
+	tempBuf := w.message
+	w.message = make([]*algorithm.SimPair, 0)
+	w.UnLock()
+
 	w.iterationNum++
 	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
-	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.message, w.preSet, w.postSet)
-	w.message = make([]*algorithm.SimPair, 0)
+	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, tempBuf, w.preSet, w.postSet)
+
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
