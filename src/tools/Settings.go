@@ -1,17 +1,17 @@
 package tools
 
 const (
-	//ResultPath = "/home/acgict/result/"
-	ResultPath = "/mnt/nfs/xwen/result/"
+	ResultPath = "/home/acgict/result/"
+	//ResultPath = "/mnt/nfs/xwen/result/"
 	//ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/usaroad_ec_json/"
+	//NFSPath = "/mnt/nfs/xwen/usaroad_ec_json/"
 	//NFSPath = "../test_data/subgraph.json"
 	//PartitionPath = "../test_data/partition.json"
-	//NFSPath = "/home/acgict/inputgraph/"
-	WorkerOnSC = false
+	NFSPath = "/home/acgict/inputgraph/"
+	WorkerOnSC = true
 
-	LoadFromJson = true
+	LoadFromJson = false
 
 	ConfigPath = "config.txt"
 	//ConfigPath = "../test_data/config.txt"
