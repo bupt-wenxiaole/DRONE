@@ -1,19 +1,19 @@
 package tools
 
 const (
-	//ResultPath = "/mnt/nfs/zpltys/test/"
-	ResultPath = "/mnt/nfs/xwen/graphData/"
-	//NFSPath = "/mnt/nfs/zpltys/test/"
-	//NFSPath = "/mnt/nfs/xwen/graphData/"
-	//NFSPath = "/mnt/nfs/xwen/generate_graph/"
-
-	//NFSPath = "/mnt/nfs/xwen/liveJournal_vc_part"
+	//ResultPath = "/home/acgict/result/"
+	ResultPath = "/mnt/nfs/xwen/result/"
+	//ResultPath = "./"
+	//NFSPath = "/home/xwen/graph/16/"
 	NFSPath = "/mnt/nfs/xwen/sssp_vc_part"
+	//NFSPath = "../test_data/subgraph.json"
+	//PartitionPath = "../test_data/partition.json"
+	//NFSPath = "/home/acgict/inputgraph/"
 
 	WorkerOnSC = true
 
-	//ConfigPath = "../test_data/config.txt"
-	ConfigPath = "config.txt"
+	ConfigPath = "../test_data/config.txt"
+	//ConfigPath = "config.txt"
 	//PatternPath = "../test_data/pattern.txt"
 	PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100

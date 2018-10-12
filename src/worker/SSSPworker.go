@@ -230,7 +230,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 		return
 	} else {
 		fullSendStart = time.Now()
-		w.SSSPMessageSend(messages, true)
+		SlicePeerSend = w.SSSPMessageSend(messages, true)
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
