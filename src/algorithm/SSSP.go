@@ -54,6 +54,7 @@ func (pq *PriorityQueue) Pop() interface{} {
 
 func SSSP_PEVal(g graph.Graph, distance map[int64]float64, startID int64, updateMaster map[int64]bool, updateMirror map[int64]bool) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
 	log.Printf("start id:%v\n", startID)
+	itertationStartTime := time.Now()
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
@@ -69,7 +70,6 @@ func SSSP_PEVal(g graph.Graph, distance map[int64]float64, startID int64, update
 	distance[startID] = 0
 
 	var iterationNum int64 = 0
-	itertationStartTime := time.Now()
 
 	if g.IsMirror(startID) {
 		updateMirror[startID] = true
@@ -104,7 +104,6 @@ func SSSP_PEVal(g graph.Graph, distance map[int64]float64, startID int64, update
 			}
 		}
 	}
-	iterationTime := time.Since(itertationStartTime).Seconds()
 	combineStartTime := time.Now()
 	//end SSSP iteration
 	messageMap := make(map[int][]*Pair)
@@ -123,6 +122,7 @@ func SSSP_PEVal(g graph.Graph, distance map[int64]float64, startID int64, update
 
 	updatePairNum := int32(len(updateMirror))
 	dstPartitionNum := int32(len(messageMap))
+	iterationTime := time.Since(itertationStartTime).Seconds()
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
@@ -130,7 +130,7 @@ func SSSP_PEVal(g graph.Graph, distance map[int64]float64, startID int64, update
 // the only difference is updated, which is the message this partition received
 
 func SSSP_IncEval(g graph.Graph, distance map[int64]float64, updated []*Pair, updateMaster map[int64]bool, updateMirror map[int64]bool, updatedByMessage map[int64]bool, id int) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
-
+	iterationStartTime := time.Now()
 	if len(updated) == 0 && len(updatedByMessage) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
@@ -163,7 +163,6 @@ func SSSP_IncEval(g graph.Graph, distance map[int64]float64, updated []*Pair, up
 	log.Printf("worker%v updatedbymessage:%v", id, len(updatedByMessage))
 
 	var iterationNum int64 = 0
-	iterationStartTime := time.Now()
 
 	for pq.Len() > 0 {
 		iterationNum++
@@ -190,7 +189,6 @@ func SSSP_IncEval(g graph.Graph, distance map[int64]float64, updated []*Pair, up
 			}
 		}
 	}
-	iterationTime := time.Since(iterationStartTime).Seconds()
 	combineStartTime := time.Now()
 
 	messageMap := make(map[int][]*Pair)
@@ -210,7 +208,7 @@ func SSSP_IncEval(g graph.Graph, distance map[int64]float64, updated []*Pair, up
 
 	updatePairNum := int32(len(updateMirror))
 	dstPartitionNum := int32(len(messageMap))
-
+	iterationTime := time.Since(iterationStartTime).Seconds()
 	//log.Printf("zs-log: messageMap:%v\n", messageMap)
 	return len(messageMap) != 0 || len(updateMaster) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }
