@@ -83,6 +83,7 @@ func SSSP_aggregateMsg(oriMsg []*Pair) []*Pair {
 // map[i] is a list of message need to be sent to partition i
 func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, startID graph.ID) (bool, map[int][]*Pair, float64, float64, int64, int32, int32) {
 	log.Printf("start id:%v\n", startID.IntVal())
+	itertationStartTime := time.Now()
 	nodes := g.GetNodes()
 	// if this partition doesn't include startID, just return
 	if _, ok := nodes[startID]; !ok {
@@ -99,7 +100,6 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 	heap.Push(&pq, startPair)
 
 	var iterationNum int64 = 0
-	itertationStartTime := time.Now()
 	// begin SSSP iteration
 	for pq.Len() > 0 {
 		iterationNum++
@@ -128,7 +128,6 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 			}
 		}
 	}
-	iterationTime := time.Since(itertationStartTime).Seconds()
 	combineStartTime := time.Now()
 	//end SSSP iteration
 	messageMap := make(map[int][]*Pair)
@@ -146,12 +145,14 @@ func SSSP_PEVal(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[gr
 
 	updatePairNum := int32(len(updated))
 	dstPartitionNum := int32(len(messageMap))
+	iterationTime := time.Since(itertationStartTime).Seconds()
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum
 }
 
 // the arguments is similar with PEVal
 // the only difference is updated, which is the message this partition received
 func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[graph.ID]float64, updated []*Pair) (bool, map[int][]*Pair, float64, float64, int64, int32, int32, float64, int32, int32) {
+	iterationStartTime := time.Now()
 	if len(updated) == 0 {
 		return false, make(map[int][]*Pair), 0, 0, 0, 0, 0, 0, 0, 0
 	}
@@ -175,7 +176,6 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 	}
 
 	var iterationNum int64 = 0
-	iterationStartTime := time.Now()
 
 	for pq.Len() > 0 {
 		iterationNum++
@@ -206,7 +206,6 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 			}
 		}
 	}
-	iterationTime := time.Since(iterationStartTime).Seconds()
 	combineStartTime := time.Now()
 
 	messageMap := make(map[int][]*Pair)
@@ -224,5 +223,6 @@ func SSSP_IncEval(g graph.Graph, distance map[graph.ID]float64, exchangeMsg map[
 
 	updatePairNum := int32(len(updatedMsg))
 	dstPartitionNum := int32(len(messageMap))
+	iterationTime := time.Since(iterationStartTime).Seconds()
 	return len(messageMap) != 0, messageMap, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime, aggregatorOriSize, aggregatorReducedSize
 }
