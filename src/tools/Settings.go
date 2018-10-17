@@ -2,18 +2,18 @@ package tools
 
 const (
 	//ResultPath = "/home/acgict/result/"
-	ResultPath = "/mnt/nfs/xwen/result/"
+	ResultPath = "/data/xwen/"
 	//ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/sssp_vc_part"
+	NFSPath = "/data/xwen/webbase"
 	//NFSPath = "../test_data/subgraph.json"
 	//PartitionPath = "../test_data/partition.json"
 	//NFSPath = "/home/acgict/inputgraph/"
 
 	WorkerOnSC = true
 
-	ConfigPath = "../test_data/config.txt"
-	//ConfigPath = "config.txt"
+	//ConfigPath = "../test_data/config.txt"
+	ConfigPath = "config.txt"
 	//PatternPath = "../test_data/pattern.txt"
 	PatternPath = "pattern.txt"
 	GraphSimulationTypeModel = 100
