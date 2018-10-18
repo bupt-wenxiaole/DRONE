@@ -6,13 +6,13 @@ const (
 	ResultPath = "/mnt/nfs/xwen/result/"
 	//ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/usaroad_ec_json/"
+	NFSPath = "/data/zpltys/webbase_ec/"
 	//NFSPath = "../test_data/subgraph.json"
 	//PartitionPath = "../test_data/partition.json"
 	//NFSPath = "/home/acgict/inputgraph/"
 	WorkerOnSC = false
 
-	LoadFromJson = true
+	LoadFromJson = false
 
 	ConfigPath = "config.txt"
 	//ConfigPath = "../test_data/config.txt"

@@ -158,7 +158,7 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID]map[ID]Rou
 		if err != nil {
 			log.Fatal("parse weight error")
 		}*/
-		weight := 0.0
+		weight := 1.0
 
 		partition, err := strconv.Atoi(paras[2])
 		if err != nil {
