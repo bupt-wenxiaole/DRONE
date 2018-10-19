@@ -107,7 +107,9 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 				tempSet.Add(v)
 			}
 
+			log.Printf("u: %v\n", u)
 			if route, ok := routes[u]; ok {
+				log.Printf("%v in route\n", u)
 				for v, msg := range route {
 					tempAcc[v.IntVal()] += diff
 					updatedBorder[PRBorder{ID:v, partitionId:msg.RoutePartition()}] = true
