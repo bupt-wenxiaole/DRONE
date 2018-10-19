@@ -123,6 +123,7 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID]map[ID]Rou
 
 	for {
 		line, err := bufrd.ReadString('\n')
+		log.Println(line)
 		if err != nil || io.EOF == err {
 			break
 		}
@@ -169,6 +170,8 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID]map[ID]Rou
 		if err != nil {
 			log.Fatal("parse partition error")
 		}
+
+		log.Printf("src: %v, dst: %v, par:%v\n", srcId, dstId, partition)
 
 		if _, ok := ansMap[srcId]; !ok {
 			ansMap[srcId] = make(map[ID]RouteMsg)
