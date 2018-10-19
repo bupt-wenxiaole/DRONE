@@ -88,7 +88,7 @@ func PageRank_IncEval(g graph.Graph, targetNum map[int64]int, prVal map[int64]fl
 
 	updatedBorder := make(map[PRBorder]bool)
 	routes := g.GetRoute()
-	log.Printf("route len:%v\n", len(routes))
+	//log.Printf("route len:%v\n", len(routes))
 	iterationStartTime := time.Now()
 
 	log.Printf("updated size:%v\n", len(updatedSet))

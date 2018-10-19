@@ -525,12 +525,12 @@ func NewGraphFromTXT(rd io.Reader, fxord io.Reader) (Graph, error) {
 
 	tag, err1 := LoadTagFromTxt(fxord)
 	if err1 != nil {
-		return nil, err1
+		log.Fatal(err1)
 	}
 
 	route, err2 := LoadRouteMsgFromTxt(fxord, true, g)
 	if err2 != nil {
-		return nil, err2
+		log.Fatal(err2)
 	}
 
 	g.tag = tag

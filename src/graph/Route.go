@@ -176,6 +176,7 @@ func LoadRouteMsgFromTxt(rd io.Reader, srcInner bool, g Graph)(map[ID]map[ID]Rou
 		route := &routeMsg{relatedWgt: weight, routePartition: partition}
 		ansMap[srcId][dstId] = route
 	}
+	log.Printf("ansMap len: %v\n", len(ansMap))
 	return ansMap, nil
 }
 
