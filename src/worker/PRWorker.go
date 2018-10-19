@@ -300,6 +300,10 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 		} else {
 			fxiReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".I")
 			fxoReader, _ = os.Open(tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
+			log.Println("read fi fo")
+			if fxoReader == nil || fxiReader == nil {
+				log.Fatalln("fuck")
+			}
 		}
 		defer fxiReader.Close()
 		defer fxoReader.Close()
