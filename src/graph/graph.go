@@ -12,6 +12,7 @@ import (
 	"strings"
 	"strconv"
 	"tools"
+	"os"
 )
 
 // ID is unique identifier.
@@ -472,7 +473,7 @@ func NewGraphFromJSON(rd io.Reader, partitonReader io.Reader, graphID string) (G
 	return g, nil
 }
 
-func NewGraphFromTXT(rd io.Reader, fxord io.Reader) (Graph, error) {
+func NewGraphFromTXT(rd io.Reader, fxopath string) (Graph, error) {
 	g := newGraph()
 	reader := bufio.NewReader(rd)
 	for {
@@ -523,12 +524,18 @@ func NewGraphFromTXT(rd io.Reader, fxord io.Reader) (Graph, error) {
 	}
 
 
-	tag, err1 := LoadTagFromTxt(fxord)
+	fxoReader, _ := os.Open(fxopath)
+
+	tag, err1 := LoadTagFromTxt(fxoReader)
 	if err1 != nil {
 		log.Fatal(err1)
 	}
 
-	route, err2 := LoadRouteMsgFromTxt(fxord, true, g)
+	fxoReader.Close()
+
+	fxoReader, _ = os.Open(fxopath)
+
+	route, err2 := LoadRouteMsgFromTxt(fxoReader, true, g)
 	if err2 != nil {
 		log.Fatal(err2)
 	}

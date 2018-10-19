@@ -308,7 +308,7 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 		defer fxiReader.Close()
 		defer fxoReader.Close()
 
-		w.g, err = graph.NewGraphFromTXT(graphIO, fxoReader)
+		w.g, err = graph.NewGraphFromTXT(graphIO, tools.NFSPath + "F" + strconv.Itoa(w.selfId-1) + ".O")
 		if err != nil {
 			log.Fatal(err)
 		}
