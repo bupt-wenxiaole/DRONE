@@ -6,9 +6,9 @@ const (
 	ResultPath = "/mnt/nfs/xwen/result/"
 	//ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/generate_graph/16p/"
+	NFSPath = "/data/zpltys/webbase_ec/"
 
-	WorkerNum = 16
+	WorkerNum = 32
 	//NFSPath = "../test_data/subgraph.json"
 	//PartitionPath = "../test_data/partition.json"
 	//NFSPath = "/home/acgict/inputgraph/"
