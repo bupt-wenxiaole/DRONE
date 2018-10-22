@@ -380,6 +380,7 @@ func RunJob(jobName string) {
 		if !finish {
 			break
 		}
+		mr.ClearSuperStepMessgae()
 		mr.MessageExchange()
 		<- mr.finishDone
 	}
@@ -388,7 +389,8 @@ func RunJob(jobName string) {
 	runTime := time.Since(start)
 
 	log.Printf("runTime: %vs\n", runTime.Seconds())
-	for i := 1; i <= mr.workerNum; i++ {
+	var i int32
+	for i = 1; i <= int32(mr.workerNum); i++ {
 		log.Printf("worker %v calculate time:%v, send message time: %v, waiting time: %v\n", i, mr.calTime[i], mr.sendTime[i], runTime.Seconds() - mr.calTime[i] - mr.sendTime[i])
 	}
 	//fmt.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
