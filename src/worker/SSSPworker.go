@@ -151,18 +151,20 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
+	calculateStart := time.Now()
+
 	startId := int64(8012731)
 
-	/*if id == 1 {
 		for v := range w.g.GetNodes() {
 			startId = v
 			break
 		}
-	}*/
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
+
+	isMessageToSend, messages, _, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
 
 	//log.Printf("zs-log:worker%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
+	calculateTime := time.Since(calculateStart).Seconds()
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -171,7 +173,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -188,7 +190,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -201,9 +203,10 @@ func (w *SSSPWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEva
 }
 
 func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
+	calculateStart := time.Now()
 	w.iterationNum++
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
+	isMessageToSend, messages, _, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.SSSP_IncEval(w.g, w.distance, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage, id)
 
 	//log.Printf("zs-log: worker:%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
@@ -215,6 +218,9 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
+
+	calculateTime := time.Since(calculateStart).Seconds()
+
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place, contains nothing
 
@@ -222,7 +228,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
-			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
+			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: calculateTime,
 			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -238,7 +244,7 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
-		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
+		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -271,6 +277,7 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 }
 
 func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
+	calculateStart := time.Now()
 	for _, pair := range w.updatedBuffer {
 		id := pair.NodeId
 		dis := pair.Distance
@@ -298,7 +305,20 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 		}
 	}
 
+	calculateTime := time.Since(calculateStart).Seconds()
+	messageStart := time.Now()
+
 	w.SSSPMessageSend(messageMap, false)
+	messageTime := time.Since(messageStart).Seconds()
+
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
+		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
+		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
+	Client.SuperStepFinish(context.Background(), finishRequest)
+
 	w.updatedMaster = make(map[int64]bool)
 
 	return &pb.ExchangeResponse{Ok:true}, nil

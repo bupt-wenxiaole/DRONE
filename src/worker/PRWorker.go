@@ -141,6 +141,8 @@ func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.
 }
 
 func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
+	calculateStart := time.Now()
+
 	for _, pair := range w.calBuffer {
 		id := pair.ID
 		diff := pair.PRValue
@@ -163,29 +165,42 @@ func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 		}
 	}
 	w.updatedMaster.Clear()
+
+	calculateTime := time.Since(calculateStart).Seconds()
+	messageStart := time.Now()
+
 	w.PRMessageSend(messageMap, false)
+	messageTime := time.Since(messageStart).Seconds()
+
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
+		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
+		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
+	Client.SuperStepFinish(context.Background(), finishRequest)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
 
 func (w *PRWorker) peval(args *pb.PEvalRequest, id int) {
-	var fullSendStart time.Time
-	var fullSendDuration float64
+	calculateStart := time.Now()
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	_, messagesMap, iterationTime := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
+	_, messagesMap, _ := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
 
 	dstPartitionNum := len(messagesMap)
+	calculateTime := time.Since(calculateStart).Seconds()
 
-	fullSendStart = time.Now()
+	fullSendStart := time.Now()
 	SlicePeerSend = w.PRMessageSend(messagesMap, true)
-	fullSendDuration = time.Since(fullSendStart).Seconds()
+	fullSendDuration := time.Since(fullSendStart).Seconds()
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: true}
 
@@ -198,18 +213,20 @@ func (w *PRWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 }
 
 func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
+	calculateStart := time.Now()
 	w.iterationNum++
 
 	var isMessageToSend bool
 	var messagesMap map[int][]*algorithm.PRPair
 
-	var iterationTime float64
 
-	isMessageToSend, messagesMap, iterationTime = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
+	isMessageToSend, messagesMap, _ = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 	w.updatedMirror.Clear()
 	dstPartitionNum := len(messagesMap)
+
+	calculateTime := time.Since(calculateStart).Seconds()
 
 	fullSendStart := time.Now()
 	SlicePeerSend := w.PRMessageSend(messagesMap, true)
@@ -219,7 +236,7 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 

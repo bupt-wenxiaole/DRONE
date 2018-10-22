@@ -140,12 +140,13 @@ func (w *CCWorker) CCMessageSend(messages map[int][]*algorithm.CCPair, calculate
 }
 
 func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
+	calculateStart := time.Now()
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	isMessageToSend, messages, iterationTime, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_PEVal(w.g, w.CCValue,  w.updatedMaster, w.updatedMirror)
-
+	isMessageToSend, messages, _, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_PEVal(w.g, w.CCValue,  w.updatedMaster, w.updatedMirror)
+	calculateTime := time.Since(calculateStart).Seconds()
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -154,7 +155,7 @@ func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 			CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -171,7 +172,7 @@ func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -185,8 +186,11 @@ func (w *CCWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEvalR
 
 func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
+	calculateStart := time.Now()
 
-	isMessageToSend, messages, iterationTime, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_IncEval(w.g, w.CCValue, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
+	isMessageToSend, messages, _, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_IncEval(w.g, w.CCValue, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
+
+	calculateTime := time.Since(calculateStart).Seconds()
 
 	w.exchangeBuffer = make([]*algorithm.CCPair, 0)
 	w.updatedMirror = Set.NewSet()
@@ -202,7 +206,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 			CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -210,7 +214,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 		return
 	} else {
 		fullSendStart = time.Now()
-		w.CCMessageSend(messages, true)
+		SlicePeerSend = w.CCMessageSend(messages, true)
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
 
@@ -218,7 +222,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -249,6 +253,7 @@ func (w *CCWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*pb.
 }
 
 func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
+	calculateStart := time.Now()
 	for _, pair := range w.updatedBuffer {
 		id := pair.NodeId
 		cc := pair.CCvalue
@@ -277,8 +282,21 @@ func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 		}
 	}
 
+	calculateTime := time.Since(calculateStart).Seconds()
+	messageStart := time.Now()
+
 	w.CCMessageSend(messageMap, false)
+	messageTime := time.Since(messageStart).Seconds()
 	w.updatedMaster = make(map[int64]bool)
+
+
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
+		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
+		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
+	Client.SuperStepFinish(context.Background(), finishRequest)
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }

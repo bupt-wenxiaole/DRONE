@@ -143,22 +143,20 @@ func (w *SimWorker) SimMessageSend(messageMap map[int]map[algorithm.SimPair]int,
 }
 
 func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
+	calculateStart := time.Now()
+
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedMirror)
+	isMessageToSend, messages, _, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.GraphSim_PEVal(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedMirror)
 	w.updatedMirror = Set.NewSet()
-/*
-	for v := range w.g.GetNodes() {
-		for u, times := range w.postMap[v] {
-			log.Printf("after peval, u: %v, v: %v, time:%v\n", u.IntVal(), v.IntVal(), times)
-		}
-	}
-*/
+
 	for v := range w.g.GetNodes() {
 		w.updatedByMessage.Add(v)
 	}
+
+	calculateTime := time.Since(calculateStart).Seconds()
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -167,7 +165,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -183,7 +181,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: iterationTime,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -192,6 +190,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 }
 
 func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
+	calculateStart := time.Now()
 	for v, posts := range w.calMessages {
 		for u, val := range posts {
 			if w.postMap[v] == nil {
@@ -223,7 +222,20 @@ func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReques
 		}
 	}
 
+	calculateTime := time.Since(calculateStart).Seconds()
+	messageStart := time.Now()
+
 	w.SimMessageSend(messageMap, false)
+	messageTime := time.Since(messageStart).Seconds()
+
+	masterHandle := w.grpcHandlers[0]
+	Client := pb.NewMasterClient(masterHandle)
+	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
+		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
+		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
+		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
+	Client.SuperStepFinish(context.Background(), finishRequest)
+
 	w.updatedMaster = Set.NewSet()
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
@@ -234,9 +246,10 @@ func (w *SimWorker) PEval(ctx context.Context, args *pb.PEvalRequest) (*pb.PEval
 }
 
 func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
+	calculateStart := time.Now()
 	w.iterationNum++
 
-	isMessageToSend, messages, iterationTime, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
+	isMessageToSend, messages, _, combineTime, iterationNum, updatePairNum, dstPartitionNum, aggregateTime,
 	aggregatorOriSize, aggregatorReducedSize := algorithm.GraphSim_IncEval(w.g, w.pattern, w.sim, w.postMap, w.updatedMaster, w.updatedByMessage, w.exchangeMessages)
 
 	w.updatedByMessage = Set.NewSet()
@@ -245,12 +258,15 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	var fullSendStart time.Time
 	var fullSendDuration float64
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
+
+	calculateTime := time.Since(calculateStart).Seconds()
+
 	if !isMessageToSend {
 		masterHandle := w.grpcHandlers[0]
 		Client := pb.NewMasterClient(masterHandle)
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
-			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
+			AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: calculateTime,
 			CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
@@ -266,7 +282,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	Client := pb.NewMasterClient(masterHandle)
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: aggregatorOriSize,
-		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: iterationTime,
+		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 

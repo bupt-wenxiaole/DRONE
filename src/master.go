@@ -48,6 +48,9 @@ type Master struct {
 	totalIteration int64
 
 	workerConn map[int]*grpc.ClientConn
+
+	calTime map[int32]float64
+	sendTime map[int32]float64
 }
 
 func (mr *Master) Lock() {
@@ -108,6 +111,8 @@ func newMaster() (mr *Master) {
 	mr.finishMap = make(map[int32]bool)
 
 	mr.workerConn = make(map[int]*grpc.ClientConn)
+	mr.calTime = make(map[int32]float64)
+	mr.sendTime = make(map[int32]float64)
 	return mr
 }
 func (mr *Master) ReadConfig() {
@@ -243,31 +248,35 @@ func (mr *Master) MessageExchange() bool {
 func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (r *pb.FinishResponse, err error) {
 	mr.Lock()
 	defer mr.Unlock()
-
 	// if messagetosend is true, means we still have message to send
 	mr.finishMap[args.WorkerID] = args.MessageToSend
 	mr.allSuperStepFinish = mr.allSuperStepFinish || args.MessageToSend
-
-	log.Printf("zs-log: message to send:%v\n", args.MessageToSend)
-
 	if len(mr.finishMap) == mr.workerNum {
 		mr.finishDone <- mr.allSuperStepFinish
 	}
 
-	log.Printf("worker %v IterationNum : %v\n", args.WorkerID, args.IterationNum)
-	log.Printf("worker %v duration time of partial evaluation: %v\n",args.WorkerID, args.IterationSeconds)
-	log.Printf("worker %v duration time of combine message : %v\n", args.WorkerID, args.CombineSeconds)
-	log.Printf("worker %v number of updated boarders node pair : %v\n", args.WorkerID, args.UpdatePairNum)
-	log.Printf("worker %v number of destinations which message send to: %v\n", args.WorkerID, args.DstPartitionNum)
-	log.Printf("worker %v duration of a worker send to message to all other workers : %v\n", args.WorkerID, args.AllPeerSend)
-	for _, pairNum := range args.PairNum {
-		log.Printf("worker %v send to worker %v %v messages\n", args.WorkerID, pairNum.WorkerID, pairNum.CommunicationSize)
+	mr.calTime[args.WorkerID] += args.IterationSeconds
+	mr.sendTime[args.WorkerID] += args.AllPeerSend
+
+	if args.CombineSeconds > 0 {
+		log.Printf("zs-log: message to send:%v\n", args.MessageToSend)
+
+		log.Printf("worker %v IterationNum : %v\n", args.WorkerID, args.IterationNum)
+		log.Printf("worker %v duration time of calculation: %v\n", args.WorkerID, args.IterationSeconds)
+		log.Printf("worker %v number of updated boarders node pair : %v\n", args.WorkerID, args.UpdatePairNum)
+		log.Printf("worker %v number of destinations which message send to: %v\n", args.WorkerID, args.DstPartitionNum)
+		log.Printf("worker %v duration of send message to all other workers : %v\n", args.WorkerID, args.AllPeerSend)
+		for _, pairNum := range args.PairNum {
+			log.Printf("worker %v send to worker %v %v messages\n", args.WorkerID, pairNum.WorkerID, pairNum.CommunicationSize)
+		}
+
+		mr.totalIteration += args.IterationNum
+		log.Printf("iteration num:%v\n", mr.totalIteration)
+	} else {
+		log.Printf("worker %v duration time of calculation in exchange: %v\n", args.WorkerID, args.IterationSeconds)
+		log.Printf("worker %v duration of send message to all other workers in exchange: %v\n", args.WorkerID, args.AllPeerSend)
 	}
-
-	mr.totalIteration += args.IterationNum
-	log.Printf("iteration num:%v\n", mr.totalIteration)
-
-	return &pb.FinishResponse{Ok:true}, nil
+	return &pb.FinishResponse{Ok: true}, nil
 }
 
 func (mr *Master) CalculateFinish(ctx context.Context, args *pb.CalculateFinishRequest) (r *pb.CalculateFinishResponse, err error) {
@@ -372,12 +381,16 @@ func RunJob(jobName string) {
 			break
 		}
 		mr.MessageExchange()
+		<- mr.finishDone
 	}
 	log.Println("end IncEval")
 
 	runTime := time.Since(start)
 
 	log.Printf("runTime: %vs\n", runTime.Seconds())
+	for i := 1; i <= mr.workerNum; i++ {
+		log.Printf("worker %v calculate time:%v, send message time: %v, waiting time: %v\n", i, mr.calTime[i], mr.sendTime[i], runTime.Seconds() - mr.calTime[i] - mr.sendTime[i])
+	}
 	//fmt.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	log.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	mr.Assemble()
