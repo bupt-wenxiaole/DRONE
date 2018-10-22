@@ -277,7 +277,6 @@ func (w *SSSPWorker) Assemble(ctx context.Context, args *pb.AssembleRequest) (*p
 }
 
 func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest) (*pb.ExchangeResponse, error) {
-	log.Println("worker: start exchange message!")
 	calculateStart := time.Now()
 	for _, pair := range w.updatedBuffer {
 		id := pair.NodeId
@@ -311,8 +310,6 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 
 	w.SSSPMessageSend(messageMap, false)
 	messageTime := time.Since(messageStart).Seconds()
-
-	log.Println("worker: finish exchange message!")
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
