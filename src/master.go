@@ -269,6 +269,8 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	mr.calTime[args.WorkerID] += args.IterationSeconds
 	mr.sendTime[args.WorkerID] += args.AllPeerSend
 
+	log.Println("???")
+
 	if args.CombineSeconds > 0 {
 		log.Printf("zs-log: message to send:%v\n", args.MessageToSend)
 
