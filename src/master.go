@@ -258,18 +258,21 @@ func (mr *Master) MessageExchange() bool {
 func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (r *pb.FinishResponse, err error) {
 	mr.SPLock()
 	defer mr.SPUnlock()
-	log.Printf("conbine seconds:%v\n", args.CombineSeconds)
+	log.Printf("this conbine seconds:%v\n", args.CombineSeconds)
 	// if messagetosend is true, means we still have message to send
 	mr.finishMap[args.WorkerID] = args.MessageToSend
+	log.Println("edfrew")
 	mr.allSuperStepFinish = mr.allSuperStepFinish || args.MessageToSend
+	log.Println(len(mr.finishMap))
 	if len(mr.finishMap) == mr.workerNum {
 		mr.finishDone <- mr.allSuperStepFinish
 	}
+	log.Println("????")
 
 	mr.calTime[args.WorkerID] += args.IterationSeconds
 	mr.sendTime[args.WorkerID] += args.AllPeerSend
 
-	log.Println("???")
+	//log.Println("???")
 
 	if args.CombineSeconds > 0 {
 		log.Printf("zs-log: message to send:%v\n", args.MessageToSend)
