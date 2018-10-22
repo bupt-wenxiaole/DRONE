@@ -378,9 +378,7 @@ func RunJob(jobName string) {
 	mr.ClearSuperStepMessgae()
 	mr.PEval()
 	<-mr.finishDone
-	mr.ClearSuperStepMessgae()
 	mr.MessageExchange()
-	<-mr.finishDone
 	log.Println("end PEval")
 
 	log.Println("start IncEval")
@@ -394,9 +392,7 @@ func RunJob(jobName string) {
 		if !finish {
 			break
 		}
-		mr.ClearSuperStepMessgae()
 		mr.MessageExchange()
-		<- mr.finishDone
 	}
 	log.Println("end IncEval")
 
