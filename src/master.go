@@ -17,6 +17,7 @@ import (
 
 type Master struct {
 	mu      *sync.Mutex
+	spmu    *sync.Mutex
 	newCond *sync.Cond
 	address string
 	// signals when Register() adds to workers[]
@@ -61,6 +62,14 @@ func (mr *Master) Unlock() {
 	mr.mu.Unlock()
 }
 
+func (mr *Master) SPLock() {
+	mr.spmu.Lock()
+}
+
+func (mr *Master) SPUnlock() {
+	mr.spmu.Unlock()
+}
+
 // Register is an RPC method that is called by workers after they have started
 // up to report that they are ready to receive tasks.
 // Locks for multiple worker concurrently access worker list
@@ -96,6 +105,7 @@ func newMaster() (mr *Master) {
 	mr = new(Master)
 	mr.shutdown = make(chan struct{})
 	mr.mu = new(sync.Mutex)
+	mr.spmu = new(sync.Mutex)
 	mr.newCond = sync.NewCond(mr.mu)
 	mr.JobDoneChan = make(chan bool)
 	mr.registerDone = make(chan bool)
@@ -246,8 +256,8 @@ func (mr *Master) MessageExchange() bool {
 }
 
 func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (r *pb.FinishResponse, err error) {
-	mr.Lock()
-	defer mr.Unlock()
+	mr.SPLock()
+	defer mr.SPUnlock()
 	// if messagetosend is true, means we still have message to send
 	mr.finishMap[args.WorkerID] = args.MessageToSend
 	mr.allSuperStepFinish = mr.allSuperStepFinish || args.MessageToSend
