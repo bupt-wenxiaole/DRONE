@@ -155,12 +155,6 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 
 	startId := int64(8012731)
 
-		for v := range w.g.GetNodes() {
-			startId = v
-			break
-		}
-
-
 	isMessageToSend, messages, _, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
 
 	//log.Printf("zs-log:worker%v visited:%v, percent:%v%%\n", id, w.visited.Size(), float64(w.visited.Size()) / float64(len(w.g.GetNodes())))
