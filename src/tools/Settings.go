@@ -6,7 +6,7 @@ const (
 	ResultPath = "/mnt/nfs/xwen/result/"
 	//ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/data/zpltys/webbase_ec/"
+	NFSPath = "/mnt/nfs/zpltys/webbase_ec/"
 
 	WorkerNum = 32
 	//NFSPath = "../test_data/subgraph.json"
