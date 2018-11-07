@@ -43,6 +43,9 @@ type PRWorker struct {
 
 	iterationNum int
 	stopChannel  chan bool
+
+	calTime float64
+	sendTime float64
 }
 
 func (w *PRWorker) Lock() {
@@ -125,6 +128,7 @@ func (w *PRWorker) PRMessageSend(messages map[int][]*algorithm.PRPair, calculate
 
 func (w *PRWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
+	log.Printf("worker %v calTime:%v sendTime:%v", w.selfId, w.calTime, w.sendTime)
 	w.Lock()
 	defer w.UnLock()
 	log.Println("shutdown ing")
@@ -172,13 +176,8 @@ func (w *PRWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 	w.PRMessageSend(messageMap, false)
 	messageTime := time.Since(messageStart).Seconds()
 
-	masterHandle := w.grpcHandlers[0]
-	Client := pb.NewMasterClient(masterHandle)
-	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
-		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
-	Client.SuperStepFinish(context.Background(), finishRequest)
+	w.calTime += calculateTime
+	w.sendTime += messageTime
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
@@ -203,7 +202,8 @@ func (w *PRWorker) peval(args *pb.PEvalRequest, id int) {
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: true}
-
+	w.calTime += calculateTime
+	w.sendTime += fullSendDuration
 	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
@@ -240,6 +240,8 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
+	w.calTime += calculateTime
+	w.sendTime += fullSendDuration
 	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
@@ -310,6 +312,9 @@ func newPRWorker(id, partitionNum int) *PRWorker {
 	w.updatedMaster = Set.NewSet()
 	w.updatedMirror = Set.NewSet()
 	w.diffVal = make(map[int64]float64)
+
+	w.calTime = 0.0
+	w.sendTime = 0.0
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n

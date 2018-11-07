@@ -50,8 +50,8 @@ type Master struct {
 
 	workerConn map[int]*grpc.ClientConn
 
-	calTime map[int32]float64
-	sendTime map[int32]float64
+	//calTime map[int32]float64
+	//sendTime map[int32]float64
 }
 
 func (mr *Master) Lock() {
@@ -121,8 +121,8 @@ func newMaster() (mr *Master) {
 	mr.finishMap = make(map[int32]bool)
 
 	mr.workerConn = make(map[int]*grpc.ClientConn)
-	mr.calTime = make(map[int32]float64)
-	mr.sendTime = make(map[int32]float64)
+	//mr.calTime = make(map[int32]float64)
+	//mr.sendTime = make(map[int32]float64)
 	return mr
 }
 func (mr *Master) ReadConfig() {
@@ -259,8 +259,8 @@ func (mr *Master) SuperStepFinish(ctx context.Context, args *pb.FinishRequest) (
 	mr.SPLock()
 	defer mr.SPUnlock()
 
-	mr.calTime[args.WorkerID] += args.IterationSeconds
-	mr.sendTime[args.WorkerID] += args.AllPeerSend
+	//mr.calTime[args.WorkerID] += args.IterationSeconds
+	//mr.sendTime[args.WorkerID] += args.AllPeerSend
 
 	//log.Printf("combine seconds:%v\n", args.CombineSeconds)
 
@@ -399,10 +399,10 @@ func RunJob(jobName string) {
 	runTime := time.Since(start)
 
 	log.Printf("runTime: %vs\n", runTime.Seconds())
-	var i int32
+	/*var i int32
 	for i = 1; i <= int32(mr.workerNum); i++ {
 		log.Printf("worker %v calculate time:%v, send message time: %v, waiting time: %v\n", i, mr.calTime[i], mr.sendTime[i], runTime.Seconds() - mr.calTime[i] - mr.sendTime[i])
-	}
+	}*/
 	//fmt.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	log.Printf("teps:%v\n", float64(mr.totalIteration) / runTime.Seconds())
 	mr.Assemble()

@@ -5,7 +5,7 @@ const (
 	ResultPath = "/data/xwen/"
 	//ResultPath = "./"
 	//NFSPath = "/home/xwen/graph/16/"
-	NFSPath = "/mnt/nfs/xwen/sssp_vc_part"
+	NFSPath = "/data/xwen/data"
 	//NFSPath = "../test_data/subgraph.json"
 	//PartitionPath = "../test_data/partition.json"
 	//NFSPath = "/home/acgict/inputgraph/"
