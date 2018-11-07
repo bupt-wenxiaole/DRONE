@@ -186,7 +186,7 @@ func (w *PRWorker) peval(args *pb.PEvalRequest, id int) {
 	calculateStart := time.Now()
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	_, messagesMap, _ := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
+	_, messagesMap, iterationNum := algorithm.PageRank_PEVal(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror)
 
 	dstPartitionNum := len(messagesMap)
 	calculateTime := time.Since(calculateStart).Seconds()
@@ -200,7 +200,7 @@ func (w *PRWorker) peval(args *pb.PEvalRequest, id int) {
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
+		CombineSeconds: 0, IterationNum: iterationNum, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: true}
 	w.calTime += calculateTime
 	w.sendTime += fullSendDuration
@@ -216,11 +216,7 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 	calculateStart := time.Now()
 	w.iterationNum++
 
-	var isMessageToSend bool
-	var messagesMap map[int][]*algorithm.PRPair
-
-
-	isMessageToSend, messagesMap, _ = algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
+	isMessageToSend, messagesMap, iterationNum := algorithm.PageRank_IncEval(w.g, w.prVal, w.accVal, w.diffVal, w.targetsNum, w.updated, w.updatedMaster, w.updatedMirror, w.exchangeBuffer)
 
 	w.exchangeBuffer = make([]*algorithm.PRPair, 0)
 	w.updatedMirror.Clear()
@@ -237,7 +233,7 @@ func (w *PRWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: 0, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
+		CombineSeconds: 0, IterationNum: iterationNum, UpdatePairNum: 0, DstPartitionNum: int32(dstPartitionNum), AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	w.calTime += calculateTime
