@@ -4,7 +4,6 @@ import (
 	"graph"
 	"math"
 	"log"
-	"time"
 	"Set"
 )
 
@@ -65,7 +64,6 @@ func PageRank_IncEval(g graph.Graph, prVal map[int64]float64, accVal map[int64]f
 	var iterationNum int64 = 0
 	maxerr := 0.0
 
-	iterationStartTime := time.Now()
 	for u := range updatedSet {
 		accVal[u] += diffVal[u]
 		delete(diffVal, u)
