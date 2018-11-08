@@ -69,6 +69,9 @@ type SSSPWorker struct {
 
 	iterationNum int
 	stopChannel  chan bool
+
+	calTime float64
+	sendTime float64
 }
 
 func (w *SSSPWorker) Lock() {
@@ -81,6 +84,7 @@ func (w *SSSPWorker) UnLock() {
 
 func (w *SSSPWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
+	log.Printf("worker %v calTime:%v sendTime:%v", w.selfId, w.calTime, w.sendTime)
 	w.Lock()
 	defer w.Lock()
 	log.Println("shutdown ing")
@@ -153,7 +157,7 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 	calculateStart := time.Now()
 
-	startId := int64(8012731)
+	startId := int64(73723936)
 
 	isMessageToSend, messages, _, combineTime, iterationNum, updatePairNum, dstPartitionNum := algorithm.SSSP_PEVal(w.g, w.distance, startId, w.updatedMaster, w.updatedMirror)
 
@@ -182,7 +186,8 @@ func (w *SSSPWorker) peval(args *pb.PEvalRequest, id int) {
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
-
+	w.calTime += calculateTime
+	w.sendTime += fullSendDuration
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
@@ -241,7 +246,8 @@ func (w *SSSPWorker) incEval(args *pb.IncEvalRequest, id int) {
 		AggregatorSeconds: aggregateTime, AggregatorReducedSize: aggregatorReducedSize, IterationSeconds: calculateTime,
 		CombineSeconds: combineTime, IterationNum: iterationNum, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
-
+	w.calTime += calculateTime
+	w.sendTime += fullSendDuration
 	Client.SuperStepFinish(context.Background(), finishRequest)
 }
 
@@ -305,16 +311,10 @@ func (w *SSSPWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReque
 	w.SSSPMessageSend(messageMap, false)
 	messageTime := time.Since(messageStart).Seconds()
 
-	masterHandle := w.grpcHandlers[0]
-	Client := pb.NewMasterClient(masterHandle)
-	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
-		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
-	Client.SuperStepFinish(context.Background(), finishRequest)
-
 	w.updatedMaster = make(map[int64]bool)
 
+	w.calTime += calculateTime
+	w.sendTime += messageTime
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
 
@@ -355,6 +355,9 @@ func newWorker(id, partitionNum int) *SSSPWorker {
 	w.iterationNum = 0
 	w.stopChannel = make(chan bool)
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
+
+	w.calTime = 0.0
+	w.sendTime = 0.0
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
