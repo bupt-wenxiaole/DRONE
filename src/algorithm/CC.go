@@ -25,7 +25,8 @@ func (a Array) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 
-func dfs(s int64, cc int64, g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, updateMirror Set.Set) {
+func dfs(s int64, cc int64, g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, updateMirror Set.Set) int64 {
+	var iterations int64 = 1
 	for v := range g.GetTargets(s) {
 		if ccValue[v] <= cc {
 			continue
@@ -38,13 +39,15 @@ func dfs(s int64, cc int64, g graph.Graph, ccValue map[int64]int64, updateMaster
 			updateMirror.Add(v)
 		}
 
-		dfs(v, cc, g, ccValue, updateMaster, updateMirror)
+		iterations += dfs(v, cc, g, ccValue, updateMaster, updateMirror)
 	}
+	return iterations
 }
 
-func CC_PEVal(g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, updateMirror Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
+func CC_PEVal(g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, updateMirror Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32, int64) {
 	var array Array
 
+	var iterations int64 = 0
 	for v := range g.GetNodes() {
 		ccValue[v] = v
 		array = append(array, &CCPair{NodeId:v, CCvalue:v})
@@ -59,7 +62,7 @@ func CC_PEVal(g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, upda
 		if cc != ccValue[v] {
 			continue
 		}
-		dfs(v, cc, g, ccValue, updateMaster, updateMirror)
+		iterations += dfs(v, cc, g, ccValue, updateMaster, updateMirror)
 	}
 	iterationTime := time.Since(itertationStartTime).Seconds()
 
@@ -80,14 +83,14 @@ func CC_PEVal(g graph.Graph, ccValue map[int64]int64, updateMaster Set.Set, upda
 
 	updatePairNum := int32(len(updateMirror))
 	dstPartitionNum := int32(len(messageMap))
-	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum
+	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum, iterations
 }
 
-func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updateMaster Set.Set, updateMirror Set.Set, updatedByMessage Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32) {
+func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updateMaster Set.Set, updateMirror Set.Set, updatedByMessage Set.Set) (bool, map[int][]*CCPair, float64, float64, int32, int32, int64) {
 	if len(updated) == 0 && len(updatedByMessage) == 0 {
-		return false, make(map[int][]*CCPair), 0, 0, 0, 0
+		return false, make(map[int][]*CCPair), 0, 0, 0, 0, 0
 	}
-
+	var iterations int64 = 0
 	for _, msg := range updated {
 		//log.Printf("receive from master: id:%v, cc:%v\n", msg.NodeId, msg.CCvalue)
 		if msg.CCvalue < ccValue[msg.NodeId] {
@@ -110,7 +113,7 @@ func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updat
 		if cc != ccValue[v] {
 			continue
 		}
-		dfs(v, cc, g, ccValue, updateMaster, updateMirror)
+		iterations += dfs(v, cc, g, ccValue, updateMaster, updateMirror)
 	}
 	iterationTime := time.Since(itertationStartTime).Seconds()
 
@@ -131,5 +134,5 @@ func CC_IncEval(g graph.Graph, ccValue map[int64]int64, updated []*CCPair, updat
 
 	updatePairNum := int32(len(updateMirror))
 	dstPartitionNum := int32(len(messageMap))
-	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum
+	return len(messageMap) != 0, messageMap, iterationTime, combineTime, updatePairNum, dstPartitionNum, iterations
 }

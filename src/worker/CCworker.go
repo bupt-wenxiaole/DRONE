@@ -61,6 +61,9 @@ type CCWorker struct {
 
 	iterationNum int
 	stopChannel  chan bool
+
+	calTime float64
+	sendTime float64
 }
 
 func (w *CCWorker) Lock() {
@@ -73,6 +76,7 @@ func (w *CCWorker) UnLock() {
 
 func (w *CCWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
+	log.Printf("worker %v calTime:%v sendTime:%v", w.selfId, w.calTime, w.sendTime)
 	w.Lock()
 	defer w.Lock()
 	log.Println("shutdown ing")
@@ -145,7 +149,7 @@ func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 	var fullSendDuration float64
 	var SlicePeerSend []*pb.WorkerCommunicationSize
 
-	isMessageToSend, messages, _, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_PEVal(w.g, w.CCValue,  w.updatedMaster, w.updatedMirror)
+	isMessageToSend, messages, _, combineTime, updatePairNum, dstPartitionNum, iterations := algorithm.CC_PEVal(w.g, w.CCValue,  w.updatedMaster, w.updatedMirror)
 	calculateTime := time.Since(calculateStart).Seconds()
 
 	if !isMessageToSend {
@@ -156,7 +160,7 @@ func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-			CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+			CombineSeconds: combineTime, IterationNum: iterations, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
@@ -170,6 +174,9 @@ func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
+
+	w.calTime += calculateTime
+	w.sendTime += fullSendDuration
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
@@ -188,7 +195,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 	w.iterationNum++
 	calculateStart := time.Now()
 
-	isMessageToSend, messages, _, combineTime, updatePairNum, dstPartitionNum := algorithm.CC_IncEval(w.g, w.CCValue, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
+	isMessageToSend, messages, _, combineTime, updatePairNum, dstPartitionNum, iterations := algorithm.CC_IncEval(w.g, w.CCValue, w.exchangeBuffer, w.updatedMaster, w.updatedMirror, w.updatedByMessage)
 
 	calculateTime := time.Since(calculateStart).Seconds()
 
@@ -207,7 +214,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 		finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 			AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-			CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
+			CombineSeconds: combineTime, IterationNum: iterations, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: 0,
 			PairNum: SlicePeerSendNull, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 		Client.SuperStepFinish(context.Background(), finishRequest)
@@ -220,6 +227,9 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
+
+	w.calTime += calculateTime
+	w.sendTime += fullSendDuration
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
@@ -283,20 +293,15 @@ func (w *CCWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeRequest
 	}
 
 	calculateTime := time.Since(calculateStart).Seconds()
-	messageStart := time.Now()
 
+	messageStart := time.Now()
 	w.CCMessageSend(messageMap, false)
 	messageTime := time.Since(messageStart).Seconds()
 	w.updatedMaster = make(map[int64]bool)
 
 
-	masterHandle := w.grpcHandlers[0]
-	Client := pb.NewMasterClient(masterHandle)
-	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
-		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
-	Client.SuperStepFinish(context.Background(), finishRequest)
+	w.calTime += calculateTime
+	w.sendTime += messageTime
 
 	return &pb.ExchangeResponse{Ok:true}, nil
 }
@@ -340,6 +345,9 @@ func newCCWorker(id, partitionNum int) *CCWorker {
 	w.grpcHandlers = make(map[int]*grpc.ClientConn)
 
 	w.CCValue = make(map[int64]int64)
+
+	w.sendTime = 0
+	w.calTime = 0
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
