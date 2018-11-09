@@ -180,7 +180,7 @@ func (w *CCWorker) peval(args *pb.PEvalRequest, id int) {
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+		CombineSeconds: combineTime, IterationNum: iterations, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	Client.SuperStepFinish(context.Background(), finishRequest)
@@ -233,7 +233,7 @@ func (w *CCWorker) incEval(args *pb.IncEvalRequest, id int) {
 
 	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
 		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: combineTime, IterationNum: 0, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
+		CombineSeconds: combineTime, IterationNum: iterations, UpdatePairNum: updatePairNum, DstPartitionNum: dstPartitionNum, AllPeerSend: fullSendDuration,
 		PairNum: SlicePeerSend, WorkerID: int32(id), MessageToSend: isMessageToSend}
 
 	Client.SuperStepFinish(context.Background(), finishRequest)
