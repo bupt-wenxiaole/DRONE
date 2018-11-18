@@ -38,9 +38,12 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, simSet map[int64]Set.Set
 		simSet[id] = Set.NewSet()
 	}
 
+	iterationNum += int64(len(g.GetNodes()))
+
 	//log.Println("step 1")
 
 	for v, msg := range g.GetNodes() {
+		iterationNum += int64(len(patternNodeSet))
 		for u := range patternNodeSet {
 			if msg.Attr() == nodeMap[u].Attr() {
 				targets := pattern.GetTargets(u)
@@ -85,6 +88,7 @@ func GraphSim_PEVal(g graph.Graph, pattern graph.Graph, simSet map[int64]Set.Set
 }
 
 func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[int64]Set.Set, postMap map[int64]map[int64]int, updatedMaster Set.Set, updatedByMessage Set.Set, exchangeMessages map[int64]map[int64]int) (bool, map[int]map[SimPair]int, float64, float64, int64, int32, int32, float64, int32, int32) {
+	var iterationNum int64 = 0
 	for v, posts := range exchangeMessages {
 		if len(posts) != len(postMap[v]) {
 			updatedByMessage.Add(v)
@@ -97,6 +101,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[int64]Set.Set,
 	mirrors := g.GetMirrors()
 
 	for v := range updatedByMessage {
+		iterationNum += int64(len(sim[v]))
 		for u := range sim[v] {
 			if !TestSim(v, u, postMap, pattern) {
 				/*log.Printf("delete %v from sim(%v)\n", u, v)
@@ -140,6 +145,7 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[int64]Set.Set,
 			if !TestSim(v, u, postMap, pattern) {
 				sim[v].Remove(u)
 				sources := g.GetSources(v)
+				iterationNum += int64(len(sources))
 				for source := range sources {
 					postMap[source][u] = postMap[source][u] - 1
 					if postMap[source][u] == 0 {
@@ -166,5 +172,5 @@ func GraphSim_IncEval(g graph.Graph, pattern graph.Graph, sim map[int64]Set.Set,
 	}
 	iterationTime := time.Since(iterationStartTime).Seconds()
 
-	return len(messageMap) != 0, messageMap, iterationTime, 0, 0, 0, 0, 0, 0, 0
+	return len(messageMap) != 0, messageMap, iterationTime, 0, iterationNum, 0, 0, 0, 0, 0
 }

@@ -45,6 +45,9 @@ type SimWorker struct {
 
 	iterationNum int64
 	stopChannel  chan bool
+
+	calTime float64
+	sendTime float64
 }
 
 func (w *SimWorker) Lock() {
@@ -57,6 +60,7 @@ func (w *SimWorker) UnLock() {
 
 func (w *SimWorker) ShutDown(ctx context.Context, args *pb.ShutDownRequest) (*pb.ShutDownResponse, error) {
 	log.Println("receive shutDown request")
+	log.Printf("worker %v calTime:%v sendTime:%v", w.selfId, w.calTime, w.sendTime)
 	w.Lock()
 	defer w.Lock()
 
@@ -157,6 +161,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 	}
 
 	calculateTime := time.Since(calculateStart).Seconds()
+	w.calTime += calculateTime
 
 	if !isMessageToSend {
 		var SlicePeerSendNull []*pb.WorkerCommunicationSize // this struct only for hold place. contains nothing, client end should ignore it
@@ -176,6 +181,7 @@ func (w *SimWorker) peVal(args *pb.PEvalRequest, id int) {
 		SlicePeerSend = w.SimMessageSend(messages, true)
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
+	w.sendTime += fullSendDuration
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
@@ -223,18 +229,12 @@ func (w *SimWorker) ExchangeMessage(ctx context.Context, args *pb.ExchangeReques
 	}
 
 	calculateTime := time.Since(calculateStart).Seconds()
+	w.calTime += calculateTime
 	messageStart := time.Now()
 
 	w.SimMessageSend(messageMap, false)
 	messageTime := time.Since(messageStart).Seconds()
-
-	masterHandle := w.grpcHandlers[0]
-	Client := pb.NewMasterClient(masterHandle)
-	finishRequest := &pb.FinishRequest{AggregatorOriSize: 0,
-		AggregatorSeconds: 0, AggregatorReducedSize: 0, IterationSeconds: calculateTime,
-		CombineSeconds: -1, IterationNum: 0, UpdatePairNum: 0, DstPartitionNum: 0, AllPeerSend: messageTime,
-		PairNum: nil, WorkerID: int32(w.selfId), MessageToSend: false}
-	Client.SuperStepFinish(context.Background(), finishRequest)
+	w.sendTime += messageTime
 
 	w.updatedMaster = Set.NewSet()
 	return &pb.ExchangeResponse{Ok:true}, nil
@@ -260,6 +260,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 	SlicePeerSend := make([]*pb.WorkerCommunicationSize, 0)
 
 	calculateTime := time.Since(calculateStart).Seconds()
+	w.calTime += calculateTime
 
 	if !isMessageToSend {
 		masterHandle := w.grpcHandlers[0]
@@ -277,6 +278,7 @@ func (w *SimWorker) incEval(args *pb.IncEvalRequest, id int) {
 		SlicePeerSend = w.SimMessageSend(messages, true)
 	}
 	fullSendDuration = time.Since(fullSendStart).Seconds()
+	w.sendTime += fullSendDuration
 
 	masterHandle := w.grpcHandlers[0]
 	Client := pb.NewMasterClient(masterHandle)
@@ -375,6 +377,9 @@ func newSimWorker(id, partitionNum int) *SimWorker {
 	w.updatedMirror = Set.NewSet()
 	w.updatedMaster = Set.NewSet()
 	w.updatedByMessage = Set.NewSet()
+
+	w.calTime = 0.0
+	w.sendTime = 0.0
 
 	// read config file get ip:port config
 	// in config file, every line in this format: id,ip:port\n
