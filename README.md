@@ -1,4 +1,4 @@
-# GRAPE
+# DRONE
 ## Install and run
 A Go implementation of Distributed Graph Computations.<br>
 The communication library is based on grpc, so you should run the following commands for installing grpc<br>
